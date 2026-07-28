@@ -172,7 +172,23 @@
       color: #777777;
       font-size: 13px;
     }
+.teacher-checkin-button {
+  width: auto;
+  min-height: 38px;
+  padding: 8px 12px;
+  background: #111111;
+  font-size: 14px;
+  white-space: nowrap;
+}
 
+.teacher-checkin-button:disabled {
+  opacity: 0.55;
+}
+
+.status-area {
+  flex-shrink: 0;
+  text-align: right;
+}
     .status-badge {
       flex-shrink: 0;
       padding: 7px 10px;
@@ -483,7 +499,56 @@
       content.textContent =
         "กรุณาสร้างหรือเปิดคลาสก่อนตรวจสอบรายชื่อ";
     }
+async function teacherCheckIn(sessionId, memberId, button) {
+  const member = overviewData.members.find(
+    (item) => item.id === memberId
+  );
 
+  const memberName = member
+    ? getMemberName(member)
+    : "นักเรียน";
+
+  const confirmed = window.confirm(
+    `ยืนยันเช็กชื่อให้ ${memberName} ใช่หรือไม่?`
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "กำลังบันทึก...";
+
+  try {
+    const response = await fetch("/api/teacher-checkin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-key": adminKey
+      },
+      body: JSON.stringify({
+        sessionId,
+        memberId
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.error || "ครูเช็กชื่อไม่สำเร็จ"
+      );
+    }
+
+    await loadOverview();
+
+  } catch (error) {
+    window.alert(error.message);
+
+    button.disabled = false;
+    button.textContent = "ครูเช็กให้";
+  }
+}
     function renderSelectedSession() {
       const sessionId = Number(sessionSelect.value);
 
@@ -583,7 +648,7 @@
         details.appendChild(memberDetail);
 
         const statusArea = document.createElement("div");
-
+statusArea.className = "status-area";
         const badge = document.createElement("div");
 
         if (attendance) {
@@ -601,11 +666,22 @@
           statusArea.appendChild(badge);
           statusArea.appendChild(method);
         } else {
-          badge.className = "status-badge not-checked";
-          badge.textContent = "ยังไม่เช็ก";
+  const checkinButton = document.createElement("button");
 
-          statusArea.appendChild(badge);
-        }
+  checkinButton.type = "button";
+  checkinButton.className = "teacher-checkin-button";
+  checkinButton.textContent = "ครูเช็กให้";
+
+  checkinButton.addEventListener("click", () => {
+    teacherCheckIn(
+      sessionId,
+      member.id,
+      checkinButton
+    );
+  });
+
+  statusArea.appendChild(checkinButton);
+}
 
         row.appendChild(details);
         row.appendChild(statusArea);
