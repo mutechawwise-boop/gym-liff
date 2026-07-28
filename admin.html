@@ -1097,4 +1097,163 @@ sortedMembers.forEach((member) => {
   row.appendChild(statusArea);
   content.appendChild(row);
 });
+}async function login() {
+  const value = adminKeyInput.value.trim();
+
+  if (!value) {
+    loginError.textContent = "กรุณากรอกรหัส Admin";
+    return;
+  }
+
+  adminKey = value;
+
+  loginButton.disabled = true;
+  loginButton.textContent = "กำลังตรวจสอบ...";
+  loginError.textContent = "";
+
+  sessionStorage.setItem(
+    "gambitAdminKey",
+    adminKey
+  );
+
+  await loadOverview();
 }
+
+function logout() {
+  sessionStorage.removeItem("gambitAdminKey");
+
+  adminKey = "";
+  overviewData = null;
+
+  adminKeyInput.value = "";
+  adminArea.style.display = "none";
+  loginArea.style.display = "block";
+}
+
+async function createSession() {
+  const classId = Number(newClassSelect.value);
+  const startTime = newStartTime.value;
+  const endTime = newEndTime.value;
+
+  if (!classId) {
+    createSessionError.textContent =
+      "กรุณาเลือกประเภทคลาส";
+    return;
+  }
+
+  if (!startTime || !endTime) {
+    createSessionError.textContent =
+      "กรุณาระบุเวลาเริ่มและเวลาสิ้นสุด";
+    return;
+  }
+
+  createSessionButton.disabled = true;
+  createSessionButton.textContent =
+    "กำลังเปิดคลาส...";
+
+  createSessionError.textContent = "";
+
+  try {
+    const response = await fetch(
+      "/api/create-session",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey
+        },
+        body: JSON.stringify({
+          classId,
+          startTime,
+          endTime,
+          note: newSessionNote.value.trim()
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.error || "เปิดคลาสไม่สำเร็จ"
+      );
+    }
+
+    newSessionNote.value = "";
+    await loadOverview();
+
+  } catch (error) {
+    createSessionError.textContent =
+      error.message;
+
+  } finally {
+    createSessionButton.disabled = false;
+    createSessionButton.textContent =
+      "เปิดคลาสวันนี้";
+  }
+}
+
+loginButton.addEventListener(
+  "click",
+  login
+);
+
+adminKeyInput.addEventListener(
+  "keydown",
+  (event) => {
+    if (event.key === "Enter") {
+      login();
+    }
+  }
+);
+
+logoutButton.addEventListener(
+  "click",
+  logout
+);
+
+refreshButton.addEventListener(
+  "click",
+  loadOverview
+);
+
+sessionSelect.addEventListener(
+  "change",
+  renderSelectedSession
+);
+
+createSessionButton.addEventListener(
+  "click",
+  createSession
+);
+
+cancelBeltButton.addEventListener(
+  "click",
+  closeBeltModal
+);
+
+saveBeltButton.addEventListener(
+  "click",
+  saveBeltChange
+);
+
+beltModal.addEventListener(
+  "click",
+  (event) => {
+    if (event.target === beltModal) {
+      closeBeltModal();
+    }
+  }
+);
+
+const savedAdminKey =
+  sessionStorage.getItem(
+    "gambitAdminKey"
+  );
+
+if (savedAdminKey) {
+  adminKey = savedAdminKey;
+  loadOverview();
+}</script>
+</body>
+</html>
