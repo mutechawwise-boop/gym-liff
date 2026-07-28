@@ -135,6 +135,10 @@ const membershipExpiryDate =
             full_name: fullName || null,
             phone: phone || null,
             member_status: memberStatus,
+            membership_start_date:
+            membershipStartDate || null,
+            membership_expiry_date:
+            membershipExpiryDate || null,
             is_guest: false
           })
         }
