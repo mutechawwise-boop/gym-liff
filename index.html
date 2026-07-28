@@ -235,9 +235,7 @@
         statusElement.textContent =
           "พร้อมแล้ว กดปุ่มด้านล่างเพื่อเช็กชื่อเข้าเรียน";
 
-        checkinButton.addEventListener("click", () => {
-          checkIn(idToken);
-        });
+       checkinButton.addEventListener("click", checkIn);
 
       } catch (error) {
         console.error(error);
@@ -245,7 +243,7 @@
       }
     }
 
-    async function checkIn(idToken) {
+    async function checkIn() {
       checkinButton.disabled = true;
       checkinButton.textContent = "กำลังเช็กชื่อ...";
 
@@ -253,6 +251,24 @@
       statusElement.textContent = "กำลังตรวจสอบข้อมูลกับ LINE...";
 
       try {
+        const idToken = liff.getIDToken();
+const decodedToken = liff.getDecodedIDToken();
+
+if (!idToken || !decodedToken) {
+  throw new Error("ไม่พบข้อมูลเข้าสู่ระบบ LINE");
+}
+
+const currentTime = Math.floor(Date.now() / 1000);
+
+if (!decodedToken.exp || decodedToken.exp <= currentTime + 30) {
+  liff.logout();
+
+  liff.login({
+    redirectUri: window.location.href
+  });
+
+  return;
+}
         const response = await fetch("/api/checkin", {
           method: "POST",
           headers: {
