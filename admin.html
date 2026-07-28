@@ -922,342 +922,179 @@ async function saveBeltChange() {
   }
 }
 function renderSelectedSession() {
-      const sessionId = Number(sessionSelect.value);
+  const sessionId = Number(sessionSelect.value);
 
-      const session = overviewData.sessions.find(
-        (item) => item.id === sessionId
-      );
+  const session = overviewData.sessions.find(
+    (item) => item.id === sessionId
+  );
 
-      if (!session) {
-        renderEmptySession();
-        return;
-      }
-const classId = Number(session.classes?.id);
-
-const classMembers = overviewData.members.filter((member) => {
-  const enrollments = Array.isArray(member.member_classes)
-    ? member.member_classes
-    : [];
-
-  return enrollments.some((enrollment) => {
-    return (
-      Number(enrollment.class_id) === classId &&
-      enrollment.status === "active"
-    );
-  });
-});
-      const sessionAttendance = overviewData.attendance.filter(
-        (record) => record.session_id === sessionId
-      );
-
-     const attendanceByMember = new Map(
-  validSessionAttendance.map((record) => [
-    record.member_id,
-    record
-  ])
-);
-
-      const classMemberIds = new Set(
-  classMembers.map((member) => member.id)
-);
-
-const validSessionAttendance = sessionAttendance.filter(
-  (record) => classMemberIds.has(record.member_id)
-);
-
-const checkedCount = validSessionAttendance.length;
-const totalCount = classMembers.length;
-      const remainingCount = Math.max(
-        totalCount - checkedCount,
-        0
-      );
-
-      document.getElementById("sessionTitle").textContent =
-        session.classes?.name || "ไม่ระบุชื่อคลาส";
-
-      document.getElementById("sessionTime").textContent =
-        `${formatTime(session.start_time)}–` +
-        `${formatTime(session.end_time)} น.`;
-
-      document.getElementById("totalCount").textContent =
-        String(totalCount);
-
-      document.getElementById("checkedCount").textContent =
-        String(checkedCount);
-
-      document.getElementById("remainingCount").textContent =
-        String(remainingCount);
-
-      if (!classMembers.length) {
-        content.className = "empty";
-        content.textContent = "ยังไม่มีสมาชิกที่ลงทะเบียนในคลาสนี้";
-        return;
-      }
-
-      const sortedMembers = [...overviewData.members].sort(
-        (first, second) => {
-          const firstChecked =
-            attendanceByMember.has(first.id);
-
-          const secondChecked =
-            attendanceByMember.has(second.id);
-
-          if (firstChecked !== secondChecked) {
-            return firstChecked ? -1 : 1;
-          }
-
-          return getMemberName(first).localeCompare(
-            getMemberName(second),
-            "th"
-          );
-        }
-      );
-
-      content.className = "member-list";
-      content.innerHTML = "";
-
-      sortedMembers.forEach((member) => {
-        const attendance =
-          attendanceByMember.get(member.id);
-
-        const row = document.createElement("article");
-        row.className = "member-row";
-
-        const details = document.createElement("div");
-
-        const name = document.createElement("p");
-        name.className = "member-name";
-        name.textContent = getMemberName(member);
-
-        const memberDetail = document.createElement("p");
-        memberDetail.className = "member-detail";
-
-if (member.current_belt) {
-  const beltBadge = document.createElement("span");
-  beltBadge.className = "belt-badge";
-
-  const beltColor = document.createElement("span");
-  beltColor.className = "belt-color";
-  beltColor.style.backgroundColor =
-    member.current_belt.color_hex || "#ffffff";
-
-  const beltText = document.createElement("span");
-  beltText.textContent =
-    `${member.current_belt.belt_name} • ` +
-    `ได้รับเมื่อ ${formatBeltDate(
-      member.current_belt.awarded_date
-    )}`;
-
-  beltBadge.appendChild(beltColor);
-  beltBadge.appendChild(beltText);
-
-  memberDetail.textContent = "";
-  memberDetail.appendChild(beltBadge);
-} else {
-  memberDetail.textContent =
-    member.phone ||
-    member.member_status ||
-    "ยังไม่ได้ระบุสาย";
-}
-        details.appendChild(name);
-        details.appendChild(memberDetail);
-        const memberActions =
-  document.createElement("div");
-
-memberActions.className = "member-actions";
-
-const changeBeltButton =
-  document.createElement("button");
-
-changeBeltButton.type = "button";
-changeBeltButton.className =
-  "change-belt-button";
-changeBeltButton.textContent = "🥋 เปลี่ยนสาย";
-
-changeBeltButton.addEventListener("click", () => {
-  openBeltModal(member);
-});
-
-memberActions.appendChild(changeBeltButton);
-details.appendChild(memberActions);
-
-        const statusArea = document.createElement("div");
-statusArea.className = "status-area";
-        const badge = document.createElement("div");
-
-        if (attendance) {
-          badge.className = "status-badge checked";
-          badge.textContent =
-            `✅ ${formatCheckinTime(
-              attendance.checked_in_at
-            )}`;
-
-          const method = document.createElement("div");
-          method.className = "method";
-          method.textContent =
-            getCheckinMethod(attendance.checkin_method);
-
-          statusArea.appendChild(badge);
-          statusArea.appendChild(method);
-        } else {
-  const checkinButton = document.createElement("button");
-
-  checkinButton.type = "button";
-  checkinButton.className = "teacher-checkin-button";
-  checkinButton.textContent = "ครูเช็กให้";
-
-  checkinButton.addEventListener("click", () => {
-    teacherCheckIn(
-      sessionId,
-      member.id,
-      checkinButton
-    );
-  });
-
-  statusArea.appendChild(checkinButton);
-}
-
-        row.appendChild(details);
-        row.appendChild(statusArea);
-        content.appendChild(row);
-      });
-    }
-async function createSession() {
-  const classId = Number(newClassSelect.value);
-  const startTime = newStartTime.value;
-  const endTime = newEndTime.value;
-
-  if (!classId) {
-    createSessionError.textContent =
-      "กรุณาเลือกประเภทคลาส";
+  if (!session) {
+    renderEmptySession();
     return;
   }
 
-  if (!startTime || !endTime) {
-    createSessionError.textContent =
-      "กรุณาระบุเวลาเริ่มและเวลาสิ้นสุด";
-    return;
-  }
+  const classId = Number(session.classes?.id);
 
-  createSessionButton.disabled = true;
-  createSessionButton.textContent = "กำลังเปิดคลาส...";
-  createSessionError.textContent = "";
+  const classMembers = overviewData.members.filter((member) => {
+    const enrollments = Array.isArray(member.member_classes)
+      ? member.member_classes
+      : [];
 
-  try {
-    const response = await fetch("/api/create-session", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-key": adminKey
-      },
-      body: JSON.stringify({
-        classId,
-        startTime,
-        endTime,
-        note: newSessionNote.value.trim()
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      const details = data.details
-        ? `\n${
-            typeof data.details === "string"
-              ? data.details
-              : JSON.stringify(data.details)
-          }`
-        : "";
-
-      throw new Error(
-        (data.error || "เปิดคลาสไม่สำเร็จ") + details
+    return enrollments.some((enrollment) => {
+      return (
+        Number(enrollment.class_id) === classId &&
+        enrollment.status === "active"
       );
-    }
+    });
+  });
 
-    newSessionNote.value = "";
+  const sessionAttendance = overviewData.attendance.filter(
+    (record) => record.session_id === sessionId
+  );
 
-    await loadOverview();
+  const classMemberIds = new Set(
+    classMembers.map((member) => member.id)
+  );
 
-  } catch (error) {
-    createSessionError.textContent = error.message;
-  } finally {
-    createSessionButton.disabled = false;
-    createSessionButton.textContent = "เปิดคลาสวันนี้";
-  }
+  const validSessionAttendance = sessionAttendance.filter(
+    (record) => classMemberIds.has(record.member_id)
+  );
+
+  const attendanceByMember = new Map(
+    validSessionAttendance.map((record) => [
+      record.member_id,
+      record
+    ])
+  );
+
+  const checkedCount = validSessionAttendance.length;
+  const totalCount = classMembers.length;
+
+  const remainingCount = Math.max(
+    totalCount - checkedCount,
+    0
+  );
+  if (!classMembers.length) {
+  content.className = "empty";
+  content.textContent =
+    "ยังไม่มีสมาชิกที่ลงทะเบียนในคลาสนี้";
+  return;
 }
-    async function login() {
-      const value = adminKeyInput.value.trim();
+const sortedMembers = [...classMembers].sort(
+  (first, second) => {
+    const firstChecked = attendanceByMember.has(first.id);
+    const secondChecked = attendanceByMember.has(second.id);
 
-      if (!value) {
-        loginError.textContent = "กรุณากรอกรหัส Admin";
-        return;
-      }
-
-      adminKey = value;
-
-      loginButton.disabled = true;
-      loginButton.textContent = "กำลังตรวจสอบ...";
-
-      sessionStorage.setItem(
-        "gambitAdminKey",
-        adminKey
-      );
-
-      await loadOverview();
+    if (firstChecked !== secondChecked) {
+      return firstChecked ? -1 : 1;
     }
 
-    loginButton.addEventListener("click", login);
-
-    adminKeyInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        login();
-      }
-    });
-
-    refreshButton.addEventListener(
-      "click",
-      loadOverview
+    return getMemberName(first).localeCompare(
+      getMemberName(second),
+      "th"
     );
-
-    sessionSelect.addEventListener(
-      "change",
-      renderSelectedSession
-    );
-
-    logoutButton.addEventListener("click", () => {
-      sessionStorage.removeItem("gambitAdminKey");
-      adminKey = "";
-      adminKeyInput.value = "";
-
-      adminArea.style.display = "none";
-      loginArea.style.display = "block";
-    });
-cancelBeltButton.addEventListener(
-  "click",
-  closeBeltModal
-);
-
-saveBeltButton.addEventListener(
-  "click",
-  saveBeltChange
-);
-
-beltModal.addEventListener("click", (event) => {
-  if (event.target === beltModal) {
-    closeBeltModal();
   }
-});
-createSessionButton.addEventListener(
-  "click",
-  createSession
 );
-const savedAdminKey =
-      sessionStorage.getItem("gambitAdminKey");
 
-    if (savedAdminKey) {
-      adminKey = savedAdminKey;
-      loadOverview();
-    }
-  </script>
-</body>
-</html>
+content.className = "member-list";
+content.innerHTML = "";
+
+sortedMembers.forEach((member) => {
+  const attendance = attendanceByMember.get(member.id);
+
+  const row = document.createElement("article");
+  row.className = "member-row";
+
+  const details = document.createElement("div");
+
+  const name = document.createElement("p");
+  name.className = "member-name";
+  name.textContent = getMemberName(member);
+
+  const memberDetail = document.createElement("p");
+  memberDetail.className = "member-detail";
+
+  if (member.current_belt) {
+    const beltBadge = document.createElement("span");
+    beltBadge.className = "belt-badge";
+
+    const beltColor = document.createElement("span");
+    beltColor.className = "belt-color";
+    beltColor.style.backgroundColor =
+      member.current_belt.color_hex || "#ffffff";
+
+    const beltText = document.createElement("span");
+    beltText.textContent =
+      `${member.current_belt.belt_name} • ` +
+      `ได้รับเมื่อ ${formatBeltDate(
+        member.current_belt.awarded_date
+      )}`;
+
+    beltBadge.appendChild(beltColor);
+    beltBadge.appendChild(beltText);
+
+    memberDetail.appendChild(beltBadge);
+  } else {
+    memberDetail.textContent =
+      member.phone ||
+      member.member_status ||
+      "ยังไม่ได้ระบุสาย";
+  }
+
+  details.appendChild(name);
+  details.appendChild(memberDetail);
+
+  const memberActions = document.createElement("div");
+  memberActions.className = "member-actions";
+
+  const changeBeltButton = document.createElement("button");
+  changeBeltButton.type = "button";
+  changeBeltButton.className = "change-belt-button";
+  changeBeltButton.textContent = "🥋 เปลี่ยนสาย";
+
+  changeBeltButton.addEventListener("click", () => {
+    openBeltModal(member);
+  });
+
+  memberActions.appendChild(changeBeltButton);
+  details.appendChild(memberActions);
+
+  const statusArea = document.createElement("div");
+  statusArea.className = "status-area";
+
+  if (attendance) {
+    const badge = document.createElement("div");
+    badge.className = "status-badge checked";
+    badge.textContent =
+      `✅ ${formatCheckinTime(attendance.checked_in_at)}`;
+
+    const method = document.createElement("div");
+    method.className = "method";
+    method.textContent =
+      getCheckinMethod(attendance.checkin_method);
+
+    statusArea.appendChild(badge);
+    statusArea.appendChild(method);
+  } else {
+    const checkinButton = document.createElement("button");
+
+    checkinButton.type = "button";
+    checkinButton.className = "teacher-checkin-button";
+    checkinButton.textContent = "ครูเช็กให้";
+
+    checkinButton.addEventListener("click", () => {
+      teacherCheckIn(
+        sessionId,
+        member.id,
+        checkinButton
+      );
+    });
+
+    statusArea.appendChild(checkinButton);
+  }
+
+  row.appendChild(details);
+  row.appendChild(statusArea);
+  content.appendChild(row);
+});
+}
