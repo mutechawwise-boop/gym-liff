@@ -394,7 +394,18 @@
         "ไม่ระบุชื่อ"
       );
     }
+function formatBeltDate(dateValue) {
+  if (!dateValue) {
+    return "";
+  }
 
+  return new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Bangkok"
+  }).format(new Date(`${dateValue}T12:00:00+07:00`));
+}
     function getCheckinMethod(method) {
       if (method === "teacher") {
         return "ครูเช็กให้";
@@ -639,11 +650,18 @@ async function teacherCheckIn(sessionId, memberId, button) {
         const memberDetail = document.createElement("p");
         memberDetail.className = "member-detail";
 
-        memberDetail.textContent =
-          member.phone ||
-          member.member_status ||
-          "สมาชิก";
-
+       if (member.current_belt) {
+  memberDetail.textContent =
+    `🥋 ${member.current_belt.belt_name}` +
+    ` • ได้รับเมื่อ ${formatBeltDate(
+      member.current_belt.awarded_date
+    )}`;
+} else {
+  memberDetail.textContent =
+    member.phone ||
+    member.member_status ||
+    "ยังไม่ได้ระบุสาย";
+}
         details.appendChild(name);
         details.appendChild(memberDetail);
 

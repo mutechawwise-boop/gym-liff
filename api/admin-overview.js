@@ -18,19 +18,29 @@ export default {
       const expectedAdminKey = process.env.ADMIN_KEY;
 
       if (!expectedAdminKey) {
-        return json({ error: "ยังไม่ได้ตั้งค่า ADMIN_KEY" }, 500);
+        return json(
+          { error: "ยังไม่ได้ตั้งค่า ADMIN_KEY" },
+          500
+        );
       }
 
       if (!adminKey || adminKey !== expectedAdminKey) {
-        return json({ error: "ไม่มีสิทธิ์ใช้งานหน้า Admin" }, 401);
+        return json(
+          { error: "ไม่มีสิทธิ์ใช้งานหน้า Admin" },
+          401
+        );
       }
 
       const supabaseUrl = process.env.SUPABASE_URL;
-      const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
+      const supabaseSecretKey =
+        process.env.SUPABASE_SECRET_KEY;
 
       if (!supabaseUrl || !supabaseSecretKey) {
         return json(
-          { error: "ตั้งค่า Supabase Environment Variables ไม่ครบ" },
+          {
+            error:
+              "ตั้งค่า Supabase Environment Variables ไม่ครบ"
+          },
           500
         );
       }
@@ -92,9 +102,47 @@ export default {
         );
       }
 
-      const members = await membersResponse.json();
+      const rawMembers = await membersResponse.json();
 
-      const sessionIds = sessions.map((session) => session.id);
+      // ดึงข้อมูลสายปัจจุบันของสมาชิก
+      const beltsResponse = await fetch(
+        `${supabaseUrl}/rest/v1/member_current_belts` +
+          `?select=member_id,belt_level_id,belt_code,belt_name,rank_order,color_hex,awarded_date,awarded_by,note`,
+        { headers }
+      );
+
+      if (!beltsResponse.ok) {
+        const details = await beltsResponse.text();
+
+        return json(
+          {
+            error: "อ่านข้อมูลสายของสมาชิกไม่สำเร็จ",
+            details
+          },
+          500
+        );
+      }
+
+      const currentBelts = await beltsResponse.json();
+
+      const beltByMemberId = new Map(
+        currentBelts.map((belt) => [
+          belt.member_id,
+          belt
+        ])
+      );
+
+      // รวมข้อมูลสมาชิกกับสายปัจจุบัน
+      const members = rawMembers.map((member) => ({
+        ...member,
+        current_belt:
+          beltByMemberId.get(member.id) || null
+      }));
+
+      // ดึงการเช็กชื่อของคลาสวันนี้
+      const sessionIds = sessions.map(
+        (session) => session.id
+      );
 
       let attendance = [];
 
@@ -107,18 +155,21 @@ export default {
         );
 
         if (!attendanceResponse.ok) {
-          const details = await attendanceResponse.text();
+          const details =
+            await attendanceResponse.text();
 
           return json(
             {
-              error: "อ่านข้อมูลการเช็กชื่อไม่สำเร็จ",
+              error:
+                "อ่านข้อมูลการเช็กชื่อไม่สำเร็จ",
               details
             },
             500
           );
         }
 
-        attendance = await attendanceResponse.json();
+        attendance =
+          await attendanceResponse.json();
       }
 
       return json({
