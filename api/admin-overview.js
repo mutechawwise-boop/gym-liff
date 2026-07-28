@@ -138,7 +138,28 @@ export default {
         current_belt:
           beltByMemberId.get(member.id) || null
       }));
+// ดึงระดับสายทั้งหมดสำหรับแบบฟอร์มเปลี่ยนสาย
+const beltLevelsResponse = await fetch(
+  `${supabaseUrl}/rest/v1/belt_levels` +
+    `?active=eq.true` +
+    `&select=id,code,name_th,rank_order,color_hex` +
+    `&order=rank_order.asc`,
+  { headers }
+);
 
+if (!beltLevelsResponse.ok) {
+  const details = await beltLevelsResponse.text();
+
+  return json(
+    {
+      error: "อ่านรายการระดับสายไม่สำเร็จ",
+      details
+    },
+    500
+  );
+}
+
+const beltLevels = await beltLevelsResponse.json();
       // ดึงการเช็กชื่อของคลาสวันนี้
       const sessionIds = sessions.map(
         (session) => session.id
@@ -172,13 +193,14 @@ export default {
           await attendanceResponse.json();
       }
 
-      return json({
-        success: true,
-        date: today,
-        sessions,
-        members,
-        attendance
-      });
+     return json({
+  success: true,
+  date: today,
+  sessions,
+  members,
+  attendance,
+  beltLevels
+});
     } catch (error) {
       return json(
         {

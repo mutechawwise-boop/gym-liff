@@ -263,6 +263,105 @@
         align-items: flex-start;
       }
     }
+ .member-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.change-belt-button {
+  width: auto;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid #cccccc;
+  background: #ffffff;
+  color: #111111;
+  font-size: 13px;
+}
+
+.belt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 5px;
+  padding: 5px 9px;
+  border: 1px solid #dddddd;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.belt-color {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #999999;
+  border-radius: 4px;
+}
+
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal {
+  width: 100%;
+  max-width: 470px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 22px;
+  background: #ffffff;
+  border-radius: 18px;
+}
+
+.modal h2 {
+  margin-top: 0;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+.cancel-button {
+  border: 1px solid #cccccc;
+  background: #ffffff;
+  color: #111111;
+}
+
+.modal-error {
+  min-height: 20px;
+  color: #c62828;
+  white-space: pre-line;
+}
+
+textarea {
+  width: 100%;
+  min-height: 90px;
+  padding: 11px 13px;
+  border: 1px solid #cccccc;
+  border-radius: 10px;
+  font: inherit;
+  resize: vertical;
+}
   </style>
 </head>
 
@@ -351,7 +450,56 @@
       </section>
     </section>
   </main>
+<section id="beltModal" class="modal-backdrop">
+  <div class="modal">
+    <h2>🥋 เปลี่ยนสาย</h2>
 
+    <p id="beltMemberName"></p>
+
+    <div class="form-group">
+      <label for="beltLevelSelect">เลือกสายใหม่</label>
+      <select id="beltLevelSelect"></select>
+    </div>
+
+    <div class="form-group">
+      <label for="beltAwardedDate">วันที่ได้รับสาย</label>
+      <input id="beltAwardedDate" type="date">
+    </div>
+
+    <div class="form-group">
+      <label for="beltAwardedBy">ผู้มอบสาย</label>
+      <input
+        id="beltAwardedBy"
+        type="text"
+        placeholder="เช่น Coach, Kru Peter"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="beltNote">หมายเหตุ</label>
+      <textarea
+        id="beltNote"
+        placeholder="เช่น ผ่านการทดสอบเลื่อนสาย"
+      ></textarea>
+    </div>
+
+    <p id="beltModalError" class="modal-error"></p>
+
+    <div class="modal-actions">
+      <button
+        id="cancelBeltButton"
+        class="cancel-button"
+        type="button"
+      >
+        ยกเลิก
+      </button>
+
+      <button id="saveBeltButton" type="button">
+        บันทึกการเปลี่ยนสาย
+      </button>
+    </div>
+  </div>
+</section>
   <script>
     const loginArea = document.getElementById("loginArea");
     const adminArea = document.getElementById("adminArea");
@@ -362,6 +510,25 @@
     const refreshButton = document.getElementById("refreshButton");
     const sessionSelect = document.getElementById("sessionSelect");
     const content = document.getElementById("content");
+    const beltModal = document.getElementById("beltModal");
+const beltMemberName =
+  document.getElementById("beltMemberName");
+const beltLevelSelect =
+  document.getElementById("beltLevelSelect");
+const beltAwardedDate =
+  document.getElementById("beltAwardedDate");
+const beltAwardedBy =
+  document.getElementById("beltAwardedBy");
+const beltNote =
+  document.getElementById("beltNote");
+const beltModalError =
+  document.getElementById("beltModalError");
+const cancelBeltButton =
+  document.getElementById("cancelBeltButton");
+const saveBeltButton =
+  document.getElementById("saveBeltButton");
+
+let selectedBeltMemberId = null;
 
     let adminKey = "";
     let overviewData = null;
@@ -560,7 +727,129 @@ async function teacherCheckIn(sessionId, memberId, button) {
     button.textContent = "ครูเช็กให้";
   }
 }
-    function renderSelectedSession() {
+   function getThailandDateInputValue() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date());
+}
+
+function openBeltModal(member) {
+  selectedBeltMemberId = member.id;
+
+  beltMemberName.textContent =
+    `นักเรียน: ${getMemberName(member)}`;
+
+  beltLevelSelect.innerHTML = "";
+
+  const beltLevels = overviewData.beltLevels || [];
+
+  beltLevels.forEach((belt) => {
+    const option = document.createElement("option");
+
+    option.value = String(belt.id);
+    option.textContent = belt.name_th;
+
+    if (
+      member.current_belt &&
+      member.current_belt.belt_level_id === belt.id
+    ) {
+      option.selected = true;
+    }
+
+    beltLevelSelect.appendChild(option);
+  });
+
+  beltAwardedDate.value = getThailandDateInputValue();
+  beltAwardedBy.value = "Coach";
+  beltNote.value = "";
+  beltModalError.textContent = "";
+
+  saveBeltButton.disabled = false;
+  saveBeltButton.textContent = "บันทึกการเปลี่ยนสาย";
+
+  beltModal.classList.add("open");
+}
+
+function closeBeltModal() {
+  beltModal.classList.remove("open");
+  selectedBeltMemberId = null;
+  beltModalError.textContent = "";
+}
+
+async function saveBeltChange() {
+  const beltLevelId = Number(beltLevelSelect.value);
+  const awardedDate = beltAwardedDate.value;
+
+  if (!selectedBeltMemberId) {
+    beltModalError.textContent =
+      "ไม่พบข้อมูลนักเรียน";
+    return;
+  }
+
+  if (!beltLevelId) {
+    beltModalError.textContent =
+      "กรุณาเลือกสาย";
+    return;
+  }
+
+  if (!awardedDate) {
+    beltModalError.textContent =
+      "กรุณาเลือกวันที่ได้รับสาย";
+    return;
+  }
+
+  saveBeltButton.disabled = true;
+  saveBeltButton.textContent = "กำลังบันทึก...";
+  beltModalError.textContent = "";
+
+  try {
+    const response = await fetch("/api/update-belt", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-key": adminKey
+      },
+      body: JSON.stringify({
+        memberId: selectedBeltMemberId,
+        beltLevelId,
+        awardedDate,
+        awardedBy: beltAwardedBy.value.trim(),
+        note: beltNote.value.trim()
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      const details = data.details
+        ? `\n${
+            typeof data.details === "string"
+              ? data.details
+              : JSON.stringify(data.details)
+          }`
+        : "";
+
+      throw new Error(
+        (data.error || "เปลี่ยนสายไม่สำเร็จ") +
+        details
+      );
+    }
+
+    closeBeltModal();
+    await loadOverview();
+
+  } catch (error) {
+    beltModalError.textContent = error.message;
+
+    saveBeltButton.disabled = false;
+    saveBeltButton.textContent =
+      "บันทึกการเปลี่ยนสาย";
+  }
+}
+function renderSelectedSession() {
       const sessionId = Number(sessionSelect.value);
 
       const session = overviewData.sessions.find(
@@ -650,12 +939,27 @@ async function teacherCheckIn(sessionId, memberId, button) {
         const memberDetail = document.createElement("p");
         memberDetail.className = "member-detail";
 
-       if (member.current_belt) {
-  memberDetail.textContent =
-    `🥋 ${member.current_belt.belt_name}` +
-    ` • ได้รับเมื่อ ${formatBeltDate(
+if (member.current_belt) {
+  const beltBadge = document.createElement("span");
+  beltBadge.className = "belt-badge";
+
+  const beltColor = document.createElement("span");
+  beltColor.className = "belt-color";
+  beltColor.style.backgroundColor =
+    member.current_belt.color_hex || "#ffffff";
+
+  const beltText = document.createElement("span");
+  beltText.textContent =
+    `${member.current_belt.belt_name} • ` +
+    `ได้รับเมื่อ ${formatBeltDate(
       member.current_belt.awarded_date
     )}`;
+
+  beltBadge.appendChild(beltColor);
+  beltBadge.appendChild(beltText);
+
+  memberDetail.textContent = "";
+  memberDetail.appendChild(beltBadge);
 } else {
   memberDetail.textContent =
     member.phone ||
@@ -664,6 +968,25 @@ async function teacherCheckIn(sessionId, memberId, button) {
 }
         details.appendChild(name);
         details.appendChild(memberDetail);
+        const memberActions =
+  document.createElement("div");
+
+memberActions.className = "member-actions";
+
+const changeBeltButton =
+  document.createElement("button");
+
+changeBeltButton.type = "button";
+changeBeltButton.className =
+  "change-belt-button";
+changeBeltButton.textContent = "🥋 เปลี่ยนสาย";
+
+changeBeltButton.addEventListener("click", () => {
+  openBeltModal(member);
+});
+
+memberActions.appendChild(changeBeltButton);
+details.appendChild(memberActions);
 
         const statusArea = document.createElement("div");
 statusArea.className = "status-area";
@@ -754,7 +1077,21 @@ statusArea.className = "status-area";
       adminArea.style.display = "none";
       loginArea.style.display = "block";
     });
+cancelBeltButton.addEventListener(
+  "click",
+  closeBeltModal
+);
 
+saveBeltButton.addEventListener(
+  "click",
+  saveBeltChange
+);
+
+beltModal.addEventListener("click", (event) => {
+  if (event.target === beltModal) {
+    closeBeltModal();
+  }
+});
     const savedAdminKey =
       sessionStorage.getItem("gambitAdminKey");
 
