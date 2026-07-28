@@ -25,10 +25,13 @@ export default {
       const lineChannelId = process.env.LINE_CHANNEL_ID;
 
       if (!supabaseUrl || !supabaseSecretKey || !lineChannelId) {
-        return json({ error: "ตั้งค่า Environment Variables ไม่ครบ" }, 500);
+        return json(
+          { error: "ตั้งค่า Environment Variables ไม่ครบ" },
+          500
+        );
       }
 
-      // ตรวจสอบ ID token กับ LINE
+      // ตรวจสอบตัวตนกับ LINE
       const verifyBody = new URLSearchParams({
         id_token: idToken,
         client_id: lineChannelId
@@ -60,28 +63,70 @@ export default {
       const lineUserId = lineProfile.sub;
       const displayName = lineProfile.name || "สมาชิก";
       const now = new Date().toISOString();
+
       function getThailandDateKey(dateValue) {
-  const date = new Date(dateValue);
+        const date = new Date(dateValue);
 
-  // ประเทศไทย UTC+7 และไม่มีการปรับเวลา DST
-  const thailandTime = new Date(
-    date.getTime() + 7 * 60 * 60 * 1000
-  );
+        const thailandTime = new Date(
+          date.getTime() + 7 * 60 * 60 * 1000
+        );
 
-  return thailandTime.toISOString().slice(0, 10);
-}
+        return thailandTime.toISOString().slice(0, 10);
+      }
 
       const commonHeaders = {
         apikey: supabaseSecretKey,
+        Authorization: `Bearer ${supabaseSecretKey}`,
         "Content-Type": "application/json",
         Accept: "application/json"
       };
 
-      // ตรวจสอบว่าสมาชิกเคยมีข้อมูลหรือยัง
+      const todayThailand = getThailandDateKey(now);
+
+      // หา Session ที่เปิดอยู่ของวันนี้
+      const sessionResponse = await fetch(
+        `${supabaseUrl}/rest/v1/class_sessions` +
+          `?session_date=eq.${todayThailand}` +
+          `&status=eq.open` +
+          `&select=id,class_id,session_date,start_time,end_time` +
+          `&order=start_time.asc` +
+          `&limit=1`,
+        {
+          headers: commonHeaders
+        }
+      );
+
+      if (!sessionResponse.ok) {
+        const details = await sessionResponse.text();
+
+        return json(
+          {
+            error: "ไม่สามารถอ่านข้อมูลคลาสวันนี้",
+            details
+          },
+          500
+        );
+      }
+
+      const sessions = await sessionResponse.json();
+
+      if (sessions.length === 0) {
+        return json(
+          {
+            error: "วันนี้ยังไม่ได้เปิดคลาส"
+          },
+          400
+        );
+      }
+
+      const sessionId = sessions[0].id;
+
+      // ค้นหาสมาชิกจาก LINE User ID
       const memberResponse = await fetch(
-        `${supabaseUrl}/rest/v1/members?line_user_id=eq.${encodeURIComponent(
-          lineUserId
-        )}&select=id,line_user_id,display_name,checkin_count,last_checkin`,
+        `${supabaseUrl}/rest/v1/members` +
+          `?line_user_id=eq.${encodeURIComponent(lineUserId)}` +
+          `&select=id,line_user_id,display_name,checkin_count,last_checkin` +
+          `&limit=1`,
         {
           headers: commonHeaders
         }
@@ -89,15 +134,22 @@ export default {
 
       if (!memberResponse.ok) {
         const details = await memberResponse.text();
-        return json({ error: "อ่านข้อมูลสมาชิกไม่สำเร็จ", details }, 500);
+
+        return json(
+          {
+            error: "อ่านข้อมูลสมาชิกไม่สำเร็จ",
+            details
+          },
+          500
+        );
       }
 
       const members = await memberResponse.json();
-      let member;
+      let currentMember;
 
+      // สร้างสมาชิกใหม่ หากยังไม่มีในระบบ
       if (members.length === 0) {
-        // สมาชิกใหม่
-        const insertResponse = await fetch(
+        const insertMemberResponse = await fetch(
           `${supabaseUrl}/rest/v1/members`,
           {
             method: "POST",
@@ -108,78 +160,164 @@ export default {
             body: JSON.stringify({
               line_user_id: lineUserId,
               display_name: displayName,
-              last_checkin: now,
-              checkin_count: 1
+              last_checkin: null,
+              checkin_count: 0,
+              created_by: "line"
             })
           }
         );
 
-        if (!insertResponse.ok) {
-          const details = await insertResponse.text();
-          return json({ error: "เพิ่มสมาชิกไม่สำเร็จ", details }, 500);
-        }
+        if (!insertMemberResponse.ok) {
+          const details = await insertMemberResponse.text();
 
-        [member] = await insertResponse.json();
-     } else {
-  // สมาชิกเดิม
-  const oldMember = members[0];
-
-  const todayThailand = getThailandDateKey(now);
-
-  const lastCheckinThailand = oldMember.last_checkin
-    ? getThailandDateKey(oldMember.last_checkin)
-    : null;
-
-  // ป้องกันเช็กชื่อซ้ำในวันเดียวกัน
-  if (lastCheckinThailand === todayThailand) {
-    return json({
-      success: true,
-      alreadyCheckedIn: true,
-      message: "วันนี้เช็กชื่อเรียบร้อยแล้ว",
-      displayName: oldMember.display_name || displayName,
-      checkinCount: Number(oldMember.checkin_count || 0),
-      checkedInAt: oldMember.last_checkin
-    });
-  }
-
-  const newCount = Number(oldMember.checkin_count || 0) + 1;
-
-        const updateResponse = await fetch(
-          `${supabaseUrl}/rest/v1/members?id=eq.${oldMember.id}`,
-          {
-            method: "PATCH",
-            headers: {
-              ...commonHeaders,
-              Prefer: "return=representation"
+          return json(
+            {
+              error: "เพิ่มสมาชิกไม่สำเร็จ",
+              details
             },
-            body: JSON.stringify({
-              display_name: displayName,
-              last_checkin: now,
-              checkin_count: newCount
-            })
-          }
-        );
-
-        if (!updateResponse.ok) {
-          const details = await updateResponse.text();
-          return json({ error: "อัปเดตการเช็กอินไม่สำเร็จ", details }, 500);
+            500
+          );
         }
 
-        [member] = await updateResponse.json();
+        [currentMember] = await insertMemberResponse.json();
+      } else {
+        currentMember = members[0];
       }
+
+      // ตรวจสอบว่าคลาสนี้มีการเช็กชื่อแล้วหรือยัง
+      const attendanceResponse = await fetch(
+        `${supabaseUrl}/rest/v1/attendance` +
+          `?session_id=eq.${sessionId}` +
+          `&member_id=eq.${currentMember.id}` +
+          `&select=id,checked_in_at,checkin_method` +
+          `&limit=1`,
+        {
+          headers: commonHeaders
+        }
+      );
+
+      if (!attendanceResponse.ok) {
+        const details = await attendanceResponse.text();
+
+        return json(
+          {
+            error: "ตรวจสอบประวัติการเช็กชื่อไม่สำเร็จ",
+            details
+          },
+          500
+        );
+      }
+
+      const attendanceRecords = await attendanceResponse.json();
+
+      // ครูหรือนักเรียนเช็กคลาสนี้ไปแล้ว
+      if (attendanceRecords.length > 0) {
+        return json({
+          success: true,
+          alreadyCheckedIn: true,
+          message: "คลาสนี้เช็กชื่อเรียบร้อยแล้ว",
+          displayName: currentMember.display_name || displayName,
+          checkinCount: Number(currentMember.checkin_count || 0),
+          checkedInAt: attendanceRecords[0].checked_in_at,
+          checkinMethod: attendanceRecords[0].checkin_method,
+          sessionId
+        });
+      }
+
+      // บันทึกประวัติการเข้าเรียน
+      const attendanceInsertResponse = await fetch(
+        `${supabaseUrl}/rest/v1/attendance`,
+        {
+          method: "POST",
+          headers: {
+            ...commonHeaders,
+            Prefer: "return=representation"
+          },
+          body: JSON.stringify({
+            session_id: sessionId,
+            member_id: currentMember.id,
+            checked_in_at: now,
+            checkin_method: "student",
+            checked_in_by: lineUserId
+          })
+        }
+      );
+
+      if (!attendanceInsertResponse.ok) {
+        const details = await attendanceInsertResponse.text();
+
+        return json(
+          {
+            error: "บันทึกประวัติการเข้าเรียนไม่สำเร็จ",
+            details
+          },
+          500
+        );
+      }
+
+      const lastCheckinThailand = currentMember.last_checkin
+        ? getThailandDateKey(currentMember.last_checkin)
+        : null;
+
+      const oldCount = Number(currentMember.checkin_count || 0);
+
+      // ป้องกันการนับซ้ำขณะย้ายจากระบบเก่า
+      const newCount =
+        lastCheckinThailand === todayThailand
+          ? oldCount
+          : oldCount + 1;
+
+      // อัปเดตข้อมูลสรุปของสมาชิก
+      const updateResponse = await fetch(
+        `${supabaseUrl}/rest/v1/members?id=eq.${currentMember.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            ...commonHeaders,
+            Prefer: "return=representation"
+          },
+          body: JSON.stringify({
+            display_name: displayName,
+            last_checkin: now,
+            checkin_count: newCount,
+            updated_at: now
+          })
+        }
+      );
+
+      if (!updateResponse.ok) {
+        const details = await updateResponse.text();
+
+        return json(
+          {
+            error: "อัปเดตข้อมูลสมาชิกไม่สำเร็จ",
+            details
+          },
+          500
+        );
+      }
+
+      const updatedMembers = await updateResponse.json();
+      const member = updatedMembers[0];
 
       return json({
         success: true,
+        alreadyCheckedIn: false,
         message: "เช็กอินสำเร็จ",
         displayName: member.display_name,
         checkinCount: member.checkin_count,
-        checkedInAt: member.last_checkin
+        checkedInAt: member.last_checkin,
+        checkinMethod: "student",
+        sessionId
       });
     } catch (error) {
       return json(
         {
           error: "ระบบเกิดข้อผิดพลาด",
-          details: error instanceof Error ? error.message : String(error)
+          details:
+            error instanceof Error
+              ? error.message
+              : String(error)
         },
         500
       );
