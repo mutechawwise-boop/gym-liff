@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>GAMBIT JIUJITSU Admin</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px 16px;
+      font-family: Arial, sans-serif;
+      background: #f2f4f6;
+      color: #181818;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .header {
+      margin-bottom: 20px;
+      padding: 22px;
+      background: #111111;
+      color: #ffffff;
+      border-radius: 18px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 25px;
+    }
+
+    .header p {
+      margin: 8px 0 0;
+      color: #d6d6d6;
+    }
+
+    .card {
+      margin-bottom: 18px;
+      padding: 20px;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    .login-card {
+      max-width: 440px;
+      margin: 50px auto;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      min-height: 46px;
+      padding: 11px 13px;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    input,
+    select {
+      border: 1px solid #cccccc;
+      background: #ffffff;
+    }
+
+    button {
+      border: 0;
+      background: #111111;
+      color: #ffffff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .login-button {
+      margin-top: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    .toolbar > div {
+      flex: 1;
+    }
+
+    .refresh-button {
+      width: auto;
+      min-width: 130px;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .summary-box {
+      padding: 16px;
+      background: #ffffff;
+      border-radius: 14px;
+      text-align: center;
+    }
+
+    .summary-number {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .session-title {
+      margin: 0 0 5px;
+      font-size: 21px;
+    }
+
+    .session-time {
+      margin: 0;
+      color: #666666;
+    }
+
+    .member-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .member-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      background: #f7f7f7;
+      border-radius: 12px;
+    }
+
+    .member-name {
+      margin: 0;
+      font-weight: bold;
+    }
+
+    .member-detail {
+      margin: 5px 0 0;
+      color: #777777;
+      font-size: 13px;
+    }
+
+    .status-badge {
+      flex-shrink: 0;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .checked {
+      background: #e5f8eb;
+      color: #087b32;
+    }
+
+    .not-checked {
+      background: #fff0f0;
+      color: #b42318;
+    }
+
+    .method {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #666666;
+    }
+
+    .empty {
+      padding: 25px;
+      color: #777777;
+      text-align: center;
+    }
+
+    .error {
+      margin-top: 14px;
+      color: #c62828;
+      white-space: pre-line;
+    }
+
+    .loading {
+      padding: 30px;
+      text-align: center;
+      color: #666666;
+    }
+
+    .logout-button {
+      width: auto;
+      margin-top: 14px;
+      padding: 8px 14px;
+      min-height: 38px;
+      background: #ffffff;
+      color: #111111;
+    }
+
+    #adminArea {
+      display: none;
+    }
+
+    @media (max-width: 650px) {
+      .toolbar {
+        display: block;
+      }
+
+      .toolbar > div,
+      .refresh-button {
+        width: 100%;
+        margin-bottom: 12px;
+      }
+
+      .summary {
+        grid-template-columns: 1fr;
+      }
+
+      .member-row {
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <section id="loginArea" class="card login-card">
+      <h1>🔐 หน้า Admin</h1>
+      <p>กรอกรหัสสำหรับคุณครูเพื่อดูรายชื่อเข้าเรียน</p>
+
+      <label for="adminKey">รหัส Admin</label>
+
+      <input
+        id="adminKey"
+        type="password"
+        autocomplete="current-password"
+        placeholder="กรอกรหัส Admin"
+      >
+
+      <button
+        id="loginButton"
+        class="login-button"
+        type="button"
+      >
+        เข้าสู่ระบบ
+      </button>
+
+      <p id="loginError" class="error"></p>
+    </section>
+
+    <section id="adminArea">
+      <header class="header">
+        <h1>🥋 GAMBIT JIUJITSU</h1>
+        <p id="dateText">ระบบตรวจสอบรายชื่อเข้าเรียน</p>
+
+        <button
+          id="logoutButton"
+          class="logout-button"
+          type="button"
+        >
+          ออกจากระบบ
+        </button>
+      </header>
+
+      <section class="toolbar card">
+        <div>
+          <label for="sessionSelect">เลือกคลาส</label>
+          <select id="sessionSelect"></select>
+        </div>
+
+        <button
+          id="refreshButton"
+          class="refresh-button"
+          type="button"
+        >
+          🔄 โหลดข้อมูลใหม่
+        </button>
+      </section>
+
+      <section class="summary">
+        <div class="summary-box">
+          <span id="totalCount" class="summary-number">0</span>
+          สมาชิกทั้งหมด
+        </div>
+
+        <div class="summary-box">
+          <span id="checkedCount" class="summary-number">0</span>
+          เช็กชื่อแล้ว
+        </div>
+
+        <div class="summary-box">
+          <span id="remainingCount" class="summary-number">0</span>
+          ยังไม่เช็ก
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 id="sessionTitle" class="session-title">
+          ยังไม่ได้เลือกคลาส
+        </h2>
+
+        <p id="sessionTime" class="session-time"></p>
+
+        <div id="content" class="loading">
+          กำลังโหลดข้อมูล...
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const loginArea = document.getElementById("loginArea");
+    const adminArea = document.getElementById("adminArea");
+    const adminKeyInput = document.getElementById("adminKey");
+    const loginButton = document.getElementById("loginButton");
+    const loginError = document.getElementById("loginError");
+    const logoutButton = document.getElementById("logoutButton");
+    const refreshButton = document.getElementById("refreshButton");
+    const sessionSelect = document.getElementById("sessionSelect");
+    const content = document.getElementById("content");
+
+    let adminKey = "";
+    let overviewData = null;
+
+    function formatTime(timeValue) {
+      if (!timeValue) {
+        return "-";
+      }
+
+      return String(timeValue).slice(0, 5);
+    }
+
+    function formatCheckinTime(dateValue) {
+      if (!dateValue) {
+        return "-";
+      }
+
+      return new Intl.DateTimeFormat("th-TH", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Asia/Bangkok"
+      }).format(new Date(dateValue));
+    }
+
+    function getMemberName(member) {
+      return (
+        member.nickname ||
+        member.full_name ||
+        member.display_name ||
+        "ไม่ระบุชื่อ"
+      );
+    }
+
+    function getCheckinMethod(method) {
+      if (method === "teacher") {
+        return "ครูเช็กให้";
+      }
+
+      if (method === "manual") {
+        return "เพิ่มย้อนหลัง";
+      }
+
+      return "นักเรียนเช็กเอง";
+    }
+
+    async function loadOverview() {
+      content.className = "loading";
+      content.textContent = "กำลังโหลดข้อมูล...";
+
+      refreshButton.disabled = true;
+      loginError.textContent = "";
+
+      try {
+        const response = await fetch("/api/admin-overview", {
+          method: "GET",
+          headers: {
+            "x-admin-key": adminKey
+          }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.error ||
+            "ไม่สามารถโหลดข้อมูล Admin ได้"
+          );
+        }
+
+        overviewData = data;
+
+        loginArea.style.display = "none";
+        adminArea.style.display = "block";
+
+        document.getElementById("dateText").textContent =
+          `รายชื่อเข้าเรียนประจำวันที่ ${new Intl.DateTimeFormat(
+            "th-TH",
+            {
+              dateStyle: "long",
+              timeZone: "Asia/Bangkok"
+            }
+          ).format(new Date(`${data.date}T12:00:00+07:00`))}`;
+
+        renderSessionOptions();
+
+      } catch (error) {
+        adminArea.style.display = "none";
+        loginArea.style.display = "block";
+        loginError.textContent = error.message;
+        sessionStorage.removeItem("gambitAdminKey");
+      } finally {
+        refreshButton.disabled = false;
+        loginButton.disabled = false;
+        loginButton.textContent = "เข้าสู่ระบบ";
+      }
+    }
+
+    function renderSessionOptions() {
+      sessionSelect.innerHTML = "";
+
+      if (!overviewData.sessions.length) {
+        sessionSelect.innerHTML =
+          `<option value="">วันนี้ยังไม่มีคลาสที่เปิดอยู่</option>`;
+
+        renderEmptySession();
+        return;
+      }
+
+      overviewData.sessions.forEach((session) => {
+        const option = document.createElement("option");
+
+        option.value = String(session.id);
+
+        option.textContent =
+          `${formatTime(session.start_time)} ` +
+          `${session.classes?.name || "ไม่ระบุชื่อคลาส"}`;
+
+        sessionSelect.appendChild(option);
+      });
+
+      renderSelectedSession();
+    }
+
+    function renderEmptySession() {
+      document.getElementById("sessionTitle").textContent =
+        "วันนี้ยังไม่มีคลาสที่เปิดอยู่";
+
+      document.getElementById("sessionTime").textContent = "";
+
+      document.getElementById("totalCount").textContent = "0";
+      document.getElementById("checkedCount").textContent = "0";
+      document.getElementById("remainingCount").textContent = "0";
+
+      content.className = "empty";
+      content.textContent =
+        "กรุณาสร้างหรือเปิดคลาสก่อนตรวจสอบรายชื่อ";
+    }
+
+    function renderSelectedSession() {
+      const sessionId = Number(sessionSelect.value);
+
+      const session = overviewData.sessions.find(
+        (item) => item.id === sessionId
+      );
+
+      if (!session) {
+        renderEmptySession();
+        return;
+      }
+
+      const sessionAttendance = overviewData.attendance.filter(
+        (record) => record.session_id === sessionId
+      );
+
+      const attendanceByMember = new Map(
+        sessionAttendance.map((record) => [
+          record.member_id,
+          record
+        ])
+      );
+
+      const checkedCount = sessionAttendance.length;
+      const totalCount = overviewData.members.length;
+      const remainingCount = Math.max(
+        totalCount - checkedCount,
+        0
+      );
+
+      document.getElementById("sessionTitle").textContent =
+        session.classes?.name || "ไม่ระบุชื่อคลาส";
+
+      document.getElementById("sessionTime").textContent =
+        `${formatTime(session.start_time)}–` +
+        `${formatTime(session.end_time)} น.`;
+
+      document.getElementById("totalCount").textContent =
+        String(totalCount);
+
+      document.getElementById("checkedCount").textContent =
+        String(checkedCount);
+
+      document.getElementById("remainingCount").textContent =
+        String(remainingCount);
+
+      if (!overviewData.members.length) {
+        content.className = "empty";
+        content.textContent = "ยังไม่มีสมาชิกในระบบ";
+        return;
+      }
+
+      const sortedMembers = [...overviewData.members].sort(
+        (first, second) => {
+          const firstChecked =
+            attendanceByMember.has(first.id);
+
+          const secondChecked =
+            attendanceByMember.has(second.id);
+
+          if (firstChecked !== secondChecked) {
+            return firstChecked ? -1 : 1;
+          }
+
+          return getMemberName(first).localeCompare(
+            getMemberName(second),
+            "th"
+          );
+        }
+      );
+
+      content.className = "member-list";
+      content.innerHTML = "";
+
+      sortedMembers.forEach((member) => {
+        const attendance =
+          attendanceByMember.get(member.id);
+
+        const row = document.createElement("article");
+        row.className = "member-row";
+
+        const details = document.createElement("div");
+
+        const name = document.createElement("p");
+        name.className = "member-name";
+        name.textContent = getMemberName(member);
+
+        const memberDetail = document.createElement("p");
+        memberDetail.className = "member-detail";
+
+        memberDetail.textContent =
+          member.phone ||
+          member.member_status ||
+          "สมาชิก";
+
+        details.appendChild(name);
+        details.appendChild(memberDetail);
+
+        const statusArea = document.createElement("div");
+
+        const badge = document.createElement("div");
+
+        if (attendance) {
+          badge.className = "status-badge checked";
+          badge.textContent =
+            `✅ ${formatCheckinTime(
+              attendance.checked_in_at
+            )}`;
+
+          const method = document.createElement("div");
+          method.className = "method";
+          method.textContent =
+            getCheckinMethod(attendance.checkin_method);
+
+          statusArea.appendChild(badge);
+          statusArea.appendChild(method);
+        } else {
+          badge.className = "status-badge not-checked";
+          badge.textContent = "ยังไม่เช็ก";
+
+          statusArea.appendChild(badge);
+        }
+
+        row.appendChild(details);
+        row.appendChild(statusArea);
+        content.appendChild(row);
+      });
+    }
+
+    async function login() {
+      const value = adminKeyInput.value.trim();
+
+      if (!value) {
+        loginError.textContent = "กรุณากรอกรหัส Admin";
+        return;
+      }
+
+      adminKey = value;
+
+      loginButton.disabled = true;
+      loginButton.textContent = "กำลังตรวจสอบ...";
+
+      sessionStorage.setItem(
+        "gambitAdminKey",
+        adminKey
+      );
+
+      await loadOverview();
+    }
+
+    loginButton.addEventListener("click", login);
+
+    adminKeyInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        login();
+      }
+    });
+
+    refreshButton.addEventListener(
+      "click",
+      loadOverview
+    );
+
+    sessionSelect.addEventListener(
+      "change",
+      renderSelectedSession
+    );
+
+    logoutButton.addEventListener("click", () => {
+      sessionStorage.removeItem("gambitAdminKey");
+      adminKey = "";
+      adminKeyInput.value = "";
+
+      adminArea.style.display = "none";
+      loginArea.style.display = "block";
+    });
+
+    const savedAdminKey =
+      sessionStorage.getItem("gambitAdminKey");
+
+    if (savedAdminKey) {
+      adminKey = savedAdminKey;
+      loadOverview();
+    }
+  </script>
+</body>
+</html>
