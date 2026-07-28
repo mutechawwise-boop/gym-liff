@@ -640,6 +640,8 @@
       memberFullName: document.getElementById("memberFullName"),
       memberPhone: document.getElementById("memberPhone"),
       memberStatus: document.getElementById("memberStatus"),
+      membershipStartDate: document.getElementById("membershipStartDate"),
+      membershipExpiryDate: document.getElementById("membershipExpiryDate"),
       createMemberClassList: document.getElementById("createMemberClassList"),
       createMemberError: document.getElementById("createMemberError"),
       cancelCreateMemberButton: document.getElementById("cancelCreateMemberButton"),
@@ -1352,6 +1354,11 @@
       const fullName = elements.memberFullName.value.trim();
       const phone = elements.memberPhone.value.trim();
       const memberStatus = elements.memberStatus.value;
+      const membershipStartDate =
+  elements.membershipStartDate.value;
+
+const membershipExpiryDate =
+  elements.membershipExpiryDate.value;
 
       const classIds = [
         ...elements.createMemberClassList.querySelectorAll(
@@ -1377,12 +1384,14 @@
             "x-admin-key": state.adminKey
           },
           body: JSON.stringify({
-            nickname,
-            fullName,
-            phone,
-            memberStatus,
-            classIds
-          })
+  nickname,
+  fullName,
+  phone,
+  memberStatus,
+  membershipStartDate,
+  membershipExpiryDate,
+  classIds
+})
         });
 
         closeCreateMemberModal();

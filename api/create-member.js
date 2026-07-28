@@ -77,6 +77,11 @@ export default {
         String(
           body.memberStatus || "active"
         ).trim();
+        const membershipStartDate =
+  String(body.membershipStartDate || "").trim();
+
+const membershipExpiryDate =
+  String(body.membershipExpiryDate || "").trim();
 
       const classIds = Array.isArray(
         body.classIds
