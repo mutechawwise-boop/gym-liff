@@ -404,7 +404,41 @@ textarea {
           ออกจากระบบ
         </button>
       </header>
+<section class="card">
+  <h2 style="margin-top: 0;">➕ เปิดคลาสวันนี้</h2>
 
+  <div class="toolbar">
+    <div>
+      <label for="newClassSelect">ประเภทคลาส</label>
+      <select id="newClassSelect"></select>
+    </div>
+
+    <div>
+      <label for="newStartTime">เวลาเริ่ม</label>
+      <input id="newStartTime" type="time" value="18:30">
+    </div>
+
+    <div>
+      <label for="newEndTime">เวลาสิ้นสุด</label>
+      <input id="newEndTime" type="time" value="20:30">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="newSessionNote">หมายเหตุ</label>
+    <input
+      id="newSessionNote"
+      type="text"
+      placeholder="เช่น Kids BJJ รอบเย็น"
+    >
+  </div>
+
+  <button id="createSessionButton" type="button">
+    เปิดคลาสวันนี้
+  </button>
+
+  <p id="createSessionError" class="error"></p>
+</section>
       <section class="toolbar card">
         <div>
           <label for="sessionSelect">เลือกคลาส</label>
@@ -501,6 +535,23 @@ textarea {
   </div>
 </section>
   <script>
+    const newClassSelect =
+  document.getElementById("newClassSelect");
+
+const newStartTime =
+  document.getElementById("newStartTime");
+
+const newEndTime =
+  document.getElementById("newEndTime");
+
+const newSessionNote =
+  document.getElementById("newSessionNote");
+
+const createSessionButton =
+  document.getElementById("createSessionButton");
+
+const createSessionError =
+  document.getElementById("createSessionError");
     const loginArea = document.getElementById("loginArea");
     const adminArea = document.getElementById("adminArea");
     const adminKeyInput = document.getElementById("adminKey");
@@ -610,7 +661,7 @@ function formatBeltDate(dateValue) {
         }
 
         overviewData = data;
-
+renderClassOptions();
         loginArea.style.display = "none";
         adminArea.style.display = "block";
 
@@ -622,7 +673,28 @@ function formatBeltDate(dateValue) {
               timeZone: "Asia/Bangkok"
             }
           ).format(new Date(`${data.date}T12:00:00+07:00`))}`;
+function renderClassOptions() {
+  newClassSelect.innerHTML = "";
 
+  const classes = overviewData.classes || [];
+
+  if (!classes.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "ยังไม่มีประเภทคลาส";
+    newClassSelect.appendChild(option);
+    return;
+  }
+
+  classes.forEach((classItem) => {
+    const option = document.createElement("option");
+
+    option.value = String(classItem.id);
+    option.textContent = classItem.name;
+
+    newClassSelect.appendChild(option);
+  });
+}
         renderSessionOptions();
 
       } catch (error) {
@@ -1029,7 +1101,69 @@ statusArea.className = "status-area";
         content.appendChild(row);
       });
     }
+async function createSession() {
+  const classId = Number(newClassSelect.value);
+  const startTime = newStartTime.value;
+  const endTime = newEndTime.value;
 
+  if (!classId) {
+    createSessionError.textContent =
+      "กรุณาเลือกประเภทคลาส";
+    return;
+  }
+
+  if (!startTime || !endTime) {
+    createSessionError.textContent =
+      "กรุณาระบุเวลาเริ่มและเวลาสิ้นสุด";
+    return;
+  }
+
+  createSessionButton.disabled = true;
+  createSessionButton.textContent = "กำลังเปิดคลาส...";
+  createSessionError.textContent = "";
+
+  try {
+    const response = await fetch("/api/create-session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-key": adminKey
+      },
+      body: JSON.stringify({
+        classId,
+        startTime,
+        endTime,
+        note: newSessionNote.value.trim()
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      const details = data.details
+        ? `\n${
+            typeof data.details === "string"
+              ? data.details
+              : JSON.stringify(data.details)
+          }`
+        : "";
+
+      throw new Error(
+        (data.error || "เปิดคลาสไม่สำเร็จ") + details
+      );
+    }
+
+    newSessionNote.value = "";
+
+    await loadOverview();
+
+  } catch (error) {
+    createSessionError.textContent = error.message;
+  } finally {
+    createSessionButton.disabled = false;
+    createSessionButton.textContent = "เปิดคลาสวันนี้";
+  }
+}
     async function login() {
       const value = adminKeyInput.value.trim();
 
@@ -1092,7 +1226,11 @@ beltModal.addEventListener("click", (event) => {
     closeBeltModal();
   }
 });
-    const savedAdminKey =
+createSessionButton.addEventListener(
+  "click",
+  createSession
+);
+const savedAdminKey =
       sessionStorage.getItem("gambitAdminKey");
 
     if (savedAdminKey) {

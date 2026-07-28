@@ -161,6 +161,28 @@ if (!beltLevelsResponse.ok) {
 
 const beltLevels = await beltLevelsResponse.json();
       // ดึงการเช็กชื่อของคลาสวันนี้
+      // ดึงประเภทคลาสทั้งหมดสำหรับแบบฟอร์มเปิดคลาส
+const classesResponse = await fetch(
+  `${supabaseUrl}/rest/v1/classes` +
+    `?active=eq.true` +
+    `&select=id,name,description` +
+    `&order=name.asc`,
+  { headers }
+);
+
+if (!classesResponse.ok) {
+  const details = await classesResponse.text();
+
+  return json(
+    {
+      error: "อ่านรายการประเภทคลาสไม่สำเร็จ",
+      details
+    },
+    500
+  );
+}
+
+const classes = await classesResponse.json();
       const sessionIds = sessions.map(
         (session) => session.id
       );
@@ -193,13 +215,14 @@ const beltLevels = await beltLevelsResponse.json();
           await attendanceResponse.json();
       }
 
-     return json({
+ return json({
   success: true,
   date: today,
   sessions,
   members,
   attendance,
-  beltLevels
+  beltLevels,
+  classes
 });
     } catch (error) {
       return json(
