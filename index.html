@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Gym Check-in</title>
+
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+
+<body>
+  <h1>🏋️ Gym Check-in</h1>
+  <p id="status">กำลังโหลด...</p>
+
+  <script>
+    async function main() {
+      try {
+        await liff.init({
+          liffId: "2010879060-PKqAwFmt"
+        });
+
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+
+        const profile = await liff.getProfile();
+
+        document.getElementById("status").textContent =
+          "สวัสดี " + profile.displayName;
+
+      } catch (error) {
+        document.getElementById("status").textContent =
+          "เกิดข้อผิดพลาด: " + error.message;
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
