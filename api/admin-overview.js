@@ -83,12 +83,20 @@ export default {
       const sessions = await sessionsResponse.json();
 
       // ดึงสมาชิกทั้งหมด
-      const membersResponse = await fetch(
-        `${supabaseUrl}/rest/v1/members` +
-          `?select=id,display_name,full_name,nickname,phone,member_status,is_guest` +
-          `&order=display_name.asc`,
-        { headers }
-      );
+     const membersResponse = await fetch(
+  `${supabaseUrl}/rest/v1/members` +
+    `?select=` +
+    `id,` +
+    `display_name,` +
+    `full_name,` +
+    `nickname,` +
+    `phone,` +
+    `member_status,` +
+    `is_guest,` +
+    `member_classes(class_id,status)` +
+    `&order=display_name.asc`,
+  { headers }
+);
 
       if (!membersResponse.ok) {
         const details = await membersResponse.text();

@@ -932,20 +932,41 @@ function renderSelectedSession() {
         renderEmptySession();
         return;
       }
+const classId = Number(session.classes?.id);
 
+const classMembers = overviewData.members.filter((member) => {
+  const enrollments = Array.isArray(member.member_classes)
+    ? member.member_classes
+    : [];
+
+  return enrollments.some((enrollment) => {
+    return (
+      Number(enrollment.class_id) === classId &&
+      enrollment.status === "active"
+    );
+  });
+});
       const sessionAttendance = overviewData.attendance.filter(
         (record) => record.session_id === sessionId
       );
 
-      const attendanceByMember = new Map(
-        sessionAttendance.map((record) => [
-          record.member_id,
-          record
-        ])
-      );
+     const attendanceByMember = new Map(
+  validSessionAttendance.map((record) => [
+    record.member_id,
+    record
+  ])
+);
 
-      const checkedCount = sessionAttendance.length;
-      const totalCount = overviewData.members.length;
+      const classMemberIds = new Set(
+  classMembers.map((member) => member.id)
+);
+
+const validSessionAttendance = sessionAttendance.filter(
+  (record) => classMemberIds.has(record.member_id)
+);
+
+const checkedCount = validSessionAttendance.length;
+const totalCount = classMembers.length;
       const remainingCount = Math.max(
         totalCount - checkedCount,
         0
@@ -967,9 +988,9 @@ function renderSelectedSession() {
       document.getElementById("remainingCount").textContent =
         String(remainingCount);
 
-      if (!overviewData.members.length) {
+      if (!classMembers.length) {
         content.className = "empty";
-        content.textContent = "ยังไม่มีสมาชิกในระบบ";
+        content.textContent = "ยังไม่มีสมาชิกที่ลงทะเบียนในคลาสนี้";
         return;
       }
 
