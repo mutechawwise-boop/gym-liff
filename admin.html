@@ -2,17 +2,11 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GAMBIT JIUJITSU Admin</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -25,32 +19,32 @@
 
     .container {
       width: 100%;
-      max-width: 900px;
+      max-width: 920px;
       margin: 0 auto;
     }
 
     .header {
       margin-bottom: 20px;
       padding: 22px;
-      background: #111111;
-      color: #ffffff;
+      background: #111;
+      color: #fff;
       border-radius: 18px;
     }
 
     .header h1 {
       margin: 0;
-      font-size: 25px;
+      font-size: 26px;
     }
 
     .header p {
       margin: 8px 0 0;
-      color: #d6d6d6;
+      color: #ddd;
     }
 
     .card {
       margin-bottom: 18px;
       padding: 20px;
-      background: #ffffff;
+      background: #fff;
       border-radius: 16px;
       box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
     }
@@ -63,30 +57,37 @@
     label {
       display: block;
       margin-bottom: 8px;
-      font-weight: bold;
+      font-weight: 700;
     }
 
     input,
     select,
+    textarea,
     button {
       width: 100%;
       min-height: 46px;
       padding: 11px 13px;
       border-radius: 10px;
-      font-size: 16px;
+      font: inherit;
     }
 
     input,
-    select {
-      border: 1px solid #cccccc;
-      background: #ffffff;
+    select,
+    textarea {
+      border: 1px solid #ccc;
+      background: #fff;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
     }
 
     button {
       border: 0;
-      background: #111111;
-      color: #ffffff;
-      font-weight: bold;
+      background: #111;
+      color: #fff;
+      font-weight: 700;
       cursor: pointer;
     }
 
@@ -95,8 +96,20 @@
       opacity: 0.55;
     }
 
-    .login-button {
+    .secondary-button,
+    .change-belt-button,
+    .manage-class-button,
+    .logout-button {
+      border: 1px solid #ccc;
+      background: #fff;
+      color: #111;
+    }
+
+    .logout-button {
+      width: auto;
+      min-height: 38px;
       margin-top: 14px;
+      padding: 8px 14px;
     }
 
     .toolbar {
@@ -106,14 +119,20 @@
       margin-bottom: 18px;
     }
 
-    .toolbar > div {
-      flex: 1;
-    }
+    .toolbar > div { flex: 1; }
 
     .refresh-button {
       width: auto;
-      min-width: 130px;
+      min-width: 150px;
     }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .form-group { margin-bottom: 16px; }
 
     .summary {
       display: grid;
@@ -124,7 +143,7 @@
 
     .summary-box {
       padding: 16px;
-      background: #ffffff;
+      background: #fff;
       border-radius: 14px;
       text-align: center;
     }
@@ -133,17 +152,17 @@
       display: block;
       margin-bottom: 5px;
       font-size: 28px;
-      font-weight: bold;
+      font-weight: 700;
     }
 
     .session-title {
       margin: 0 0 5px;
-      font-size: 21px;
+      font-size: 22px;
     }
 
     .session-time {
       margin: 0;
-      color: #666666;
+      color: #666;
     }
 
     .member-list {
@@ -156,7 +175,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      gap: 16px;
       padding: 14px;
       background: #f7f7f7;
       border-radius: 12px;
@@ -164,37 +183,44 @@
 
     .member-name {
       margin: 0;
-      font-weight: bold;
+      font-weight: 700;
     }
 
     .member-detail {
       margin: 5px 0 0;
-      color: #777777;
+      color: #777;
       font-size: 13px;
     }
-.teacher-checkin-button {
-  width: auto;
-  min-height: 38px;
-  padding: 8px 12px;
-  background: #111111;
-  font-size: 14px;
-  white-space: nowrap;
-}
 
-.teacher-checkin-button:disabled {
-  opacity: 0.55;
-}
+    .member-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
 
-.status-area {
-  flex-shrink: 0;
-  text-align: right;
-}
-    .status-badge {
+    .change-belt-button,
+    .manage-class-button,
+    .teacher-checkin-button {
+      width: auto;
+      min-height: 36px;
+      padding: 7px 11px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .status-area {
       flex-shrink: 0;
+      text-align: right;
+    }
+
+    .status-badge {
+      display: inline-block;
       padding: 7px 10px;
       border-radius: 999px;
       font-size: 13px;
-      font-weight: bold;
+      font-weight: 700;
     }
 
     .checked {
@@ -202,20 +228,35 @@
       color: #087b32;
     }
 
-    .not-checked {
-      background: #fff0f0;
-      color: #b42318;
-    }
-
     .method {
       margin-top: 4px;
       font-size: 12px;
-      color: #666666;
+      color: #666;
     }
 
-    .empty {
-      padding: 25px;
-      color: #777777;
+    .belt-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 5px;
+      padding: 5px 9px;
+      border: 1px solid #ddd;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .belt-color {
+      width: 16px;
+      height: 16px;
+      border: 1px solid #999;
+      border-radius: 4px;
+    }
+
+    .empty,
+    .loading {
+      padding: 28px;
+      color: #777;
       text-align: center;
     }
 
@@ -225,29 +266,74 @@
       white-space: pre-line;
     }
 
-    .loading {
-      padding: 30px;
-      text-align: center;
-      color: #666666;
-    }
-
-    .logout-button {
-      width: auto;
+    .success {
       margin-top: 14px;
-      padding: 8px 14px;
-      min-height: 38px;
-      background: #ffffff;
-      color: #111111;
+      color: #087b32;
+      white-space: pre-line;
     }
 
-    #adminArea {
+    .modal-backdrop {
       display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.55);
+      align-items: center;
+      justify-content: center;
     }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 22px;
+      background: #fff;
+      border-radius: 18px;
+    }
+
+    .modal h2 { margin-top: 0; }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .modal-actions button { flex: 1; }
+
+    .checkbox-list {
+      display: grid;
+      gap: 10px;
+      margin: 12px 0 18px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 12px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .checkbox-item input {
+      width: 20px;
+      min-height: 20px;
+      margin: 0;
+    }
+
+    .checkbox-item span {
+      flex: 1;
+    }
+
+    #adminArea { display: none; }
 
     @media (max-width: 650px) {
-      .toolbar {
-        display: block;
-      }
+      .toolbar { display: block; }
 
       .toolbar > div,
       .refresh-button {
@@ -255,7 +341,8 @@
         margin-bottom: 12px;
       }
 
-      .summary {
+      .summary,
+      .action-grid {
         grid-template-columns: 1fr;
       }
 
@@ -263,105 +350,6 @@
         align-items: flex-start;
       }
     }
- .member-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-top: 8px;
-}
-
-.change-belt-button {
-  width: auto;
-  min-height: 34px;
-  padding: 7px 11px;
-  border: 1px solid #cccccc;
-  background: #ffffff;
-  color: #111111;
-  font-size: 13px;
-}
-
-.belt-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 5px;
-  padding: 5px 9px;
-  border: 1px solid #dddddd;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: bold;
-}
-
-.belt-color {
-  width: 16px;
-  height: 16px;
-  border: 1px solid #999999;
-  border-radius: 4px;
-}
-
-.modal-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  padding: 20px;
-  background: rgba(0, 0, 0, 0.55);
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-backdrop.open {
-  display: flex;
-}
-
-.modal {
-  width: 100%;
-  max-width: 470px;
-  max-height: 90vh;
-  overflow-y: auto;
-  padding: 22px;
-  background: #ffffff;
-  border-radius: 18px;
-}
-
-.modal h2 {
-  margin-top: 0;
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.modal-actions button {
-  flex: 1;
-}
-
-.cancel-button {
-  border: 1px solid #cccccc;
-  background: #ffffff;
-  color: #111111;
-}
-
-.modal-error {
-  min-height: 20px;
-  color: #c62828;
-  white-space: pre-line;
-}
-
-textarea {
-  width: 100%;
-  min-height: 90px;
-  padding: 11px 13px;
-  border: 1px solid #cccccc;
-  border-radius: 10px;
-  font: inherit;
-  resize: vertical;
-}
   </style>
 </head>
 
@@ -372,7 +360,6 @@ textarea {
       <p>กรอกรหัสสำหรับคุณครูเพื่อดูรายชื่อเข้าเรียน</p>
 
       <label for="adminKey">รหัส Admin</label>
-
       <input
         id="adminKey"
         type="password"
@@ -380,14 +367,7 @@ textarea {
         placeholder="กรอกรหัส Admin"
       >
 
-      <button
-        id="loginButton"
-        class="login-button"
-        type="button"
-      >
-        เข้าสู่ระบบ
-      </button>
-
+      <button id="loginButton" type="button">เข้าสู่ระบบ</button>
       <p id="loginError" class="error"></p>
     </section>
 
@@ -395,61 +375,67 @@ textarea {
       <header class="header">
         <h1>🥋 GAMBIT JIUJITSU</h1>
         <p id="dateText">ระบบตรวจสอบรายชื่อเข้าเรียน</p>
-
-        <button
-          id="logoutButton"
-          class="logout-button"
-          type="button"
-        >
+        <button id="logoutButton" class="logout-button" type="button">
           ออกจากระบบ
         </button>
       </header>
-<section class="card">
-  <h2 style="margin-top: 0;">➕ เปิดคลาสวันนี้</h2>
 
-  <div class="toolbar">
-    <div>
-      <label for="newClassSelect">ประเภทคลาส</label>
-      <select id="newClassSelect"></select>
-    </div>
+      <section class="card">
+        <h2 style="margin-top: 0;">👥 จัดการสมาชิก</h2>
+        <div class="action-grid">
+          <button id="openCreateMemberButton" type="button">
+            ➕ เพิ่มสมาชิกใหม่
+          </button>
+          <button id="refreshMembersButton" class="secondary-button" type="button">
+            🔄 โหลดข้อมูลสมาชิกใหม่
+          </button>
+        </div>
+        <p id="memberActionMessage"></p>
+      </section>
 
-    <div>
-      <label for="newStartTime">เวลาเริ่ม</label>
-      <input id="newStartTime" type="time" value="18:30">
-    </div>
+      <section class="card">
+        <h2 style="margin-top: 0;">➕ เปิดคลาสวันนี้</h2>
 
-    <div>
-      <label for="newEndTime">เวลาสิ้นสุด</label>
-      <input id="newEndTime" type="time" value="20:30">
-    </div>
-  </div>
+        <div class="toolbar">
+          <div>
+            <label for="newClassSelect">ประเภทคลาส</label>
+            <select id="newClassSelect"></select>
+          </div>
 
-  <div class="form-group">
-    <label for="newSessionNote">หมายเหตุ</label>
-    <input
-      id="newSessionNote"
-      type="text"
-      placeholder="เช่น Kids BJJ รอบเย็น"
-    >
-  </div>
+          <div>
+            <label for="newStartTime">เวลาเริ่ม</label>
+            <input id="newStartTime" type="time" value="18:30">
+          </div>
 
-  <button id="createSessionButton" type="button">
-    เปิดคลาสวันนี้
-  </button>
+          <div>
+            <label for="newEndTime">เวลาสิ้นสุด</label>
+            <input id="newEndTime" type="time" value="20:30">
+          </div>
+        </div>
 
-  <p id="createSessionError" class="error"></p>
-</section>
+        <div class="form-group">
+          <label for="newSessionNote">หมายเหตุ</label>
+          <input
+            id="newSessionNote"
+            type="text"
+            placeholder="เช่น Kids BJJ รอบเย็น"
+          >
+        </div>
+
+        <button id="createSessionButton" type="button">
+          เปิดคลาสวันนี้
+        </button>
+
+        <p id="createSessionError" class="error"></p>
+      </section>
+
       <section class="toolbar card">
         <div>
           <label for="sessionSelect">เลือกคลาส</label>
           <select id="sessionSelect"></select>
         </div>
 
-        <button
-          id="refreshButton"
-          class="refresh-button"
-          type="button"
-        >
+        <button id="refreshButton" class="refresh-button" type="button">
           🔄 โหลดข้อมูลใหม่
         </button>
       </section>
@@ -484,124 +470,200 @@ textarea {
       </section>
     </section>
   </main>
-<section id="beltModal" class="modal-backdrop">
-  <div class="modal">
-    <h2>🥋 เปลี่ยนสาย</h2>
 
-    <p id="beltMemberName"></p>
+  <section id="beltModal" class="modal-backdrop">
+    <div class="modal">
+      <h2>🥋 เปลี่ยนสาย</h2>
+      <p id="beltMemberName"></p>
 
-    <div class="form-group">
-      <label for="beltLevelSelect">เลือกสายใหม่</label>
-      <select id="beltLevelSelect"></select>
+      <div class="form-group">
+        <label for="beltLevelSelect">เลือกสายใหม่</label>
+        <select id="beltLevelSelect"></select>
+      </div>
+
+      <div class="form-group">
+        <label for="beltAwardedDate">วันที่ได้รับสาย</label>
+        <input id="beltAwardedDate" type="date">
+      </div>
+
+      <div class="form-group">
+        <label for="beltAwardedBy">ผู้มอบสาย</label>
+        <input id="beltAwardedBy" type="text" placeholder="เช่น Coach">
+      </div>
+
+      <div class="form-group">
+        <label for="beltNote">หมายเหตุ</label>
+        <textarea id="beltNote" placeholder="เช่น ผ่านการทดสอบเลื่อนสาย"></textarea>
+      </div>
+
+      <p id="beltModalError" class="error"></p>
+
+      <div class="modal-actions">
+        <button id="cancelBeltButton" class="secondary-button" type="button">
+          ยกเลิก
+        </button>
+        <button id="saveBeltButton" type="button">
+          บันทึกการเปลี่ยนสาย
+        </button>
+      </div>
     </div>
+  </section>
 
-    <div class="form-group">
-      <label for="beltAwardedDate">วันที่ได้รับสาย</label>
-      <input id="beltAwardedDate" type="date">
+  <section id="enrollmentModal" class="modal-backdrop">
+    <div class="modal">
+      <h2>👥 จัดการคลาส</h2>
+      <p id="enrollmentMemberName"></p>
+      <div id="enrollmentClassList" class="checkbox-list"></div>
+      <p id="enrollmentError" class="error"></p>
+
+      <div class="modal-actions">
+        <button id="cancelEnrollmentButton" class="secondary-button" type="button">
+          ยกเลิก
+        </button>
+        <button id="saveEnrollmentButton" type="button">
+          บันทึก
+        </button>
+      </div>
     </div>
+  </section>
 
-    <div class="form-group">
-      <label for="beltAwardedBy">ผู้มอบสาย</label>
-      <input
-        id="beltAwardedBy"
-        type="text"
-        placeholder="เช่น Coach, Kru Peter"
-      >
+  <section id="createMemberModal" class="modal-backdrop">
+    <div class="modal">
+      <h2>➕ เพิ่มสมาชิกใหม่</h2>
+
+      <div class="form-group">
+        <label for="memberNickname">ชื่อเล่น</label>
+        <input id="memberNickname" type="text" placeholder="เช่น Cholmark">
+      </div>
+
+      <div class="form-group">
+        <label for="memberFullName">ชื่อจริง</label>
+        <input id="memberFullName" type="text" placeholder="ชื่อและนามสกุล">
+      </div>
+
+      <div class="form-group">
+        <label for="memberPhone">เบอร์โทร</label>
+        <input id="memberPhone" type="tel" placeholder="เช่น 0812345678">
+      </div>
+
+      <div class="form-group">
+        <label for="memberStatus">สถานะสมาชิก</label>
+        <select id="memberStatus">
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="suspended">Suspended</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>เลือกคลาสที่ลงทะเบียน</label>
+        <div id="createMemberClassList" class="checkbox-list"></div>
+      </div>
+
+      <p id="createMemberError" class="error"></p>
+
+      <div class="modal-actions">
+        <button id="cancelCreateMemberButton" class="secondary-button" type="button">
+          ยกเลิก
+        </button>
+        <button id="saveCreateMemberButton" type="button">
+          เพิ่มสมาชิก
+        </button>
+      </div>
     </div>
+  </section>
 
-    <div class="form-group">
-      <label for="beltNote">หมายเหตุ</label>
-      <textarea
-        id="beltNote"
-        placeholder="เช่น ผ่านการทดสอบเลื่อนสาย"
-      ></textarea>
-    </div>
-
-    <p id="beltModalError" class="modal-error"></p>
-
-    <div class="modal-actions">
-      <button
-        id="cancelBeltButton"
-        class="cancel-button"
-        type="button"
-      >
-        ยกเลิก
-      </button>
-
-      <button id="saveBeltButton" type="button">
-        บันทึกการเปลี่ยนสาย
-      </button>
-    </div>
-  </div>
-</section>
   <script>
-    const newClassSelect =
-  document.getElementById("newClassSelect");
+    const elements = {
+      loginArea: document.getElementById("loginArea"),
+      adminArea: document.getElementById("adminArea"),
+      adminKeyInput: document.getElementById("adminKey"),
+      loginButton: document.getElementById("loginButton"),
+      loginError: document.getElementById("loginError"),
+      logoutButton: document.getElementById("logoutButton"),
+      refreshButton: document.getElementById("refreshButton"),
+      refreshMembersButton: document.getElementById("refreshMembersButton"),
+      openCreateMemberButton: document.getElementById("openCreateMemberButton"),
+      memberActionMessage: document.getElementById("memberActionMessage"),
+      sessionSelect: document.getElementById("sessionSelect"),
+      content: document.getElementById("content"),
+      dateText: document.getElementById("dateText"),
+      totalCount: document.getElementById("totalCount"),
+      checkedCount: document.getElementById("checkedCount"),
+      remainingCount: document.getElementById("remainingCount"),
+      sessionTitle: document.getElementById("sessionTitle"),
+      sessionTime: document.getElementById("sessionTime"),
+      newClassSelect: document.getElementById("newClassSelect"),
+      newStartTime: document.getElementById("newStartTime"),
+      newEndTime: document.getElementById("newEndTime"),
+      newSessionNote: document.getElementById("newSessionNote"),
+      createSessionButton: document.getElementById("createSessionButton"),
+      createSessionError: document.getElementById("createSessionError"),
+      beltModal: document.getElementById("beltModal"),
+      beltMemberName: document.getElementById("beltMemberName"),
+      beltLevelSelect: document.getElementById("beltLevelSelect"),
+      beltAwardedDate: document.getElementById("beltAwardedDate"),
+      beltAwardedBy: document.getElementById("beltAwardedBy"),
+      beltNote: document.getElementById("beltNote"),
+      beltModalError: document.getElementById("beltModalError"),
+      cancelBeltButton: document.getElementById("cancelBeltButton"),
+      saveBeltButton: document.getElementById("saveBeltButton"),
+      enrollmentModal: document.getElementById("enrollmentModal"),
+      enrollmentMemberName: document.getElementById("enrollmentMemberName"),
+      enrollmentClassList: document.getElementById("enrollmentClassList"),
+      enrollmentError: document.getElementById("enrollmentError"),
+      cancelEnrollmentButton: document.getElementById("cancelEnrollmentButton"),
+      saveEnrollmentButton: document.getElementById("saveEnrollmentButton"),
+      createMemberModal: document.getElementById("createMemberModal"),
+      memberNickname: document.getElementById("memberNickname"),
+      memberFullName: document.getElementById("memberFullName"),
+      memberPhone: document.getElementById("memberPhone"),
+      memberStatus: document.getElementById("memberStatus"),
+      createMemberClassList: document.getElementById("createMemberClassList"),
+      createMemberError: document.getElementById("createMemberError"),
+      cancelCreateMemberButton: document.getElementById("cancelCreateMemberButton"),
+      saveCreateMemberButton: document.getElementById("saveCreateMemberButton")
+    };
 
-const newStartTime =
-  document.getElementById("newStartTime");
+    const state = {
+      adminKey: "",
+      overview: null,
+      selectedBeltMemberId: null,
+      selectedEnrollmentMemberId: null
+    };
 
-const newEndTime =
-  document.getElementById("newEndTime");
-
-const newSessionNote =
-  document.getElementById("newSessionNote");
-
-const createSessionButton =
-  document.getElementById("createSessionButton");
-
-const createSessionError =
-  document.getElementById("createSessionError");
-    const loginArea = document.getElementById("loginArea");
-    const adminArea = document.getElementById("adminArea");
-    const adminKeyInput = document.getElementById("adminKey");
-    const loginButton = document.getElementById("loginButton");
-    const loginError = document.getElementById("loginError");
-    const logoutButton = document.getElementById("logoutButton");
-    const refreshButton = document.getElementById("refreshButton");
-    const sessionSelect = document.getElementById("sessionSelect");
-    const content = document.getElementById("content");
-    const beltModal = document.getElementById("beltModal");
-const beltMemberName =
-  document.getElementById("beltMemberName");
-const beltLevelSelect =
-  document.getElementById("beltLevelSelect");
-const beltAwardedDate =
-  document.getElementById("beltAwardedDate");
-const beltAwardedBy =
-  document.getElementById("beltAwardedBy");
-const beltNote =
-  document.getElementById("beltNote");
-const beltModalError =
-  document.getElementById("beltModalError");
-const cancelBeltButton =
-  document.getElementById("cancelBeltButton");
-const saveBeltButton =
-  document.getElementById("saveBeltButton");
-
-let selectedBeltMemberId = null;
-
-    let adminKey = "";
-    let overviewData = null;
-
-    function formatTime(timeValue) {
-      if (!timeValue) {
-        return "-";
-      }
-
-      return String(timeValue).slice(0, 5);
+    function formatTime(value) {
+      return value ? String(value).slice(0, 5) : "-";
     }
 
-    function formatCheckinTime(dateValue) {
-      if (!dateValue) {
-        return "-";
-      }
+    function formatCheckinTime(value) {
+      if (!value) return "-";
 
       return new Intl.DateTimeFormat("th-TH", {
         hour: "2-digit",
         minute: "2-digit",
         timeZone: "Asia/Bangkok"
-      }).format(new Date(dateValue));
+      }).format(new Date(value));
+    }
+
+    function formatBeltDate(value) {
+      if (!value) return "";
+
+      return new Intl.DateTimeFormat("th-TH", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "Asia/Bangkok"
+      }).format(new Date(`${value}T12:00:00+07:00`));
+    }
+
+    function thailandDateValue() {
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Bangkok",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }).format(new Date());
     }
 
     function getMemberName(member) {
@@ -612,60 +674,333 @@ let selectedBeltMemberId = null;
         "ไม่ระบุชื่อ"
       );
     }
-function formatBeltDate(dateValue) {
-  if (!dateValue) {
-    return "";
-  }
 
-  return new Intl.DateTimeFormat("th-TH", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "Asia/Bangkok"
-  }).format(new Date(`${dateValue}T12:00:00+07:00`));
-}
     function getCheckinMethod(method) {
-      if (method === "teacher") {
-        return "ครูเช็กให้";
-      }
-
-      if (method === "manual") {
-        return "เพิ่มย้อนหลัง";
-      }
-
+      if (method === "teacher") return "ครูเช็กให้";
+      if (method === "manual") return "เพิ่มย้อนหลัง";
       return "นักเรียนเช็กเอง";
     }
 
-    async function loadOverview() {
-      content.className = "loading";
-      content.textContent = "กำลังโหลดข้อมูล...";
-
-      refreshButton.disabled = true;
-      loginError.textContent = "";
+    async function requestJson(url, options = {}) {
+      const response = await fetch(url, options);
+      let data;
 
       try {
-        const response = await fetch("/api/admin-overview", {
-          method: "GET",
-          headers: {
-            "x-admin-key": adminKey
-          }
+        data = await response.json();
+      } catch {
+        throw new Error("เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง");
+      }
+
+      if (!response.ok || data.success === false) {
+        const detailText = data.details
+          ? `\n${typeof data.details === "string"
+              ? data.details
+              : JSON.stringify(data.details)}`
+          : "";
+
+        throw new Error((data.error || "เกิดข้อผิดพลาด") + detailText);
+      }
+
+      return data;
+    }
+
+    function createClassCheckbox(classItem, checked = false, prefix = "class") {
+      const label = document.createElement("label");
+      label.className = "checkbox-item";
+
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.value = String(classItem.id);
+      input.id = `${prefix}-${classItem.id}`;
+      input.checked = checked;
+
+      const text = document.createElement("span");
+      text.textContent = classItem.name;
+
+      label.appendChild(input);
+      label.appendChild(text);
+
+      return label;
+    }
+
+    function renderClassOptions() {
+      elements.newClassSelect.innerHTML = "";
+
+      const classes = state.overview?.classes || [];
+
+      if (!classes.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "ยังไม่มีประเภทคลาส";
+        elements.newClassSelect.appendChild(option);
+        return;
+      }
+
+      classes.forEach((classItem) => {
+        const option = document.createElement("option");
+        option.value = String(classItem.id);
+        option.textContent = classItem.name;
+        elements.newClassSelect.appendChild(option);
+      });
+    }
+
+    function renderSessionOptions() {
+      elements.sessionSelect.innerHTML = "";
+
+      const sessions = state.overview?.sessions || [];
+
+      if (!sessions.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "วันนี้ยังไม่มีคลาสที่เปิดอยู่";
+        elements.sessionSelect.appendChild(option);
+        renderEmptySession();
+        return;
+      }
+
+      sessions.forEach((session) => {
+        const option = document.createElement("option");
+        option.value = String(session.id);
+        option.textContent =
+          `${formatTime(session.start_time)} ` +
+          `${session.classes?.name || "ไม่ระบุชื่อคลาส"}`;
+
+        elements.sessionSelect.appendChild(option);
+      });
+
+      renderSelectedSession();
+    }
+
+    function renderEmptySession() {
+      elements.sessionTitle.textContent = "วันนี้ยังไม่มีคลาสที่เปิดอยู่";
+      elements.sessionTime.textContent = "";
+      elements.totalCount.textContent = "0";
+      elements.checkedCount.textContent = "0";
+      elements.remainingCount.textContent = "0";
+      elements.content.className = "empty";
+      elements.content.textContent =
+        "กรุณาสร้างหรือเปิดคลาสก่อนตรวจสอบรายชื่อ";
+    }
+
+    function createBeltBadge(member) {
+      const detail = document.createElement("p");
+      detail.className = "member-detail";
+
+      if (!member.current_belt) {
+        detail.textContent =
+          member.phone ||
+          member.member_status ||
+          "ยังไม่ได้ระบุสาย";
+
+        return detail;
+      }
+
+      const badge = document.createElement("span");
+      badge.className = "belt-badge";
+
+      const color = document.createElement("span");
+      color.className = "belt-color";
+      color.style.backgroundColor =
+        member.current_belt.color_hex || "#fff";
+
+      const text = document.createElement("span");
+      text.textContent =
+        `${member.current_belt.belt_name} • ` +
+        `ได้รับเมื่อ ${formatBeltDate(member.current_belt.awarded_date)}`;
+
+      badge.appendChild(color);
+      badge.appendChild(text);
+      detail.appendChild(badge);
+
+      return detail;
+    }
+
+    function createMemberRow(member, attendance, sessionId) {
+      const row = document.createElement("article");
+      row.className = "member-row";
+
+      const details = document.createElement("div");
+
+      const name = document.createElement("p");
+      name.className = "member-name";
+      name.textContent = getMemberName(member);
+
+      details.appendChild(name);
+      details.appendChild(createBeltBadge(member));
+
+      const actions = document.createElement("div");
+      actions.className = "member-actions";
+
+      const changeBeltButton = document.createElement("button");
+      changeBeltButton.type = "button";
+      changeBeltButton.className = "change-belt-button";
+      changeBeltButton.textContent = "🥋 เปลี่ยนสาย";
+      changeBeltButton.addEventListener("click", () => {
+        openBeltModal(member);
+      });
+
+      const manageClassButton = document.createElement("button");
+      manageClassButton.type = "button";
+      manageClassButton.className = "manage-class-button";
+      manageClassButton.textContent = "👥 จัดการคลาส";
+      manageClassButton.addEventListener("click", () => {
+        openEnrollmentModal(member);
+      });
+
+      actions.appendChild(changeBeltButton);
+      actions.appendChild(manageClassButton);
+      details.appendChild(actions);
+
+      const statusArea = document.createElement("div");
+      statusArea.className = "status-area";
+
+      if (attendance) {
+        const badge = document.createElement("div");
+        badge.className = "status-badge checked";
+        badge.textContent =
+          `✅ ${formatCheckinTime(attendance.checked_in_at)}`;
+
+        const method = document.createElement("div");
+        method.className = "method";
+        method.textContent = getCheckinMethod(attendance.checkin_method);
+
+        statusArea.appendChild(badge);
+        statusArea.appendChild(method);
+      } else {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "teacher-checkin-button";
+        button.textContent = "ครูเช็กให้";
+        button.addEventListener("click", () => {
+          teacherCheckIn(sessionId, member.id, button);
         });
 
-        const data = await response.json();
+        statusArea.appendChild(button);
+      }
 
-        if (!response.ok || !data.success) {
-          throw new Error(
-            data.error ||
-            "ไม่สามารถโหลดข้อมูล Admin ได้"
+      row.appendChild(details);
+      row.appendChild(statusArea);
+
+      return row;
+    }
+
+    function renderSelectedSession() {
+      const sessionId = Number(elements.sessionSelect.value);
+      const sessions = state.overview?.sessions || [];
+
+      const session = sessions.find(
+        (item) => Number(item.id) === sessionId
+      );
+
+      if (!session) {
+        renderEmptySession();
+        return;
+      }
+
+      const classId = Number(session.classes?.id);
+
+      const classMembers = (state.overview.members || []).filter(
+        (member) => {
+          const enrollments = Array.isArray(member.member_classes)
+            ? member.member_classes
+            : [];
+
+          return enrollments.some(
+            (enrollment) =>
+              Number(enrollment.class_id) === classId &&
+              enrollment.status === "active"
           );
         }
+      );
 
-        overviewData = data;
-renderClassOptions();
-        loginArea.style.display = "none";
-        adminArea.style.display = "block";
+      const classMemberIds = new Set(
+        classMembers.map((member) => Number(member.id))
+      );
 
-        document.getElementById("dateText").textContent =
+      const validAttendance = (state.overview.attendance || []).filter(
+        (record) =>
+          Number(record.session_id) === sessionId &&
+          classMemberIds.has(Number(record.member_id))
+      );
+
+      const attendanceByMember = new Map(
+        validAttendance.map((record) => [
+          Number(record.member_id),
+          record
+        ])
+      );
+
+      const total = classMembers.length;
+      const checked = validAttendance.length;
+      const remaining = Math.max(total - checked, 0);
+
+      elements.sessionTitle.textContent =
+        session.classes?.name || "ไม่ระบุชื่อคลาส";
+
+      elements.sessionTime.textContent =
+        `${formatTime(session.start_time)}–${formatTime(session.end_time)} น.`;
+
+      elements.totalCount.textContent = String(total);
+      elements.checkedCount.textContent = String(checked);
+      elements.remainingCount.textContent = String(remaining);
+
+      if (!classMembers.length) {
+        elements.content.className = "empty";
+        elements.content.textContent =
+          "ยังไม่มีสมาชิกที่ลงทะเบียนในคลาสนี้";
+        return;
+      }
+
+      const sortedMembers = [...classMembers].sort(
+        (first, second) => {
+          const firstChecked =
+            attendanceByMember.has(Number(first.id));
+          const secondChecked =
+            attendanceByMember.has(Number(second.id));
+
+          if (firstChecked !== secondChecked) {
+            return firstChecked ? -1 : 1;
+          }
+
+          return getMemberName(first).localeCompare(
+            getMemberName(second),
+            "th"
+          );
+        }
+      );
+
+      elements.content.className = "member-list";
+      elements.content.innerHTML = "";
+
+      sortedMembers.forEach((member) => {
+        const attendance = attendanceByMember.get(Number(member.id));
+        elements.content.appendChild(
+          createMemberRow(member, attendance, sessionId)
+        );
+      });
+    }
+
+    async function loadOverview() {
+      elements.content.className = "loading";
+      elements.content.textContent = "กำลังโหลดข้อมูล...";
+      elements.refreshButton.disabled = true;
+      elements.refreshMembersButton.disabled = true;
+      elements.loginError.textContent = "";
+
+      try {
+        const selectedSessionId = Number(elements.sessionSelect.value);
+
+        const data = await requestJson("/api/admin-overview", {
+          method: "GET",
+          headers: { "x-admin-key": state.adminKey }
+        });
+
+        state.overview = data;
+
+        elements.loginArea.style.display = "none";
+        elements.adminArea.style.display = "block";
+
+        elements.dateText.textContent =
           `รายชื่อเข้าเรียนประจำวันที่ ${new Intl.DateTimeFormat(
             "th-TH",
             {
@@ -673,587 +1008,452 @@ renderClassOptions();
               timeZone: "Asia/Bangkok"
             }
           ).format(new Date(`${data.date}T12:00:00+07:00`))}`;
-function renderClassOptions() {
-  newClassSelect.innerHTML = "";
 
-  const classes = overviewData.classes || [];
-
-  if (!classes.length) {
-    const option = document.createElement("option");
-    option.value = "";
-    option.textContent = "ยังไม่มีประเภทคลาส";
-    newClassSelect.appendChild(option);
-    return;
-  }
-
-  classes.forEach((classItem) => {
-    const option = document.createElement("option");
-
-    option.value = String(classItem.id);
-    option.textContent = classItem.name;
-
-    newClassSelect.appendChild(option);
-  });
-}
+        renderClassOptions();
         renderSessionOptions();
 
+        if (
+          selectedSessionId &&
+          (state.overview.sessions || []).some(
+            (session) => Number(session.id) === selectedSessionId
+          )
+        ) {
+          elements.sessionSelect.value = String(selectedSessionId);
+          renderSelectedSession();
+        }
       } catch (error) {
-        adminArea.style.display = "none";
-        loginArea.style.display = "block";
-        loginError.textContent = error.message;
+        elements.adminArea.style.display = "none";
+        elements.loginArea.style.display = "block";
+        elements.loginError.textContent = error.message;
         sessionStorage.removeItem("gambitAdminKey");
       } finally {
-        refreshButton.disabled = false;
-        loginButton.disabled = false;
-        loginButton.textContent = "เข้าสู่ระบบ";
+        elements.refreshButton.disabled = false;
+        elements.refreshMembersButton.disabled = false;
+        elements.loginButton.disabled = false;
+        elements.loginButton.textContent = "เข้าสู่ระบบ";
       }
     }
 
-    function renderSessionOptions() {
-      sessionSelect.innerHTML = "";
+    async function teacherCheckIn(sessionId, memberId, button) {
+      const member = state.overview.members.find(
+        (item) => Number(item.id) === Number(memberId)
+      );
 
-      if (!overviewData.sessions.length) {
-        sessionSelect.innerHTML =
-          `<option value="">วันนี้ยังไม่มีคลาสที่เปิดอยู่</option>`;
-
-        renderEmptySession();
+      if (!window.confirm(
+        `ยืนยันเช็กชื่อให้ ${getMemberName(member || {})} ใช่หรือไม่?`
+      )) {
         return;
       }
 
-      overviewData.sessions.forEach((session) => {
+      button.disabled = true;
+      button.textContent = "กำลังบันทึก...";
+
+      try {
+        await requestJson("/api/teacher-checkin", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-key": state.adminKey
+          },
+          body: JSON.stringify({ sessionId, memberId })
+        });
+
+        await loadOverview();
+      } catch (error) {
+        window.alert(error.message);
+        button.disabled = false;
+        button.textContent = "ครูเช็กให้";
+      }
+    }
+
+    async function createSession() {
+      const classId = Number(elements.newClassSelect.value);
+      const startTime = elements.newStartTime.value;
+      const endTime = elements.newEndTime.value;
+
+      if (!classId) {
+        elements.createSessionError.textContent =
+          "กรุณาเลือกประเภทคลาส";
+        return;
+      }
+
+      if (!startTime || !endTime) {
+        elements.createSessionError.textContent =
+          "กรุณาระบุเวลาเริ่มและเวลาสิ้นสุด";
+        return;
+      }
+
+      elements.createSessionButton.disabled = true;
+      elements.createSessionButton.textContent = "กำลังเปิดคลาส...";
+      elements.createSessionError.textContent = "";
+
+      try {
+        await requestJson("/api/create-session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-key": state.adminKey
+          },
+          body: JSON.stringify({
+            classId,
+            startTime,
+            endTime,
+            note: elements.newSessionNote.value.trim()
+          })
+        });
+
+        elements.newSessionNote.value = "";
+        await loadOverview();
+      } catch (error) {
+        elements.createSessionError.textContent = error.message;
+      } finally {
+        elements.createSessionButton.disabled = false;
+        elements.createSessionButton.textContent = "เปิดคลาสวันนี้";
+      }
+    }
+
+    function openBeltModal(member) {
+      state.selectedBeltMemberId = Number(member.id);
+      elements.beltMemberName.textContent =
+        `นักเรียน: ${getMemberName(member)}`;
+
+      elements.beltLevelSelect.innerHTML = "";
+
+      (state.overview.beltLevels || []).forEach((belt) => {
         const option = document.createElement("option");
+        option.value = String(belt.id);
+        option.textContent = belt.name_th;
 
-        option.value = String(session.id);
+        if (
+          member.current_belt &&
+          Number(member.current_belt.belt_level_id) === Number(belt.id)
+        ) {
+          option.selected = true;
+        }
 
-        option.textContent =
-          `${formatTime(session.start_time)} ` +
-          `${session.classes?.name || "ไม่ระบุชื่อคลาส"}`;
-
-        sessionSelect.appendChild(option);
+        elements.beltLevelSelect.appendChild(option);
       });
 
-      renderSelectedSession();
+      elements.beltAwardedDate.value = thailandDateValue();
+      elements.beltAwardedBy.value = "Coach";
+      elements.beltNote.value = "";
+      elements.beltModalError.textContent = "";
+      elements.saveBeltButton.disabled = false;
+      elements.saveBeltButton.textContent = "บันทึกการเปลี่ยนสาย";
+      elements.beltModal.classList.add("open");
     }
 
-    function renderEmptySession() {
-      document.getElementById("sessionTitle").textContent =
-        "วันนี้ยังไม่มีคลาสที่เปิดอยู่";
-
-      document.getElementById("sessionTime").textContent = "";
-
-      document.getElementById("totalCount").textContent = "0";
-      document.getElementById("checkedCount").textContent = "0";
-      document.getElementById("remainingCount").textContent = "0";
-
-      content.className = "empty";
-      content.textContent =
-        "กรุณาสร้างหรือเปิดคลาสก่อนตรวจสอบรายชื่อ";
-    }
-async function teacherCheckIn(sessionId, memberId, button) {
-  const member = overviewData.members.find(
-    (item) => item.id === memberId
-  );
-
-  const memberName = member
-    ? getMemberName(member)
-    : "นักเรียน";
-
-  const confirmed = window.confirm(
-    `ยืนยันเช็กชื่อให้ ${memberName} ใช่หรือไม่?`
-  );
-
-  if (!confirmed) {
-    return;
-  }
-
-  button.disabled = true;
-  button.textContent = "กำลังบันทึก...";
-
-  try {
-    const response = await fetch("/api/teacher-checkin", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-key": adminKey
-      },
-      body: JSON.stringify({
-        sessionId,
-        memberId
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      throw new Error(
-        data.error || "ครูเช็กชื่อไม่สำเร็จ"
-      );
+    function closeBeltModal() {
+      elements.beltModal.classList.remove("open");
+      state.selectedBeltMemberId = null;
+      elements.beltModalError.textContent = "";
     }
 
-    await loadOverview();
-
-  } catch (error) {
-    window.alert(error.message);
-
-    button.disabled = false;
-    button.textContent = "ครูเช็กให้";
-  }
-}
-   function getThailandDateInputValue() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Bangkok",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(new Date());
-}
-
-function openBeltModal(member) {
-  selectedBeltMemberId = member.id;
-
-  beltMemberName.textContent =
-    `นักเรียน: ${getMemberName(member)}`;
-
-  beltLevelSelect.innerHTML = "";
-
-  const beltLevels = overviewData.beltLevels || [];
-
-  beltLevels.forEach((belt) => {
-    const option = document.createElement("option");
-
-    option.value = String(belt.id);
-    option.textContent = belt.name_th;
-
-    if (
-      member.current_belt &&
-      member.current_belt.belt_level_id === belt.id
-    ) {
-      option.selected = true;
-    }
-
-    beltLevelSelect.appendChild(option);
-  });
-
-  beltAwardedDate.value = getThailandDateInputValue();
-  beltAwardedBy.value = "Coach";
-  beltNote.value = "";
-  beltModalError.textContent = "";
-
-  saveBeltButton.disabled = false;
-  saveBeltButton.textContent = "บันทึกการเปลี่ยนสาย";
-
-  beltModal.classList.add("open");
-}
-
-function closeBeltModal() {
-  beltModal.classList.remove("open");
-  selectedBeltMemberId = null;
-  beltModalError.textContent = "";
-}
-
-async function saveBeltChange() {
-  const beltLevelId = Number(beltLevelSelect.value);
-  const awardedDate = beltAwardedDate.value;
-
-  if (!selectedBeltMemberId) {
-    beltModalError.textContent =
-      "ไม่พบข้อมูลนักเรียน";
-    return;
-  }
-
-  if (!beltLevelId) {
-    beltModalError.textContent =
-      "กรุณาเลือกสาย";
-    return;
-  }
-
-  if (!awardedDate) {
-    beltModalError.textContent =
-      "กรุณาเลือกวันที่ได้รับสาย";
-    return;
-  }
-
-  saveBeltButton.disabled = true;
-  saveBeltButton.textContent = "กำลังบันทึก...";
-  beltModalError.textContent = "";
-
-  try {
-    const response = await fetch("/api/update-belt", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-key": adminKey
-      },
-      body: JSON.stringify({
-        memberId: selectedBeltMemberId,
-        beltLevelId,
-        awardedDate,
-        awardedBy: beltAwardedBy.value.trim(),
-        note: beltNote.value.trim()
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      const details = data.details
-        ? `\n${
-            typeof data.details === "string"
-              ? data.details
-              : JSON.stringify(data.details)
-          }`
-        : "";
-
-      throw new Error(
-        (data.error || "เปลี่ยนสายไม่สำเร็จ") +
-        details
-      );
-    }
-
-    closeBeltModal();
-    await loadOverview();
-
-  } catch (error) {
-    beltModalError.textContent = error.message;
-
-    saveBeltButton.disabled = false;
-    saveBeltButton.textContent =
-      "บันทึกการเปลี่ยนสาย";
-  }
-}
-function renderSelectedSession() {
-  const sessionId = Number(sessionSelect.value);
-
-  const session = overviewData.sessions.find(
-    (item) => item.id === sessionId
-  );
-
-  if (!session) {
-    renderEmptySession();
-    return;
-  }
-
-  const classId = Number(session.classes?.id);
-
-  const classMembers = overviewData.members.filter((member) => {
-    const enrollments = Array.isArray(member.member_classes)
-      ? member.member_classes
-      : [];
-
-    return enrollments.some((enrollment) => {
-      return (
-        Number(enrollment.class_id) === classId &&
-        enrollment.status === "active"
-      );
-    });
-  });
-
-  const sessionAttendance = overviewData.attendance.filter(
-    (record) => record.session_id === sessionId
-  );
-
-  const classMemberIds = new Set(
-    classMembers.map((member) => member.id)
-  );
-
-  const validSessionAttendance = sessionAttendance.filter(
-    (record) => classMemberIds.has(record.member_id)
-  );
-
-  const attendanceByMember = new Map(
-    validSessionAttendance.map((record) => [
-      record.member_id,
-      record
-    ])
-  );
-
-  const checkedCount = validSessionAttendance.length;
-  const totalCount = classMembers.length;
-
-  const remainingCount = Math.max(
-    totalCount - checkedCount,
-    0
-  );
-  if (!classMembers.length) {
-  content.className = "empty";
-  content.textContent =
-    "ยังไม่มีสมาชิกที่ลงทะเบียนในคลาสนี้";
-  return;
-}
-const sortedMembers = [...classMembers].sort(
-  (first, second) => {
-    const firstChecked = attendanceByMember.has(first.id);
-    const secondChecked = attendanceByMember.has(second.id);
-
-    if (firstChecked !== secondChecked) {
-      return firstChecked ? -1 : 1;
-    }
-
-    return getMemberName(first).localeCompare(
-      getMemberName(second),
-      "th"
-    );
-  }
-);
-
-content.className = "member-list";
-content.innerHTML = "";
-
-sortedMembers.forEach((member) => {
-  const attendance = attendanceByMember.get(member.id);
-
-  const row = document.createElement("article");
-  row.className = "member-row";
-
-  const details = document.createElement("div");
-
-  const name = document.createElement("p");
-  name.className = "member-name";
-  name.textContent = getMemberName(member);
-
-  const memberDetail = document.createElement("p");
-  memberDetail.className = "member-detail";
-
-  if (member.current_belt) {
-    const beltBadge = document.createElement("span");
-    beltBadge.className = "belt-badge";
-
-    const beltColor = document.createElement("span");
-    beltColor.className = "belt-color";
-    beltColor.style.backgroundColor =
-      member.current_belt.color_hex || "#ffffff";
-
-    const beltText = document.createElement("span");
-    beltText.textContent =
-      `${member.current_belt.belt_name} • ` +
-      `ได้รับเมื่อ ${formatBeltDate(
-        member.current_belt.awarded_date
-      )}`;
-
-    beltBadge.appendChild(beltColor);
-    beltBadge.appendChild(beltText);
-
-    memberDetail.appendChild(beltBadge);
-  } else {
-    memberDetail.textContent =
-      member.phone ||
-      member.member_status ||
-      "ยังไม่ได้ระบุสาย";
-  }
-
-  details.appendChild(name);
-  details.appendChild(memberDetail);
-
-  const memberActions = document.createElement("div");
-  memberActions.className = "member-actions";
-
-  const changeBeltButton = document.createElement("button");
-  changeBeltButton.type = "button";
-  changeBeltButton.className = "change-belt-button";
-  changeBeltButton.textContent = "🥋 เปลี่ยนสาย";
-
-  changeBeltButton.addEventListener("click", () => {
-    openBeltModal(member);
-  });
-
-  memberActions.appendChild(changeBeltButton);
-  details.appendChild(memberActions);
-
-  const statusArea = document.createElement("div");
-  statusArea.className = "status-area";
-
-  if (attendance) {
-    const badge = document.createElement("div");
-    badge.className = "status-badge checked";
-    badge.textContent =
-      `✅ ${formatCheckinTime(attendance.checked_in_at)}`;
-
-    const method = document.createElement("div");
-    method.className = "method";
-    method.textContent =
-      getCheckinMethod(attendance.checkin_method);
-
-    statusArea.appendChild(badge);
-    statusArea.appendChild(method);
-  } else {
-    const checkinButton = document.createElement("button");
-
-    checkinButton.type = "button";
-    checkinButton.className = "teacher-checkin-button";
-    checkinButton.textContent = "ครูเช็กให้";
-
-    checkinButton.addEventListener("click", () => {
-      teacherCheckIn(
-        sessionId,
-        member.id,
-        checkinButton
-      );
-    });
-
-    statusArea.appendChild(checkinButton);
-  }
-
-  row.appendChild(details);
-  row.appendChild(statusArea);
-  content.appendChild(row);
-});
-}async function login() {
-  const value = adminKeyInput.value.trim();
-
-  if (!value) {
-    loginError.textContent = "กรุณากรอกรหัส Admin";
-    return;
-  }
-
-  adminKey = value;
-
-  loginButton.disabled = true;
-  loginButton.textContent = "กำลังตรวจสอบ...";
-  loginError.textContent = "";
-
-  sessionStorage.setItem(
-    "gambitAdminKey",
-    adminKey
-  );
-
-  await loadOverview();
-}
-
-function logout() {
-  sessionStorage.removeItem("gambitAdminKey");
-
-  adminKey = "";
-  overviewData = null;
-
-  adminKeyInput.value = "";
-  adminArea.style.display = "none";
-  loginArea.style.display = "block";
-}
-
-async function createSession() {
-  const classId = Number(newClassSelect.value);
-  const startTime = newStartTime.value;
-  const endTime = newEndTime.value;
-
-  if (!classId) {
-    createSessionError.textContent =
-      "กรุณาเลือกประเภทคลาส";
-    return;
-  }
-
-  if (!startTime || !endTime) {
-    createSessionError.textContent =
-      "กรุณาระบุเวลาเริ่มและเวลาสิ้นสุด";
-    return;
-  }
-
-  createSessionButton.disabled = true;
-  createSessionButton.textContent =
-    "กำลังเปิดคลาส...";
-
-  createSessionError.textContent = "";
-
-  try {
-    const response = await fetch(
-      "/api/create-session",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey
-        },
-        body: JSON.stringify({
-          classId,
-          startTime,
-          endTime,
-          note: newSessionNote.value.trim()
-        })
+    async function saveBeltChange() {
+      const beltLevelId = Number(elements.beltLevelSelect.value);
+      const awardedDate = elements.beltAwardedDate.value;
+
+      if (!state.selectedBeltMemberId) {
+        elements.beltModalError.textContent = "ไม่พบข้อมูลนักเรียน";
+        return;
       }
+
+      if (!beltLevelId || !awardedDate) {
+        elements.beltModalError.textContent =
+          "กรุณาเลือกสายและวันที่ได้รับสาย";
+        return;
+      }
+
+      elements.saveBeltButton.disabled = true;
+      elements.saveBeltButton.textContent = "กำลังบันทึก...";
+      elements.beltModalError.textContent = "";
+
+      try {
+        await requestJson("/api/update-belt", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-key": state.adminKey
+          },
+          body: JSON.stringify({
+            memberId: state.selectedBeltMemberId,
+            beltLevelId,
+            awardedDate,
+            awardedBy: elements.beltAwardedBy.value.trim(),
+            note: elements.beltNote.value.trim()
+          })
+        });
+
+        closeBeltModal();
+        await loadOverview();
+      } catch (error) {
+        elements.beltModalError.textContent = error.message;
+        elements.saveBeltButton.disabled = false;
+        elements.saveBeltButton.textContent = "บันทึกการเปลี่ยนสาย";
+      }
+    }
+
+    function openEnrollmentModal(member) {
+      state.selectedEnrollmentMemberId = Number(member.id);
+      elements.enrollmentMemberName.textContent =
+        `นักเรียน: ${getMemberName(member)}`;
+      elements.enrollmentError.textContent = "";
+      elements.enrollmentClassList.innerHTML = "";
+
+      const activeClassIds = new Set(
+        (Array.isArray(member.member_classes)
+          ? member.member_classes
+          : []
+        )
+          .filter((item) => item.status === "active")
+          .map((item) => Number(item.class_id))
+      );
+
+      (state.overview.classes || []).forEach((classItem) => {
+        elements.enrollmentClassList.appendChild(
+          createClassCheckbox(
+            classItem,
+            activeClassIds.has(Number(classItem.id)),
+            "enrollment"
+          )
+        );
+      });
+
+      elements.saveEnrollmentButton.disabled = false;
+      elements.saveEnrollmentButton.textContent = "บันทึก";
+      elements.enrollmentModal.classList.add("open");
+    }
+
+    function closeEnrollmentModal() {
+      elements.enrollmentModal.classList.remove("open");
+      state.selectedEnrollmentMemberId = null;
+      elements.enrollmentError.textContent = "";
+    }
+
+    async function saveEnrollmentChanges() {
+      const member = (state.overview.members || []).find(
+        (item) => Number(item.id) === state.selectedEnrollmentMemberId
+      );
+
+      if (!member) {
+        elements.enrollmentError.textContent = "ไม่พบข้อมูลนักเรียน";
+        return;
+      }
+
+      const selectedClassIds = new Set(
+        [...elements.enrollmentClassList.querySelectorAll(
+          'input[type="checkbox"]:checked'
+        )].map((input) => Number(input.value))
+      );
+
+      const currentActiveClassIds = new Set(
+        (Array.isArray(member.member_classes)
+          ? member.member_classes
+          : []
+        )
+          .filter((item) => item.status === "active")
+          .map((item) => Number(item.class_id))
+      );
+
+      const changes = [];
+
+      (state.overview.classes || []).forEach((classItem) => {
+        const classId = Number(classItem.id);
+        const shouldBeActive = selectedClassIds.has(classId);
+        const isActive = currentActiveClassIds.has(classId);
+
+        if (shouldBeActive !== isActive) {
+          changes.push({
+            memberId: state.selectedEnrollmentMemberId,
+            classId,
+            status: shouldBeActive ? "active" : "inactive"
+          });
+        }
+      });
+
+      if (!changes.length) {
+        closeEnrollmentModal();
+        return;
+      }
+
+      elements.saveEnrollmentButton.disabled = true;
+      elements.saveEnrollmentButton.textContent = "กำลังบันทึก...";
+      elements.enrollmentError.textContent = "";
+
+      try {
+        for (const change of changes) {
+          await requestJson("/api/update-enrollment", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-admin-key": state.adminKey
+            },
+            body: JSON.stringify(change)
+          });
+        }
+
+        closeEnrollmentModal();
+        await loadOverview();
+      } catch (error) {
+        elements.enrollmentError.textContent = error.message;
+        elements.saveEnrollmentButton.disabled = false;
+        elements.saveEnrollmentButton.textContent = "บันทึก";
+      }
+    }
+
+    function openCreateMemberModal() {
+      elements.memberNickname.value = "";
+      elements.memberFullName.value = "";
+      elements.memberPhone.value = "";
+      elements.memberStatus.value = "active";
+      elements.createMemberError.textContent = "";
+      elements.createMemberClassList.innerHTML = "";
+
+      (state.overview?.classes || []).forEach((classItem) => {
+        elements.createMemberClassList.appendChild(
+          createClassCheckbox(classItem, false, "create-member")
+        );
+      });
+
+      elements.saveCreateMemberButton.disabled = false;
+      elements.saveCreateMemberButton.textContent = "เพิ่มสมาชิก";
+      elements.createMemberModal.classList.add("open");
+      elements.memberNickname.focus();
+    }
+
+    function closeCreateMemberModal() {
+      elements.createMemberModal.classList.remove("open");
+      elements.createMemberError.textContent = "";
+    }
+
+    async function createMember() {
+      const nickname = elements.memberNickname.value.trim();
+      const fullName = elements.memberFullName.value.trim();
+      const phone = elements.memberPhone.value.trim();
+      const memberStatus = elements.memberStatus.value;
+
+      const classIds = [
+        ...elements.createMemberClassList.querySelectorAll(
+          'input[type="checkbox"]:checked'
+        )
+      ].map((input) => Number(input.value));
+
+      if (!nickname && !fullName) {
+        elements.createMemberError.textContent =
+          "กรุณากรอกชื่อเล่นหรือชื่อจริง";
+        return;
+      }
+
+      elements.saveCreateMemberButton.disabled = true;
+      elements.saveCreateMemberButton.textContent = "กำลังเพิ่ม...";
+      elements.createMemberError.textContent = "";
+
+      try {
+        await requestJson("/api/create-member", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-key": state.adminKey
+          },
+          body: JSON.stringify({
+            nickname,
+            fullName,
+            phone,
+            memberStatus,
+            classIds
+          })
+        });
+
+        closeCreateMemberModal();
+        elements.memberActionMessage.className = "success";
+        elements.memberActionMessage.textContent =
+          "เพิ่มสมาชิกใหม่เรียบร้อยแล้ว";
+        await loadOverview();
+      } catch (error) {
+        elements.createMemberError.textContent = error.message;
+        elements.saveCreateMemberButton.disabled = false;
+        elements.saveCreateMemberButton.textContent = "เพิ่มสมาชิก";
+      }
+    }
+
+    async function login() {
+      const value = elements.adminKeyInput.value.trim();
+
+      if (!value) {
+        elements.loginError.textContent = "กรุณากรอกรหัส Admin";
+        return;
+      }
+
+      state.adminKey = value;
+      elements.loginButton.disabled = true;
+      elements.loginButton.textContent = "กำลังตรวจสอบ...";
+      elements.loginError.textContent = "";
+
+      sessionStorage.setItem("gambitAdminKey", state.adminKey);
+      await loadOverview();
+    }
+
+    function logout() {
+      sessionStorage.removeItem("gambitAdminKey");
+      state.adminKey = "";
+      state.overview = null;
+      elements.adminKeyInput.value = "";
+      elements.adminArea.style.display = "none";
+      elements.loginArea.style.display = "block";
+    }
+
+    elements.loginButton.addEventListener("click", login);
+    elements.adminKeyInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") login();
+    });
+
+    elements.logoutButton.addEventListener("click", logout);
+    elements.refreshButton.addEventListener("click", loadOverview);
+    elements.refreshMembersButton.addEventListener("click", loadOverview);
+    elements.sessionSelect.addEventListener("change", renderSelectedSession);
+    elements.createSessionButton.addEventListener("click", createSession);
+    elements.openCreateMemberButton.addEventListener(
+      "click",
+      openCreateMemberModal
     );
 
-    const data = await response.json();
+    elements.cancelBeltButton.addEventListener("click", closeBeltModal);
+    elements.saveBeltButton.addEventListener("click", saveBeltChange);
 
-    if (!response.ok || !data.success) {
-      throw new Error(
-        data.error || "เปิดคลาสไม่สำเร็จ"
-      );
+    elements.cancelEnrollmentButton.addEventListener(
+      "click",
+      closeEnrollmentModal
+    );
+    elements.saveEnrollmentButton.addEventListener(
+      "click",
+      saveEnrollmentChanges
+    );
+
+    elements.cancelCreateMemberButton.addEventListener(
+      "click",
+      closeCreateMemberModal
+    );
+    elements.saveCreateMemberButton.addEventListener(
+      "click",
+      createMember
+    );
+
+    [
+      [elements.beltModal, closeBeltModal],
+      [elements.enrollmentModal, closeEnrollmentModal],
+      [elements.createMemberModal, closeCreateMemberModal]
+    ].forEach(([modal, closeFunction]) => {
+      modal.addEventListener("click", (event) => {
+        if (event.target === modal) closeFunction();
+      });
+    });
+
+    const savedAdminKey = sessionStorage.getItem("gambitAdminKey");
+
+    if (savedAdminKey) {
+      state.adminKey = savedAdminKey;
+      loadOverview();
     }
-
-    newSessionNote.value = "";
-    await loadOverview();
-
-  } catch (error) {
-    createSessionError.textContent =
-      error.message;
-
-  } finally {
-    createSessionButton.disabled = false;
-    createSessionButton.textContent =
-      "เปิดคลาสวันนี้";
-  }
-}
-
-loginButton.addEventListener(
-  "click",
-  login
-);
-
-adminKeyInput.addEventListener(
-  "keydown",
-  (event) => {
-    if (event.key === "Enter") {
-      login();
-    }
-  }
-);
-
-logoutButton.addEventListener(
-  "click",
-  logout
-);
-
-refreshButton.addEventListener(
-  "click",
-  loadOverview
-);
-
-sessionSelect.addEventListener(
-  "change",
-  renderSelectedSession
-);
-
-createSessionButton.addEventListener(
-  "click",
-  createSession
-);
-
-cancelBeltButton.addEventListener(
-  "click",
-  closeBeltModal
-);
-
-saveBeltButton.addEventListener(
-  "click",
-  saveBeltChange
-);
-
-beltModal.addEventListener(
-  "click",
-  (event) => {
-    if (event.target === beltModal) {
-      closeBeltModal();
-    }
-  }
-);
-
-const savedAdminKey =
-  sessionStorage.getItem(
-    "gambitAdminKey"
-  );
-
-if (savedAdminKey) {
-  adminKey = savedAdminKey;
-  loadOverview();
-}</script>
+  </script>
 </body>
 </html>
