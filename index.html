@@ -164,7 +164,7 @@
 
     <section id="result" class="result">
       <div class="result-icon">✅</div>
-      <h2>เช็กชื่อสำเร็จ</h2>
+    <h2 id="resultTitle">เช็คชื่อสำเร็จ</h2>
       <p id="resultName"></p>
       <p id="resultCount"></p>
       <p id="resultTime"></p>
@@ -302,7 +302,20 @@ if (!decodedToken.exp || decodedToken.exp <= currentTime + 30) {
         }
 
         statusElement.className = "success";
-        statusElement.textContent = "บันทึกข้อมูลเรียบร้อยแล้ว";
+
+if (data.alreadyCheckedIn) {
+  statusElement.textContent =
+    "วันนี้คุณเช็กชื่อเรียบร้อยแล้ว";
+
+  document.getElementById("resultTitle").textContent =
+    "วันนี้เช็กชื่อแล้ว";
+} else {
+  statusElement.textContent =
+    "บันทึกข้อมูลเรียบร้อยแล้ว";
+
+  document.getElementById("resultTitle").textContent =
+    "เช็กชื่อสำเร็จ";
+}
 
         document.getElementById("resultName").textContent =
           `ชื่อ: ${data.displayName}`;

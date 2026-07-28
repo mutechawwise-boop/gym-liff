@@ -60,6 +60,16 @@ export default {
       const lineUserId = lineProfile.sub;
       const displayName = lineProfile.name || "สมาชิก";
       const now = new Date().toISOString();
+      function getThailandDateKey(dateValue) {
+  const date = new Date(dateValue);
+
+  // ประเทศไทย UTC+7 และไม่มีการปรับเวลา DST
+  const thailandTime = new Date(
+    date.getTime() + 7 * 60 * 60 * 1000
+  );
+
+  return thailandTime.toISOString().slice(0, 10);
+}
 
       const commonHeaders = {
         apikey: supabaseSecretKey,
@@ -110,10 +120,29 @@ export default {
         }
 
         [member] = await insertResponse.json();
-      } else {
-        // สมาชิกเดิม
-        const oldMember = members[0];
-        const newCount = Number(oldMember.checkin_count || 0) + 1;
+     } else {
+  // สมาชิกเดิม
+  const oldMember = members[0];
+
+  const todayThailand = getThailandDateKey(now);
+
+  const lastCheckinThailand = oldMember.last_checkin
+    ? getThailandDateKey(oldMember.last_checkin)
+    : null;
+
+  // ป้องกันเช็กชื่อซ้ำในวันเดียวกัน
+  if (lastCheckinThailand === todayThailand) {
+    return json({
+      success: true,
+      alreadyCheckedIn: true,
+      message: "วันนี้เช็กชื่อเรียบร้อยแล้ว",
+      displayName: oldMember.display_name || displayName,
+      checkinCount: Number(oldMember.checkin_count || 0),
+      checkedInAt: oldMember.last_checkin
+    });
+  }
+
+  const newCount = Number(oldMember.checkin_count || 0) + 1;
 
         const updateResponse = await fetch(
           `${supabaseUrl}/rest/v1/members?id=eq.${oldMember.id}`,
