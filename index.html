@@ -2,41 +2,316 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
-  <title>Gym Check-in</title>
+  <title>GAMBIT JIUJITSU Check-in</title>
 
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px 16px;
+      font-family: Arial, sans-serif;
+      background: #f4f5f7;
+      color: #181818;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 440px;
+      margin: 40px auto;
+      padding: 28px 22px;
+      background: #ffffff;
+      border-radius: 18px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 52px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 26px;
+    }
+
+    .subtitle {
+      margin: 8px 0 24px;
+      color: #666666;
+    }
+
+    .profile {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      padding: 14px;
+      background: #f7f7f7;
+      border-radius: 14px;
+      text-align: left;
+    }
+
+    .profile img {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #dddddd;
+    }
+
+    .profile-name {
+      margin: 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .profile-label {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: #777777;
+    }
+
+    #status {
+      min-height: 24px;
+      margin: 18px 0;
+      line-height: 1.6;
+      color: #555555;
+      white-space: pre-line;
+    }
+
+    #checkinButton {
+      display: none;
+      width: 100%;
+      padding: 15px 20px;
+      border: 0;
+      border-radius: 12px;
+      background: #111111;
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #checkinButton:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .success {
+      color: #138a40 !important;
+      font-weight: bold;
+    }
+
+    .error {
+      color: #c62828 !important;
+    }
+
+    .result {
+      display: none;
+      margin-top: 20px;
+      padding: 18px;
+      background: #edf9f1;
+      border-radius: 14px;
+    }
+
+    .result-icon {
+      font-size: 42px;
+    }
+
+    .result h2 {
+      margin: 8px 0;
+      color: #138a40;
+    }
+
+    .result p {
+      margin: 6px 0;
+    }
+  </style>
 </head>
 
 <body>
-  <h1>🏋️ Gym Check-in</h1>
-  <p id="status">กำลังโหลด...</p>
+  <main class="card">
+    <div class="logo">🥋</div>
+
+    <h1>GAMBIT JIUJITSU</h1>
+    <p class="subtitle">ระบบเช็กชื่อเข้าเรียน</p>
+
+    <section id="profile" class="profile">
+      <img id="picture" alt="รูปโปรไฟล์ LINE">
+
+      <div>
+        <p id="displayName" class="profile-name"></p>
+        <p class="profile-label">สมาชิก LINE</p>
+      </div>
+    </section>
+
+    <p id="status">กำลังเชื่อมต่อกับ LINE...</p>
+
+    <button id="checkinButton" type="button">
+      ✅ เช็กชื่อเข้าเรียน
+    </button>
+
+    <section id="result" class="result">
+      <div class="result-icon">✅</div>
+      <h2>เช็กชื่อสำเร็จ</h2>
+      <p id="resultName"></p>
+      <p id="resultCount"></p>
+      <p id="resultTime"></p>
+    </section>
+  </main>
 
   <script>
-    async function main() {
+    const LIFF_ID = "2010879060-PKqAwFmt";
+
+    const statusElement = document.getElementById("status");
+    const profileElement = document.getElementById("profile");
+    const pictureElement = document.getElementById("picture");
+    const displayNameElement = document.getElementById("displayName");
+    const checkinButton = document.getElementById("checkinButton");
+    const resultElement = document.getElementById("result");
+
+    function showError(message) {
+      statusElement.className = "error";
+      statusElement.textContent = message;
+      checkinButton.disabled = false;
+    }
+
+    function formatThaiDateTime(dateValue) {
+      const date = new Date(dateValue);
+
+      return new Intl.DateTimeFormat("th-TH", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "Asia/Bangkok"
+      }).format(date);
+    }
+
+    async function initializeLiff() {
       try {
         await liff.init({
-          liffId: "2010879060-PKqAwFmt"
+          liffId: LIFF_ID
         });
 
         if (!liff.isLoggedIn()) {
-          liff.login();
+          liff.login({
+            redirectUri: window.location.href
+          });
           return;
+        }
+
+        const idToken = liff.getIDToken();
+
+        if (!idToken) {
+          throw new Error(
+            "ไม่สามารถรับ LINE ID token ได้ กรุณาตรวจสอบว่า LIFF เปิด scope openid แล้ว"
+          );
         }
 
         const profile = await liff.getProfile();
 
-        document.getElementById("status").textContent =
-          "สวัสดี " + profile.displayName;
+        displayNameElement.textContent = profile.displayName;
+
+        if (profile.pictureUrl) {
+          pictureElement.src = profile.pictureUrl;
+        } else {
+          pictureElement.style.display = "none";
+        }
+
+        profileElement.style.display = "flex";
+        checkinButton.style.display = "block";
+
+        statusElement.className = "";
+        statusElement.textContent =
+          "พร้อมแล้ว กดปุ่มด้านล่างเพื่อเช็กชื่อเข้าเรียน";
+
+        checkinButton.addEventListener("click", () => {
+          checkIn(idToken);
+        });
 
       } catch (error) {
-        document.getElementById("status").textContent =
-          "เกิดข้อผิดพลาด: " + error.message;
+        console.error(error);
+        showError("เกิดข้อผิดพลาด: " + error.message);
       }
     }
 
-    main();
+    async function checkIn(idToken) {
+      checkinButton.disabled = true;
+      checkinButton.textContent = "กำลังเช็กชื่อ...";
+
+      statusElement.className = "";
+      statusElement.textContent = "กำลังตรวจสอบข้อมูลกับ LINE...";
+
+      try {
+        const response = await fetch("/api/checkin", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            idToken: idToken
+          })
+        });
+
+        let data;
+
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error(
+            "เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง กรุณาตรวจสอบการ Deploy"
+          );
+        }
+
+        if (!response.ok || !data.success) {
+          const details = data.details
+            ? `\n${typeof data.details === "string"
+              ? data.details
+              : JSON.stringify(data.details)}`
+            : "";
+
+          throw new Error(
+            (data.error || "เช็กชื่อไม่สำเร็จ") + details
+          );
+        }
+
+        statusElement.className = "success";
+        statusElement.textContent = "บันทึกข้อมูลเรียบร้อยแล้ว";
+
+        document.getElementById("resultName").textContent =
+          `ชื่อ: ${data.displayName}`;
+
+        document.getElementById("resultCount").textContent =
+          `เข้าเรียนสะสม: ${data.checkinCount} ครั้ง`;
+
+        document.getElementById("resultTime").textContent =
+          `เวลา: ${formatThaiDateTime(data.checkedInAt)}`;
+
+        resultElement.style.display = "block";
+        checkinButton.style.display = "none";
+
+      } catch (error) {
+        console.error(error);
+
+        showError(
+          "เช็กชื่อไม่สำเร็จ\n" + error.message
+        );
+
+        checkinButton.textContent = "ลองเช็กชื่ออีกครั้ง";
+      }
+    }
+
+    initializeLiff();
   </script>
 </body>
 </html>
