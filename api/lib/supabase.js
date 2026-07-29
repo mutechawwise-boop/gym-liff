@@ -1,17 +1,33 @@
-import { createClient } from "@supabase/supabase-js";
-
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SECRET_KEY;
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
 
 if (!supabaseUrl) {
     throw new Error("SUPABASE_URL is missing");
 }
 
-if (!supabaseKey) {
+if (!supabaseSecretKey) {
     throw new Error("SUPABASE_SECRET_KEY is missing");
 }
 
-export const supabase = createClient(
-    supabaseUrl,
-    supabaseKey
-);
+const defaultHeaders = {
+    apikey: supabaseSecretKey,
+    Authorization: `Bearer ${supabaseSecretKey}`,
+    "Content-Type": "application/json"
+};
+
+export const supabase = {
+    async request(path, options = {}) {
+        const response = await fetch(
+            `${supabaseUrl}/rest/v1/${path}`,
+            {
+                ...options,
+                headers: {
+                    ...defaultHeaders,
+                    ...(options.headers || {})
+                }
+            }
+        );
+
+        return response;
+    }
+};
