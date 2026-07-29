@@ -12,11 +12,29 @@ export default {
             });
 
         try {
-            return json({
-                success: true,
-                message: "Membership expiry engine พร้อมใช้งาน"
-            });
+            const response = await supabase.request(
+    "members?select=id,display_name,line_user_id,membership_expiry_date,expiry_7_day_notified_at,expiry_1_day_notified_at,expiry_expired_notified_at"
+);
 
+if (!response.ok) {
+    const errorText = await response.text();
+
+    return json(
+        {
+            success: false,
+            error: errorText
+        },
+        500
+    );
+}
+
+const members = await response.json();
+
+return json({
+    success: true,
+    count: members.length,
+    members
+});
         } catch (error) {
 
             return json({
