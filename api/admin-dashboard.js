@@ -135,7 +135,9 @@ const expiringMembers = members
    return json({
   success: true,
   today,
-  totalMembers,
+  totalMembers: members.filter(
+  member => !member.is_guest
+).length,
   activeMembers,
   expiringSoon,
   expiredMembers,

@@ -1702,41 +1702,51 @@ document
       loadOverview();
         loadExpiringMembers();
     }
-    async function loadExpiringMembers() {
+   async function loadExpiringMembers() {
   const list = document.getElementById("expiringMemberList");
   const error = document.getElementById("expiryListError");
 
-  list.innerHTML = "<p>กำลังโหลด...</p>";
+  list.innerHTML = "<p class=\"loading\">กำลังโหลด...</p>";
   error.textContent = "";
 
   try {
-    const response = await fetch("/api/admin-expiring-members", {
-  method: "GET",
-  headers: {
-    "x-admin-key": state.adminKey
-  }
-});
+    const response = await fetch("/api/admin-dashboard", {
+      method: "GET",
+      headers: {
+        "x-admin-key": state.adminKey
+      }
+    });
+
     const data = await response.json();
 
-    if (!data.success) {
-      throw new Error("โหลดไม่สำเร็จ");
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "โหลดข้อมูลไม่สำเร็จ");
     }
 
-    if (data.members.length === 0) {
+    const members = Array.isArray(data.expiringMembers)
+      ? data.expiringMembers
+      : [];
+
+    if (members.length === 0) {
       list.innerHTML = "<p>ไม่มีสมาชิกใกล้หมดอายุ</p>";
       return;
     }
 
-    list.innerHTML = data.members.map(member => `
-      <div class="expiry-item">
-        <strong>${member.name}</strong><br>
-        หมดอายุ ${member.expiry_date}
-        (${member.daysLeft} วัน)
-      </div>
-    `).join("");
-
+    list.innerHTML = members
+      .map(
+        member => `
+          <div class="expiry-item">
+            <strong>${member.name}</strong><br>
+            หมดอายุ ${member.expiry_date}
+            (${member.daysLeft} วัน)
+          </div>
+        `
+      )
+      .join("");
   } catch (err) {
+    console.error("Expiring members error:", err);
     error.textContent = err.message;
+    list.innerHTML = "";
   }
 }
   </script>
