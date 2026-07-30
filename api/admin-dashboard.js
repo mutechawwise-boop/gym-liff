@@ -104,17 +104,43 @@ export default {
                     }
                 }
             }
+const expiringMembers = members
+  .filter(member => {
+    if (!member.membership_expiry_date) return false;
 
-            return json({
-                success: true,
-                today,
-                totalMembers: members.filter(
-                    (member) => !member.is_guest
-                ).length,
-                activeMembers,
-                expiringSoon,
-                expiredMembers
-            });
+    const expiry = new Date(member.membership_expiry_date);
+    const todayDate = new Date();
+
+    const daysLeft = Math.ceil(
+      (expiry - todayDate) / (1000 * 60 * 60 * 24)
+    );
+
+    return daysLeft >= 0 && daysLeft <= 7;
+  })
+  .map(member => {
+    const expiry = new Date(member.membership_expiry_date);
+    const todayDate = new Date();
+
+    const daysLeft = Math.ceil(
+      (expiry - todayDate) / (1000 * 60 * 60 * 24)
+    );
+
+    return {
+      id: member.id,
+      name: member.name,
+      expiry_date: member.membership_expiry_date,
+      daysLeft
+    };
+  });
+   return json({
+  success: true,
+  today,
+  totalMembers,
+  activeMembers,
+  expiringSoon,
+  expiredMembers,
+  expiringMembers
+});
         } catch (error) {
             console.error(
                 "Admin dashboard error:",
