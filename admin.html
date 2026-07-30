@@ -534,7 +534,32 @@
       </section>
 
       <p id="dashboardError" class="error"></p>
+</section>
 
+<section class="card expiry-card">
+  <div class="section-heading">
+    <div>
+      <h2>⚠️ สมาชิกใกล้หมดอายุ</h2>
+      <p>สมาชิกที่เหลืออายุไม่เกิน 7 วัน</p>
+    </div>
+
+    <button
+      id="refreshExpiryButton"
+      class="secondary-button expiry-refresh-button"
+      type="button"
+    >
+      🔄 โหลดใหม่
+    </button>
+  </div>
+
+  <div id="expiringMemberList" class="expiry-list">
+    <p class="loading">กำลังโหลดข้อมูล...</p>
+  </div>
+
+  <p id="expiryListError" class="error"></p>
+</section>
+
+<section id="members" class="card">
       <section id="members" class="card">
         <h2 style="margin-top: 0;">👥 จัดการสมาชิก</h2>
         <div class="action-grid">
@@ -1626,7 +1651,9 @@ await loadOverview();
     elements.adminKeyInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter") login();
     });
-
+document
+  .getElementById("refreshExpiryButton")
+  .addEventListener("click", loadExpiringMembers);
     elements.logoutButton.addEventListener("click", logout);
     elements.refreshButton.addEventListener("click", loadOverview);
     elements.refreshMembersButton.addEventListener("click", loadOverview);
@@ -1673,7 +1700,45 @@ await loadOverview();
     if (savedAdminKey) {
       state.adminKey = savedAdminKey;
       loadOverview();
+        loadExpiringMembers();
     }
+    async function loadExpiringMembers() {
+  const list = document.getElementById("expiringMemberList");
+  const error = document.getElementById("expiryListError");
+
+  list.innerHTML = "<p>กำลังโหลด...</p>";
+  error.textContent = "";
+
+  try {
+    const response = await fetch("/api/admin-expiring-members", {
+  method: "GET",
+  headers: {
+    "x-admin-key": state.adminKey
+  }
+});
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error("โหลดไม่สำเร็จ");
+    }
+
+    if (data.members.length === 0) {
+      list.innerHTML = "<p>ไม่มีสมาชิกใกล้หมดอายุ</p>";
+      return;
+    }
+
+    list.innerHTML = data.members.map(member => `
+      <div class="expiry-item">
+        <strong>${member.name}</strong><br>
+        หมดอายุ ${member.expiry_date}
+        (${member.daysLeft} วัน)
+      </div>
+    `).join("");
+
+  } catch (err) {
+    error.textContent = err.message;
+  }
+}
   </script>
 </body>
 </html>
