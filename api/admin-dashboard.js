@@ -59,7 +59,7 @@ export default {
             }
 
             const response = await supabase.request(
-                "members?select=id,membership_expiry_date,is_guest"
+                "members?select=id,name,membership_expiry_date,is_guest"
             );
 
             if (!response.ok) {
