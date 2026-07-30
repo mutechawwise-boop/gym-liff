@@ -24,6 +24,33 @@
     }
 
     .header {
+      .header-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: #fff;
+  border: 3px solid #fff;
+  border-radius: 50%;
+}
+
+.header-brand h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.header-brand p {
+  margin: 5px 0 0;
+  color: #cfcfcf;
+  font-size: 14px;
+  font-weight: 600;
+}
       margin-bottom: 20px;
       padding: 22px;
       background: #111;
@@ -417,7 +444,14 @@
 
     <section id="adminArea">
       <header class="header">
-        <h1>🥋 GAMBIT JIUJITSU</h1>
+        <div class="header-brand">
+  <img src="images/logo.jpg" alt="GAMBIT Logo" class="logo">
+
+  <div>
+    <h1>GAMBIT JIUJITSU</h1>
+<p>COACH DASHBOARD</p>
+  </div>
+</div>
         <p id="dateText">ระบบตรวจสอบรายชื่อเข้าเรียน</p>
         <button id="logoutButton" class="logout-button" type="button">
           ออกจากระบบ
