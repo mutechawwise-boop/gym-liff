@@ -59,7 +59,7 @@ export default {
             }
 
             const response = await supabase.request(
-                "members?select=id,name,membership_expiry_date,is_guest"
+                "members?select=id,display_name,membership_expiry_date,is_guest"
             );
 
             if (!response.ok) {
@@ -127,7 +127,7 @@ const expiringMembers = members
 
     return {
       id: member.id,
-      name: member.name,
+     name: member.display_name,
       expiry_date: member.membership_expiry_date,
       daysLeft
     };
