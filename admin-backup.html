@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GAMBIT JIUJITSU Admin</title>
-<link rel="stylesheet" href="admin.css">
+
   <style>
     * { box-sizing: border-box; }
 
@@ -725,43 +725,7 @@
       selectedBeltMemberId: null,
       selectedEnrollmentMemberId: null
     };
-async function loadAdminDashboard() {
-  const dashboardError = document.getElementById("dashboardError");
 
-  dashboardError.textContent = "";
-
-  try {
-    const response = await fetch("/api/admin-dashboard", {
-      method: "GET",
-      headers: {
-         "x-admin-key": state.adminKey
-      }
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      throw new Error(data.error || "ไม่สามารถโหลดข้อมูล Dashboard ได้");
-    }
-
-    document.getElementById("totalMembers").textContent =
-      data.totalMembers ?? 0;
-
-    document.getElementById("activeMembers").textContent =
-      data.activeMembers ?? 0;
-
-    document.getElementById("expiringSoon").textContent =
-      data.expiringSoon ?? 0;
-
-    document.getElementById("expiredMembers").textContent =
-      data.expiredMembers ?? 0;
-  } catch (error) {
-    console.error("Dashboard error:", error);
-
-    dashboardError.textContent =
-      "โหลดข้อมูล Dashboard ไม่สำเร็จ\n" + error.message;
-  }
-}
     function formatTime(value) {
       return value ? String(value).slice(0, 5) : "-";
     }
@@ -1524,9 +1488,7 @@ async function loadAdminDashboard() {
       elements.loginError.textContent = "";
 
       sessionStorage.setItem("gambitAdminKey", state.adminKey);
-
-await loadAdminDashboard();
-await loadOverview();
+      await loadOverview();
     }
 
     function logout() {
