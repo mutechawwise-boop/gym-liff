@@ -452,6 +452,68 @@
         align-items: flex-start;
       }
     }
+  .expiry-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.expiry-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border: 1px solid #e4e4e4;
+  border-radius: 14px;
+}
+
+.expiry-member-info {
+  min-width: 0;
+}
+
+.expiry-member-name {
+  margin: 0 0 5px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.expiry-member-date {
+  margin: 0;
+  color: #666;
+  font-size: 13px;
+}
+
+.expiry-status {
+  flex-shrink: 0;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.expiry-critical {
+  background: #fde8e8;
+  color: #b42318;
+}
+
+.expiry-urgent {
+  background: #fff0db;
+  color: #b54708;
+}
+
+.expiry-warning {
+  background: #fff8cc;
+  color: #8a6700;
+}
+
+@media (max-width: 600px) {
+  .expiry-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
   </style>
 </head>
 
@@ -1733,16 +1795,34 @@ document
     }
 
     list.innerHTML = members
-      .map(
-        member => `
-          <div class="expiry-item">
-            <strong>${member.name}</strong><br>
-            หมดอายุ ${member.expiry_date}
-            (${member.daysLeft} วัน)
-          </div>
-        `
-      )
-      .join("");
+     .map(member => {
+  let statusClass = "expiry-warning";
+
+  if (member.daysLeft <= 1) {
+    statusClass = "expiry-critical";
+  } else if (member.daysLeft <= 3) {
+    statusClass = "expiry-urgent";
+  }
+
+  return `
+    <div class="expiry-item">
+      <div class="expiry-member-info">
+        <p class="expiry-member-name">
+          ${member.name}
+        </p>
+
+        <p class="expiry-member-date">
+          หมดอายุวันที่ ${member.expiry_date}
+        </p>
+      </div>
+
+      <span class="expiry-status ${statusClass}">
+        เหลือ ${member.daysLeft} วัน
+      </span>
+    </div>
+  `;
+})
+.join("");
   } catch (err) {
     console.error("Expiring members error:", err);
     error.textContent = err.message;
