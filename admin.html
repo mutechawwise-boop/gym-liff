@@ -892,6 +892,7 @@
 
     const state = {
       adminKey: "",
+      role: "",
       overview: null,
       selectedBeltMemberId: null,
       selectedEnrollmentMemberId: null
@@ -1695,6 +1696,8 @@ async function loadAdminDashboard() {
       elements.loginError.textContent = "";
 
       sessionStorage.setItem("gambitAdminKey", state.adminKey);
+      state.role = "owner";
+sessionStorage.setItem("gambitRole", state.role);
 
 await loadAdminDashboard();
 await loadOverview();
