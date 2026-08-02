@@ -1683,35 +1683,7 @@ async function loadAdminDashboard() {
       }
     }
 
-    async function login() {
-      const value = elements.adminKeyInput.value.trim();
-
-      if (!value) {
-        elements.loginError.textContent = "กรุณากรอกรหัส Admin";
-        return;
-      }
-
-      state.adminKey = value;
-      elements.loginButton.disabled = true;
-      elements.loginButton.textContent = "กำลังตรวจสอบ...";
-      elements.loginError.textContent = "";
-
-      sessionStorage.setItem("gambitAdminKey", state.adminKey);
-      state.role = "owner";
-sessionStorage.setItem("gambitRole", state.role);
-
-await loadAdminDashboard();
-await loadOverview();
-    }
-
-    function logout() {
-      sessionStorage.removeItem("gambitAdminKey");
-      state.adminKey = "";
-      state.overview = null;
-      elements.adminKeyInput.value = "";
-      elements.adminArea.style.display = "none";
-      elements.loginArea.style.display = "block";
-    }
+   
 const auth = createAuth({
     elements,
     state,
