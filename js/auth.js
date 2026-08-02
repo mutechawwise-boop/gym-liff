@@ -1,4 +1,5 @@
 import { setRole, logoutRole, restoreRole } from "./role.js";
+
 export function createAuth({
   elements,
   state,
@@ -16,8 +17,13 @@ export function createAuth({
 
     state.adminKey = value;
 
+    const role =
+      value === "gonglovemute"
+        ? "owner"
+        : "coach";
 
-setRole(state, "owner");
+    setRole(state, role);
+
     elements.loginButton.disabled = true;
     elements.loginButton.textContent = "กำลังตรวจสอบ...";
     elements.loginError.textContent = "";
@@ -25,14 +31,22 @@ setRole(state, "owner");
     try {
       sessionStorage.setItem("gambitAdminKey", state.adminKey);
 
+      if (role === "owner") {
+        window.location.href = "owner.html";
+        return;
+      }
+
       await loadAdminDashboard();
       await loadOverview();
       onAuthenticated?.();
     } catch (error) {
       sessionStorage.removeItem("gambitAdminKey");
       state.adminKey = "";
+
       elements.loginError.textContent =
-        error instanceof Error ? error.message : "เข้าสู่ระบบไม่สำเร็จ";
+        error instanceof Error
+          ? error.message
+          : "เข้าสู่ระบบไม่สำเร็จ";
     } finally {
       elements.loginButton.disabled = false;
       elements.loginButton.textContent = "เข้าสู่ระบบ";
@@ -41,7 +55,7 @@ setRole(state, "owner");
 
   function logout() {
     sessionStorage.removeItem("gambitAdminKey");
-   logoutRole();
+    logoutRole();
 
     state.adminKey = "";
     state.role = "";
@@ -53,12 +67,14 @@ setRole(state, "owner");
   }
 
   function restoreSession() {
-    const savedAdminKey = sessionStorage.getItem("gambitAdminKey");
+    const savedAdminKey =
+      sessionStorage.getItem("gambitAdminKey");
 
     if (!savedAdminKey) return false;
 
     state.adminKey = savedAdminKey;
-   restoreRole(state);
+    restoreRole(state);
+
     return true;
   }
 

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>GAMBIT Owner Dashboard</title>
+
+  <link rel="stylesheet" href="admin.css">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px 16px;
+      font-family: Arial, sans-serif;
+      background: #f2f4f6;
+      color: #181818;
+    }
+
+    .owner-container {
+      width: 100%;
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    .owner-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      margin-bottom: 20px;
+      padding: 24px;
+      background: #111;
+      color: #fff;
+      border-radius: 18px;
+    }
+
+    .owner-brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .owner-logo {
+      width: 80px;
+      height: 80px;
+      flex-shrink: 0;
+      object-fit: cover;
+      background: #fff;
+      border: 3px solid #fff;
+      border-radius: 50%;
+    }
+
+    .owner-brand h1 {
+      margin: 0;
+      font-size: 26px;
+    }
+
+    .owner-brand p {
+      margin: 6px 0 0;
+      color: #ccc;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .owner-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .owner-actions a,
+    .owner-actions button {
+      width: auto;
+      min-height: 38px;
+      padding: 8px 14px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      background: #fff;
+      color: #111;
+      font: inherit;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .owner-nav {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+      padding: 8px;
+      overflow-x: auto;
+      background: #fff;
+      border: 1px solid #e4e4e4;
+      border-radius: 14px;
+    }
+
+    .owner-nav a {
+      flex: 1;
+      min-width: max-content;
+      padding: 10px 14px;
+      color: #333;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+      border-radius: 10px;
+    }
+
+    .owner-nav a:hover {
+      background: #111;
+      color: #fff;
+    }
+
+    .owner-card {
+      margin-bottom: 18px;
+      padding: 24px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    .owner-card h2 {
+      margin-top: 0;
+    }
+
+    .owner-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .owner-stat {
+      padding: 18px;
+      border: 1px solid #e4e4e4;
+      border-radius: 16px;
+      background: #fafafa;
+    }
+
+    .owner-stat-label {
+      display: block;
+      margin-bottom: 10px;
+      color: #555;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .owner-stat-number {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 30px;
+      font-weight: 800;
+    }
+
+    .owner-stat-caption {
+      color: #777;
+      font-size: 13px;
+    }
+
+    .empty-state {
+      padding: 24px;
+      color: #777;
+      text-align: center;
+      border: 1px dashed #ccc;
+      border-radius: 12px;
+    }
+
+    @media (max-width: 650px) {
+      .owner-header {
+        flex-direction: column;
+      }
+
+      .owner-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .owner-actions {
+        width: 100%;
+      }
+
+      .owner-actions a,
+      .owner-actions button {
+        flex: 1;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="owner-container">
+    <header class="owner-header">
+      <div class="owner-brand">
+        <img
+          src="images/logo.jpg"
+          alt="GAMBIT Logo"
+          class="owner-logo"
+        >
+
+        <div>
+          <h1>GAMBIT JIUJITSU</h1>
+          <p>OWNER DASHBOARD</p>
+          <small id="ownerDateText">ภาพรวมธุรกิจประจำวัน</small>
+        </div>
+      </div>
+
+      <div class="owner-actions">
+        <a href="admin.html">🥋 ไปหน้า Coach</a>
+        <button id="ownerLogoutButton" type="button">
+          ออกจากระบบ
+        </button>
+      </div>
+    </header>
+
+    <nav class="owner-nav">
+      <a href="#todayOverview">📅 ภาพรวมวันนี้</a>
+      <a href="#financeOverview">💰 การเงิน</a>
+      <a href="#payments">💳 รายการรับเงิน</a>
+      <a href="#reports">📄 รายงาน</a>
+    </nav>
+
+    <section id="todayOverview" class="owner-card">
+      <h2>📅 ภาพรวมวันนี้</h2>
+
+      <div class="owner-grid">
+        <article class="owner-stat">
+          <span class="owner-stat-label">คลาสที่เปิดวันนี้</span>
+          <strong id="todayClassCount" class="owner-stat-number">-</strong>
+          <span class="owner-stat-caption">คลาส</span>
+        </article>
+
+        <article class="owner-stat">
+          <span class="owner-stat-label">ผู้เข้าเรียนรวม</span>
+          <strong id="todayAttendanceCount" class="owner-stat-number">-</strong>
+          <span class="owner-stat-caption">คน</span>
+        </article>
+
+        <article class="owner-stat">
+          <span class="owner-stat-label">สมาชิกใหม่วันนี้</span>
+          <strong id="todayNewMemberCount" class="owner-stat-number">-</strong>
+          <span class="owner-stat-caption">คน</span>
+        </article>
+
+        <article class="owner-stat">
+          <span class="owner-stat-label">สมาชิกใกล้หมดอายุ</span>
+          <strong id="todayExpiringCount" class="owner-stat-number">-</strong>
+          <span class="owner-stat-caption">คน</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="owner-card">
+      <h2>🥋 คลาสวันนี้</h2>
+
+      <div id="todayClassList" class="empty-state">
+        ยังไม่ได้เชื่อมข้อมูลคลาส
+      </div>
+    </section>
+
+    <section id="financeOverview" class="owner-card">
+      <h2>💰 Dashboard การเงิน</h2>
+
+      <div class="owner-grid">
+        <article class="owner-stat">
+          <span class="owner-stat-label">รายรับวันนี้</span>
+          <strong id="todayRevenue" class="owner-stat-number">-</strong>
+          <span class="owner-stat-caption">บาท</span>
+        </article>
+
+        <article class="owner-stat">
+          <span class="owner-stat-label">รายรับเดือนนี้</span>
+          <strong id="monthlyRevenue" class="owner-stat-number">-</strong>
+          <span class="owner-stat-caption">บาท</span>
+        </article>
+
+        <article class="owner-stat">
+          <span class="owner-stat-label">เงินสดวันนี้</span>
+          <strong id="todayCashRevenue" class="owner-stat-number">-</strong>
+          <span class="owner-stat-caption">บาท</span>
+        </article>
+
+        <article class="owner-stat">
+          <span class="owner-stat-label">เงินโอนวันนี้</span>
+          <strong id="todayTransferRevenue" class="owner-stat-number">-</strong>
+          <span class="owner-stat-caption">บาท</span>
+        </article>
+      </div>
+    </section>
+
+    <section id="payments" class="owner-card">
+      <h2>💳 รายการรับเงินล่าสุด</h2>
+
+      <div class="empty-state">
+        ยังไม่ได้เชื่อมระบบรับเงิน
+      </div>
+    </section>
+
+    <section id="reports" class="owner-card">
+      <h2>📄 รายงาน</h2>
+
+      <div class="empty-state">
+        รายงานรายวัน รายเดือน และ Export จะเพิ่มในขั้นถัดไป
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    const savedAdminKey =
+      sessionStorage.getItem("gambitAdminKey");
+
+    if (!savedAdminKey) {
+      window.location.href = "admin.html";
+    }
+async function loadOwnerDashboard() {
+  const adminKey =
+    sessionStorage.getItem("gambitAdminKey");
+
+  const response = await fetch("/api/owner-dashboard", {
+    method: "GET",
+    headers: {
+      "x-admin-key": adminKey
+    }
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.success) {
+    throw new Error(
+      data.error || "โหลด Owner Dashboard ไม่สำเร็จ"
+    );
+  }
+
+  document.getElementById("todayClassCount").textContent =
+    data.todayClassCount ?? 0;
+
+  document.getElementById("todayAttendanceCount").textContent =
+    data.todayAttendanceCount ?? 0;
+
+  document.getElementById("todayNewMemberCount").textContent =
+    data.todayNewMemberCount ?? 0;
+
+  document.getElementById("todayExpiringCount").textContent =
+    data.todayExpiringCount ?? 0;
+
+  const classList =
+    document.getElementById("todayClassList");
+
+  if (!data.classes?.length) {
+    classList.textContent = "วันนี้ยังไม่มีคลาสที่เปิด";
+    return;
+  }
+
+  classList.innerHTML = data.classes
+    .map((classItem) => `
+      <div class="owner-stat">
+        <strong>${classItem.name}</strong>
+        <p>
+          ${String(classItem.startTime).slice(0, 5)}
+          -
+          ${String(classItem.endTime).slice(0, 5)}
+        </p>
+        <span>
+          เข้าเรียน ${classItem.attendanceCount} คน
+        </span>
+      </div>
+    `)
+    .join("");
+}
+    document.getElementById("ownerDateText").textContent =
+      `ภาพรวมประจำวันที่ ${new Intl.DateTimeFormat("th-TH", {
+        dateStyle: "long",
+        timeZone: "Asia/Bangkok"
+      }).format(new Date())}`;
+
+    document
+      .getElementById("ownerLogoutButton")
+      .addEventListener("click", () => {
+        sessionStorage.removeItem("gambitAdminKey");
+        sessionStorage.removeItem("gambitRole");
+        window.location.href = "admin.html";
+      });
+      loadOwnerDashboard().catch((error) => {
+  console.error(error);
+  document.getElementById("todayClassList").textContent =
+    error.message;
+});
+  </script>
+</body>
+</html>
