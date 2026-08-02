@@ -564,16 +564,14 @@
 </header>
 
 <nav class="quick-nav">
-  <a href="#dashboard" data-owner>📊 Dashboard</a>
-<a href="#members" data-owner>👥 สมาชิก</a>
+<a href="#dashboardSection">📊 Dashboard</a>
+<a href="#members">👥 สมาชิก</a>
   <a href="#classes">🥋 เปิดคลาส</a>
   <a href="#attendance">✅ เช็กชื่อ</a>
 </nav>
 
-<section
-    id="dashboardSection"
-    data-owner
->
+<section id="dashboardSection" class="card">
+    <div class="dashboard-summary">
         <article class="summary-card">
           <span class="summary-label">👥 สมาชิกทั้งหมด</span>
           <strong id="totalMembers" class="summary-number">-</strong>
@@ -597,10 +595,10 @@
           <strong id="expiredMembers" class="summary-number">-</strong>
           <span class="summary-caption">คน</span>
         </article>
+            </div>
       </section>
 
       <p id="dashboardError" class="error"></p>
-</section>
 
 <section class="card expiry-card">
   <div class="section-heading">
@@ -626,10 +624,7 @@
 </section>
 
 <section id="members" class="card">
-     <section
-    id="membersSection"
-    data-owner
->
+     <section id="membersSection">
         <h2 style="margin-top: 0;">👥 จัดการสมาชิก</h2>
         <div class="action-grid">
         <button id="openCreateMemberButton" type="button">
@@ -1706,15 +1701,11 @@ const auth = createAuth({
   onAuthenticated: applyRole
 });
 function applyRole() {
-
-    if (isOwner(state)) return;
-
-    document
-        .querySelectorAll("[data-owner]")
-        .forEach(el => {
-            el.style.display = "none";
-        });
-
+  document
+    .querySelectorAll("[data-owner]")
+    .forEach(el => {
+      el.style.display = "";
+    });
 }
     elements.loginButton.addEventListener("click", auth.login);
 
