@@ -836,7 +836,8 @@
     </div>
   </section>
 
-  <script>
+<script type="module">
+  import { createAuth } from "./js/auth.js";
     const elements = {
       loginArea: document.getElementById("loginArea"),
       adminArea: document.getElementById("adminArea"),
@@ -1711,15 +1712,22 @@ await loadOverview();
       elements.adminArea.style.display = "none";
       elements.loginArea.style.display = "block";
     }
+const auth = createAuth({
+    elements,
+    state,
+    loadAdminDashboard,
+    loadOverview
+});
+    elements.loginButton.addEventListener("click", auth.login);
 
-    elements.loginButton.addEventListener("click", login);
-    elements.adminKeyInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") login();
-    });
+elements.adminKeyInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") auth.login();
+});
+
 document
   .getElementById("refreshExpiryButton")
   .addEventListener("click", loadExpiringMembers);
-    elements.logoutButton.addEventListener("click", logout);
+    elements.logoutButton.addEventListener("click", auth.logout);
     elements.refreshButton.addEventListener("click", loadOverview);
     elements.refreshMembersButton.addEventListener("click", loadOverview);
     elements.sessionSelect.addEventListener("change", renderSelectedSession);
