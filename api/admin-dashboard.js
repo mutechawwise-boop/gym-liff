@@ -43,18 +43,23 @@ export default {
     try {
       const adminKey = request.headers.get("x-admin-key");
 
-      if (
-        !process.env.ADMIN_KEY ||
-        adminKey !== process.env.ADMIN_KEY
-      ) {
-        return json(
-          {
-            success: false,
-            error: "ไม่มีสิทธิ์ใช้งาน"
-          },
-          401
-        );
-      }
+const isCoach =
+  process.env.ADMIN_KEY &&
+  adminKey === process.env.ADMIN_KEY;
+
+const isOwner =
+  process.env.OWNER_KEY &&
+  adminKey === process.env.OWNER_KEY;
+
+if (!isCoach && !isOwner) {
+  return json(
+    {
+      success: false,
+      error: "ไม่มีสิทธิ์ใช้งาน"
+    },
+    401
+  );
+}
 
       const today = getBangkokDateString();
 
