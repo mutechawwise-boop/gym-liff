@@ -320,7 +320,7 @@ async function loadOwnerDashboard() {
   const adminKey =
     sessionStorage.getItem("gambitAdminKey");
 
-  const response = await fetch("/api/owner-dashboard", {
+  const response = await fetch("/api/admin-dashboard", {
     method: "GET",
     headers: {
       "x-admin-key": adminKey
