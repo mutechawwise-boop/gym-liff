@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+ <title>สมัครสมาชิก | GAMBIT JIUJITSU</title>
+
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px 16px;
+      font-family: Arial, sans-serif;
+      background: #f4f5f7;
+      color: #181818;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 440px;
+      margin: 40px auto;
+      padding: 28px 22px;
+      background: #ffffff;
+      border-radius: 18px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 52px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 26px;
+    }
+
+    .subtitle {
+      margin: 8px 0 24px;
+      color: #666666;
+    }
+
+    .profile {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      padding: 14px;
+      background: #f7f7f7;
+      border-radius: 14px;
+      text-align: left;
+    }
+
+    .profile img {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #dddddd;
+    }
+
+    .profile-name {
+      margin: 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .profile-label {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: #777777;
+    }
+
+    #status {
+      min-height: 24px;
+      margin: 18px 0;
+      line-height: 1.6;
+      color: #555555;
+      white-space: pre-line;
+    }
+
+    #checkinButton {
+      display: none;
+      width: 100%;
+      padding: 15px 20px;
+      border: 0;
+      border-radius: 12px;
+      background: #111111;
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #checkinButton:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .success {
+      color: #138a40 !important;
+      font-weight: bold;
+    }
+
+    .error {
+      color: #c62828 !important;
+    }
+
+    .result {
+      display: none;
+      margin-top: 20px;
+      padding: 18px;
+      background: #edf9f1;
+      border-radius: 14px;
+    }
+
+    .result-icon {
+      font-size: 42px;
+    }
+
+    .result h2 {
+      margin: 8px 0;
+      color: #138a40;
+    }
+
+    .result p {
+      margin: 6px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="card">
+    <div class="logo">🥋</div>
+
+    <h1>GAMBIT JIUJITSU</h1>
+    <p class="subtitle">สมัครสมาชิก</p>
+
+    <section id="profile" class="profile">
+     <form id="registrationForm">
+
+  <label for="firstName">ชื่อ</label>
+  <input
+    id="firstName"
+    name="firstName"
+    type="text"
+    autocomplete="given-name"
+    required
+  >
+
+  <label for="lastName">นามสกุล</label>
+  <input
+    id="lastName"
+    name="lastName"
+    type="text"
+    autocomplete="family-name"
+    required
+  >
+
+  <label for="nickname">ชื่อเล่น</label>
+  <input
+    id="nickname"
+    name="nickname"
+    type="text"
+    required
+  >
+
+  <label for="phone">เบอร์โทรศัพท์</label>
+  <input
+    id="phone"
+    name="phone"
+    type="tel"
+    inputmode="tel"
+    autocomplete="tel"
+    required
+  >
+<label for="email">
+อีเมล (ไม่บังคับ)
+</label>
+
+<input
+    id="email"
+    name="email"
+    type="email"
+    autocomplete="email"
+>
+  <label for="birthDate">วันเกิด</label>
+  <input
+    id="birthDate"
+    name="birthDate"
+    type="date"
+  >
+
+  <label for="gender">เพศ</label>
+  <select id="gender" name="gender">
+    <option value="">ไม่ระบุ</option>
+    <option value="male">ชาย</option>
+    <option value="female">หญิง</option>
+    <option value="other">อื่น ๆ</option>
+  </select>
+<label for="medicalConditions">
+  โรคประจำตัว
+</label>
+<textarea
+  id="medicalConditions"
+  name="medicalConditions"
+  rows="3"
+  placeholder="หากไม่มีให้เว้นว่าง"
+></textarea>
+
+<label for="allergies">
+  แพ้อาหาร / แพ้ยา
+</label>
+<textarea
+  id="allergies"
+  name="allergies"
+  rows="3"
+  placeholder="หากไม่มีให้เว้นว่าง"
+></textarea>
+
+  <label for="emergencyContactName">
+    ชื่อผู้ติดต่อฉุกเฉิน
+  </label>
+  <input
+    id="emergencyContactName"
+    name="emergencyContactName"
+    type="text"
+  >
+<label for="emergencyContactRelationship">
+  ความสัมพันธ์กับผู้ติดต่อฉุกเฉิน
+</label>
+<input
+  id="emergencyContactRelationship"
+  name="emergencyContactRelationship"
+  type="text"
+  placeholder="เช่น พ่อ แม่ คู่สมรส เพื่อน"
+>
+  <label for="emergencyContactPhone">
+    เบอร์ผู้ติดต่อฉุกเฉิน
+  </label>
+  <input
+    id="emergencyContactPhone"
+    name="emergencyContactPhone"
+    type="tel"
+    inputmode="tel"
+  >
+
+  <button id="submitRegistrationButton" type="submit">
+    สมัครสมาชิก
+  </button>
+<div class="notice-box">
+  <strong>หมายเหตุ</strong>
+  <p>
+    หลังส่งข้อมูลแล้ว คำขอจะเข้าสู่ขั้นตอนตรวจสอบโดยโค้ช
+    เมื่ออนุมัติแล้ว คุณจะได้รับการแจ้งเตือนผ่าน LINE
+  </p>
+</div>
+  <p id="registrationMessage"></p>
+<hr>
+
+<h2>เลือกแผนสมาชิก</h2>
+
+<label>
+  <input
+    type="radio"
+    name="membershipPlan"
+    value="adult_monthly"
+    required
+  >
+  Adult Monthly
+</label>
+
+<label>
+  <input
+    type="radio"
+    name="membershipPlan"
+    value="kids_monthly"
+  >
+  Kids Monthly
+</label>
+
+<label>
+  <input
+    type="radio"
+    name="membershipPlan"
+    value="private"
+  >
+  Private
+</label>
+
+<label>
+  <input
+    type="radio"
+    name="membershipPlan"
+    value="drop_in"
+  >
+  Drop In
+</label>
+
+<label>
+  <input
+    type="radio"
+    name="membershipPlan"
+    value="class_pass_4"
+  >
+  Class Pass 4 ครั้ง / 1 เดือน
+</label>
+
+<label>
+  <input
+    type="radio"
+    name="membershipPlan"
+    value="class_pass_8"
+  >
+  Class Pass 8 ครั้ง / 1 เดือน
+</label>
+
+<label>
+  <input
+    type="radio"
+    name="membershipPlan"
+    value="class_pass_12"
+  >
+  Class Pass 12 ครั้ง / 1 เดือน
+</label>
+<hr>
+
+<h2>วิธีชำระเงิน</h2>
+
+<label>
+  <input
+    type="radio"
+    name="paymentMethod"
+    value="cash"
+    required
+  >
+  เงินสด
+</label>
+
+<label>
+  <input
+    type="radio"
+    name="paymentMethod"
+    value="transfer"
+  >
+  เงินโอน
+</label>
+
+<div id="transferDetails" style="display:none; margin-top:16px;">
+  <p>
+    กรุณาโอนตามบัญชีหรือ QR ที่ยิมแจ้งไว้
+    แล้วแนบหลักฐานการโอน
+  </p>
+
+  <label for="paymentSlip">
+    หลักฐานการโอน
+  </label>
+
+  <input
+    id="paymentSlip"
+    name="paymentSlip"
+    type="file"
+    accept="image/*"
+  >
+</div>
+<script>
+const LIFF_ID = "2010879060-PKqAwFmt";
+const paymentMethodInputs = document.querySelectorAll(
+  'input[name="paymentMethod"]'
+);
+
+const transferDetails =
+  document.getElementById("transferDetails");
+
+const paymentSlip =
+  document.getElementById("paymentSlip");
+
+paymentMethodInputs.forEach((input) => {
+  input.addEventListener("change", () => {
+    const isTransfer = input.value === "transfer" && input.checked;
+
+    transferDetails.style.display =
+      isTransfer ? "block" : "none";
+
+    paymentSlip.required = isTransfer;
+
+    if (!isTransfer) {
+      paymentSlip.value = "";
+    }
+  });
+});
+let lineProfile = null;
+let lineIdToken = "";
+async function initializeLiff() {
+  try {
+    await liff.init({
+      liffId: LIFF_ID
+    });
+
+    if (!liff.isLoggedIn()) {
+      liff.login({
+        redirectUri: window.location.href
+      });
+      return;
+    }
+
+    lineProfile = await liff.getProfile();
+lineIdToken = liff.getIDToken() || "";
+
+console.log("LINE profile:", lineProfile);
+  } catch (error) {
+    console.error("LIFF initialization error:", error);
+
+    document.getElementById("registrationMessage").textContent =
+      "เชื่อมต่อ LINE ไม่สำเร็จ: " + error.message;
+  }
+}
+
+initializeLiff();
+const registrationForm =
+  document.getElementById("registrationForm");
+
+registrationForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const registrationMessage =
+    document.getElementById("registrationMessage");
+
+  const submitButton =
+    document.getElementById("submitRegistrationButton");
+
+  if (!lineProfile || !lineIdToken) {
+    registrationMessage.textContent =
+      "ยังเชื่อมต่อ LINE ไม่สำเร็จ กรุณาลองใหม่";
+    return;
+  }
+
+  const formData = new FormData(registrationForm);
+
+  const membershipPlan =
+    formData.get("membershipPlan");
+
+  const paymentMethod =
+    formData.get("paymentMethod");
+
+  if (!membershipPlan) {
+    registrationMessage.textContent =
+      "กรุณาเลือกแผนสมาชิก";
+    return;
+  }
+
+  if (!paymentMethod) {
+    registrationMessage.textContent =
+      "กรุณาเลือกวิธีชำระเงิน";
+    return;
+  }
+
+  submitButton.disabled = true;
+  submitButton.textContent = "กำลังส่งคำขอ...";
+  registrationMessage.textContent = "";
+
+  try {
+    console.log({
+      idToken: lineIdToken,
+      lineProfile,
+      membershipPlan,
+      paymentMethod
+    });
+
+    registrationMessage.textContent =
+      "เตรียมข้อมูลเรียบร้อยแล้ว";
+  } catch (error) {
+    console.error(error);
+
+    registrationMessage.textContent =
+      error instanceof Error
+        ? error.message
+        : "ส่งคำขอไม่สำเร็จ";
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = "สมัครสมาชิก";
+  }
+});
+</script>
+</body>
+</html>

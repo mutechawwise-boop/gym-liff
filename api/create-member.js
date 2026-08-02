@@ -1,3 +1,41 @@
+async function verifyLineIdToken(idToken, lineChannelId) {
+  if (!idToken) {
+    throw new Error("ไม่พบ LINE ID token");
+  }
+
+  const verifyBody = new URLSearchParams({
+    id_token: idToken,
+    client_id: lineChannelId
+  });
+
+  const verifyResponse = await fetch(
+    "https://api.line.me/oauth2/v2.1/verify",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: verifyBody
+    }
+  );
+
+  const lineProfile = await verifyResponse.json();
+
+  if (!verifyResponse.ok || !lineProfile.sub) {
+    const error = new Error(
+      "ยืนยันตัวตนกับ LINE ไม่สำเร็จ"
+    );
+
+    error.details = lineProfile;
+    throw error;
+  }
+
+  return {
+    userId: lineProfile.sub,
+    displayName: lineProfile.name || "สมาชิก",
+    pictureUrl: lineProfile.picture || null
+  };
+}
 export default {
   async fetch(request) {
     const json = (data, status = 200) =>
@@ -17,31 +55,7 @@ export default {
     }
 
     try {
-      const adminKey =
-        request.headers.get("x-admin-key");
-
-      const expectedAdminKey =
-        process.env.ADMIN_KEY;
-
-      if (!expectedAdminKey) {
-        return json(
-          { error: "ยังไม่ได้ตั้งค่า ADMIN_KEY" },
-          500
-        );
-      }
-
-      if (
-        !adminKey ||
-        adminKey !== expectedAdminKey
-      ) {
-        return json(
-          {
-            error:
-              "ไม่มีสิทธิ์ใช้งานหน้า Admin"
-          },
-          401
-        );
-      }
+      
 
       const supabaseUrl =
         process.env.SUPABASE_URL;
@@ -63,8 +77,37 @@ export default {
       }
 
       const body = await request.json();
+const mode = String(body.mode || "admin_create").trim();
+if (mode !== "line_register") {
+  const adminKey =
+    request.headers.get("x-admin-key");
 
-      const nickname =
+  const expectedAdminKey =
+    process.env.ADMIN_KEY;
+
+  if (!expectedAdminKey) {
+    return json(
+      { error: "ยังไม่ได้ตั้งค่า ADMIN_KEY" },
+      500
+    );
+  }
+
+  if (
+    !adminKey ||
+    adminKey !== expectedAdminKey
+  ) {
+    return json(
+      {
+        error: "ไม่มีสิทธิ์ใช้งานหน้า Admin"
+      },
+      401
+    );
+  }
+}
+      if (mode === "line_register") {
+
+}
+const nickname =
         String(body.nickname || "").trim();
 
       const fullName =

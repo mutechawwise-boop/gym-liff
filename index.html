@@ -157,11 +157,26 @@
     </section>
 
     <p id="status">กำลังเชื่อมต่อกับ LINE...</p>
+<section id="memberMenu" style="margin-top:20px;">
 
-    <button id="checkinButton" type="button">
-      ✅ เช็กชื่อเข้าเรียน
+  <button id="registerButton" type="button">
+    📝 สมัครสมาชิก
+  </button>
+
+  <button id="renewButton" type="button">
+    💳 ต่ออายุสมาชิก
+  </button>
+<button id="checkinButton" type="button">
+    ✅ เช็กชื่อเข้าเรียน
     </button>
+  <button id="historyButton" type="button">
+    📋 ประวัติการเข้าเรียน
+  </button>
+   <button id="paymentHistoryButton" type="button">
+    💰 ประวัติการชำระเงิน
+  </button>
 
+</section>
     <section id="result" class="result">
       <div class="result-icon">✅</div>
     <h2 id="resultTitle">เช็คชื่อสำเร็จ</h2>
@@ -180,6 +195,7 @@
     const displayNameElement = document.getElementById("displayName");
     const checkinButton = document.getElementById("checkinButton");
     const resultElement = document.getElementById("result");
+    const memberMenu = document.getElementById("memberMenu");
 
     function showError(message) {
       statusElement.className = "error";
@@ -219,6 +235,7 @@
         }
 
         const profile = await liff.getProfile();
+        const lineUserId = profile.userId;
 
         displayNameElement.textContent = profile.displayName;
 
@@ -328,6 +345,7 @@ if (data.alreadyCheckedIn) {
 
         resultElement.style.display = "block";
         checkinButton.style.display = "none";
+       
 
       } catch (error) {
         console.error(error);
@@ -341,6 +359,11 @@ if (data.alreadyCheckedIn) {
     }
 
     initializeLiff();
+    document
+  .getElementById("registerButton")
+  .addEventListener("click", () => {
+    window.location.href = "register.html";
+  });
   </script>
 </body>
 </html>
