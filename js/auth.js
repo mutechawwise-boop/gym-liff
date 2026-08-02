@@ -15,7 +15,13 @@ export function createAuth({
     }
 
     state.adminKey = value;
-    setRole(state, "owner");
+
+const role =
+  value === "gonglovemute"
+    ? "owner"
+    : "coach";
+
+setRole(state, role);
     elements.loginButton.disabled = true;
     elements.loginButton.textContent = "กำลังตรวจสอบ...";
     elements.loginError.textContent = "";
