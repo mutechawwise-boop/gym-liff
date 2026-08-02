@@ -530,8 +530,6 @@
         autocomplete="current-password"
         placeholder="กรอกรหัส Admin"
       >
-
-      <button id="loginButton" type="button">เข้าสู่ระบบ</button>
       <p id="loginError" class="error"></p>
     </section>
 
@@ -563,13 +561,16 @@
 </header>
 
 <nav class="quick-nav">
-  <a href="#dashboard">📊 Dashboard</a>
-  <a href="#members">👥 สมาชิก</a>
+  <a href="#dashboard" data-owner>📊 Dashboard</a>
+<a href="#members" data-owner>👥 สมาชิก</a>
   <a href="#classes">🥋 เปิดคลาส</a>
   <a href="#attendance">✅ เช็กชื่อ</a>
 </nav>
 
-<section id="dashboard" class="dashboard-summary">
+<section
+    id="dashboardSection"
+    data-owner
+>
         <article class="summary-card">
           <span class="summary-label">👥 สมาชิกทั้งหมด</span>
           <strong id="totalMembers" class="summary-number">-</strong>
@@ -622,10 +623,13 @@
 </section>
 
 <section id="members" class="card">
-      <section id="members" class="card">
+     <section
+    id="membersSection"
+    data-owner
+>
         <h2 style="margin-top: 0;">👥 จัดการสมาชิก</h2>
         <div class="action-grid">
-          <button id="openCreateMemberButton" type="button">
+        <button id="openCreateMemberButton" type="button">
             ➕ เพิ่มสมาชิกใหม่
           </button>
           <button id="refreshMembersButton" class="secondary-button" type="button">
@@ -838,6 +842,13 @@
 
 <script type="module">
 import { createAuth } from "./js/auth.js";
+import {
+    isOwner,
+    isCoach,
+    setRole,
+    restoreRole,
+    logoutRole
+} from "./js/role.js";
     const elements = {
       loginArea: document.getElementById("loginArea"),
       adminArea: document.getElementById("adminArea"),
@@ -1685,11 +1696,23 @@ async function loadAdminDashboard() {
 
    
 const auth = createAuth({
-    elements,
-    state,
-    loadAdminDashboard,
-    loadOverview
+  elements,
+  state,
+  loadAdminDashboard,
+  loadOverview,
+  onAuthenticated: applyRole
 });
+function applyRole() {
+
+    if (isOwner(state)) return;
+
+    document
+        .querySelectorAll("[data-owner]")
+        .forEach(el => {
+            el.style.display = "none";
+        });
+
+}
     elements.loginButton.addEventListener("click", auth.login);
 
 elements.adminKeyInput.addEventListener("keydown", (event) => {
@@ -1740,13 +1763,13 @@ document
       });
     });
 
-    const savedAdminKey = sessionStorage.getItem("gambitAdminKey");
 
-    if (savedAdminKey) {
-      state.adminKey = savedAdminKey;
-      loadOverview();
-        loadExpiringMembers();
-    }
+   if (auth.restoreSession()) {
+  loadAdminDashboard();
+  loadOverview();
+  loadExpiringMembers();
+  applyRole();
+}
    async function loadExpiringMembers() {
   const list = document.getElementById("expiringMemberList");
   const error = document.getElementById("expiryListError");

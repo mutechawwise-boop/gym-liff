@@ -1,8 +1,10 @@
+import { setRole, logoutRole, restoreRole } from "./role.js";
 export function createAuth({
   elements,
   state,
   loadAdminDashboard,
-  loadOverview
+  loadOverview,
+  onAuthenticated
 }) {
   async function login() {
     const value = elements.adminKeyInput.value.trim();
@@ -13,6 +15,7 @@ export function createAuth({
     }
 
     state.adminKey = value;
+    setRole(state, "owner");
     elements.loginButton.disabled = true;
     elements.loginButton.textContent = "กำลังตรวจสอบ...";
     elements.loginError.textContent = "";
@@ -22,6 +25,7 @@ export function createAuth({
 
       await loadAdminDashboard();
       await loadOverview();
+      onAuthenticated?.();
     } catch (error) {
       sessionStorage.removeItem("gambitAdminKey");
       state.adminKey = "";
@@ -35,7 +39,7 @@ export function createAuth({
 
   function logout() {
     sessionStorage.removeItem("gambitAdminKey");
-    sessionStorage.removeItem("gambitRole");
+   logoutRole();
 
     state.adminKey = "";
     state.role = "";
@@ -48,13 +52,11 @@ export function createAuth({
 
   function restoreSession() {
     const savedAdminKey = sessionStorage.getItem("gambitAdminKey");
-    const savedRole = sessionStorage.getItem("gambitRole");
 
     if (!savedAdminKey) return false;
 
     state.adminKey = savedAdminKey;
-    state.role = savedRole || "";
-
+   restoreRole(state);
     return true;
   }
 
