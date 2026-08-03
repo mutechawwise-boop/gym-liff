@@ -543,14 +543,43 @@ registrationForm.addEventListener("submit", async (event) => {
       membershipPlan,
       paymentMethod
     });
-const response = await fetch("/api/create-member", {
+const decodedToken = liff.getDecodedIDToken();
+const currentTime = Math.floor(Date.now() / 1000);
+
+if (
+  !decodedToken ||
+  !decodedToken.exp ||
+  decodedToken.exp <= currentTime
+) {
+  registrationMessage.textContent =
+    "เซสชัน LINE หมดอายุ กำลังเข้าสู่ระบบใหม่...";
+
+  if (liff.isLoggedIn()) {
+    liff.logout();
+  }
+
+  liff.login({
+    redirectUri: window.location.href
+  });
+
+  return;
+}
+
+const freshIdToken = liff.getIDToken();
+
+if (!freshIdToken) {
+  throw new Error(
+    "ไม่สามารถรับ LINE ID Token ได้ กรุณาเข้าสู่ระบบใหม่"
+  );
+}
+    const response = await fetch("/api/create-member", {
   method: "POST",
   headers: {
     "Content-Type": "application/json"
   },
   body: JSON.stringify({
     mode: "line_register",
-    idToken: lineIdToken,
+    idToken: freshIdToken,
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
     nickname: formData.get("nickname"),
