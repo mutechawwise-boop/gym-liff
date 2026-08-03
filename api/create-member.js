@@ -396,17 +396,20 @@ const membershipExpiryDate =
         enrollments
       });
     } catch (error) {
-      return json(
-        {
-          error:
-            "ระบบเพิ่มสมาชิกเกิดข้อผิดพลาด",
-          details:
-            error instanceof Error
-              ? error.message
-              : String(error)
-        },
-        500
-      );
-    }
+  console.error("Create member error:", error);
+
+  return json(
+    {
+      error: "ระบบเพิ่มสมาชิกเกิดข้อผิดพลาด",
+      details:
+        error && typeof error === "object" && "details" in error
+          ? error.details
+          : error instanceof Error
+            ? error.message
+            : String(error)
+    },
+    500
+  );
+}
   }
 };
