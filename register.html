@@ -137,7 +137,65 @@
     .result p {
       margin: 6px 0;
     }
-  </style>
+ #registrationForm {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 10px;
+}
+
+#registrationForm > label {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+#registrationForm input:not([type="radio"]):not([type="file"]),
+#registrationForm select,
+#registrationForm textarea {
+  width: 100%;
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font: inherit;
+  background: #fff;
+}
+
+#registrationForm textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+#registrationForm input[type="radio"] {
+  width: auto;
+  margin-right: 6px;
+}
+
+#registrationForm h2 {
+  margin: 20px 0 10px;
+}
+    #submitRegistrationButton {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: #111111;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#submitRegistrationButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+ 
+ </style>
 </head>
 
 <body>
