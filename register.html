@@ -52,15 +52,15 @@
     }
 
     .profile {
-      display: none;
-      align-items: center;
-      gap: 12px;
-      margin: 20px 0;
-      padding: 14px;
-      background: #f7f7f7;
-      border-radius: 14px;
-      text-align: left;
-    }
+  display: block;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  padding: 14px;
+  background: #f7f7f7;
+  border-radius: 14px;
+  text-align: left;
+}
 
     .profile img {
       width: 56px;
@@ -373,7 +373,23 @@
     type="file"
     accept="image/*"
   >
+
+<button id="submitRegistrationButton" type="submit">
+  สมัครสมาชิกและส่งข้อมูลการชำระเงิน
+</button>
+
+<div class="notice-box">
+  <strong>หมายเหตุ</strong>
+  <p>
+    หลังส่งข้อมูลแล้ว คำขอจะเข้าสู่ขั้นตอนตรวจสอบโดยโค้ช
+    เมื่ออนุมัติแล้ว คุณจะได้รับการแจ้งเตือนผ่าน LINE
+  </p>
 </div>
+<p id="registrationMessage"></p>
+
+</form>
+</section>
+</main>
 <script>
 const LIFF_ID = "2010879060-PKqAwFmt";
 const paymentMethodInputs = document.querySelectorAll(
@@ -419,6 +435,7 @@ async function initializeLiff() {
 lineIdToken = liff.getIDToken() || "";
 
 console.log("LINE profile:", lineProfile);
+document.getElementById("profile").style.display = "block";
   } catch (error) {
     console.error("LIFF initialization error:", error);
 
@@ -477,9 +494,38 @@ registrationForm.addEventListener("submit", async (event) => {
       membershipPlan,
       paymentMethod
     });
+const response = await fetch("/api/create-member", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    mode: "line_register",
+    idToken: lineIdToken,
+    firstName: formData.get("firstName"),
+    lastName: formData.get("lastName"),
+    nickname: formData.get("nickname"),
+    phone: formData.get("phone"),
+    email: formData.get("email"),
+    birthDate: formData.get("birthDate"),
+    gender: formData.get("gender"),
+    medicalConditions: formData.get("medicalConditions"),
+    allergies: formData.get("allergies"),
+    emergencyContactName: formData.get("emergencyContactName"),
+    emergencyContactRelationship: formData.get("emergencyContactRelationship"),
+    emergencyContactPhone: formData.get("emergencyContactPhone"),
+    membershipPlan: formData.get("membershipPlan"),
+    paymentMethod: formData.get("paymentMethod")
+  })
+});
 
+const data = await response.json();
+
+if (!response.ok || !data.success) {
+  throw new Error(data.error || "สมัครสมาชิกไม่สำเร็จ");
+}
     registrationMessage.textContent =
-      "เตรียมข้อมูลเรียบร้อยแล้ว";
+  "ส่งคำขอสมัครสมาชิกเรียบร้อยแล้ว กรุณารอโค้ชตรวจสอบ";
   } catch (error) {
     console.error(error);
 

@@ -104,8 +104,134 @@ if (mode !== "line_register") {
     );
   }
 }
-      if (mode === "line_register") {
+  if (mode === "line_register") {
+  const lineChannelId = process.env.LINE_CHANNEL_ID;
 
+  if (!lineChannelId) {
+    return json(
+      { error: "ยังไม่ได้ตั้งค่า LINE_CHANNEL_ID" },
+      500
+    );
+  }
+
+  const idToken = String(body.idToken || "").trim();
+
+  const lineProfile = await verifyLineIdToken(
+    idToken,
+    lineChannelId
+  );
+
+  const firstName = String(body.firstName || "").trim();
+  const lastName = String(body.lastName || "").trim();
+  const nickname = String(body.nickname || "").trim();
+  const phone = String(body.phone || "").trim();
+  const email = String(body.email || "").trim();
+  const birthDate = String(body.birthDate || "").trim();
+  const gender = String(body.gender || "").trim();
+
+  const medicalConditions =
+    String(body.medicalConditions || "").trim();
+
+  const allergies =
+    String(body.allergies || "").trim();
+
+  const emergencyContactName =
+    String(body.emergencyContactName || "").trim();
+
+  const emergencyContactRelationship =
+    String(body.emergencyContactRelationship || "").trim();
+
+  const emergencyContactPhone =
+    String(body.emergencyContactPhone || "").trim();
+
+  const membershipPlan =
+    String(body.membershipPlan || "").trim();
+
+  const paymentMethod =
+    String(body.paymentMethod || "").trim();
+
+  if (!firstName || !lastName || !nickname || !phone) {
+    return json(
+      { error: "กรุณากรอกข้อมูลที่จำเป็นให้ครบ" },
+      400
+    );
+  }
+
+  if (!membershipPlan) {
+    return json(
+      { error: "กรุณาเลือกแผนสมาชิก" },
+      400
+    );
+  }
+
+  if (!["cash", "transfer"].includes(paymentMethod)) {
+    return json(
+      { error: "วิธีชำระเงินไม่ถูกต้อง" },
+      400
+    );
+  }
+
+  const supabaseHeaders = {
+    apikey: supabaseSecretKey,
+    Authorization: `Bearer ${supabaseSecretKey}`,
+    "Content-Type": "application/json",
+    Prefer: "return=representation"
+  };
+
+  const registrationResponse = await fetch(
+    `${supabaseUrl}/rest/v1/member_registration`,
+    {
+      method: "POST",
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        line_user_id: lineProfile.userId,
+        line_display_name: lineProfile.displayName,
+        line_picture_url: lineProfile.pictureUrl,
+        first_name: firstName,
+        last_name: lastName,
+        nickname,
+        phone,
+        email: email || null,
+        birth_date: birthDate || null,
+        gender: gender || null,
+        medical_conditions: medicalConditions || null,
+        allergies: allergies || null,
+        emergency_contact_name:
+          emergencyContactName || null,
+        emergency_contact_relationship:
+          emergencyContactRelationship || null,
+        emergency_contact_phone:
+          emergencyContactPhone || null,
+        membership_plan: membershipPlan,
+        payment_method: paymentMethod,
+        payment_status: "pending",
+        registration_status: "pending",
+        payment_amount: null,
+        slip_url: null,
+        slip_uploaded_at: null
+      })
+    }
+  );
+
+  if (!registrationResponse.ok) {
+    const details = await registrationResponse.text();
+
+    return json(
+      {
+        error: "บันทึกคำขอสมัครสมาชิกไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const registrations =
+    await registrationResponse.json();
+
+  return json({
+    success: true,
+    registration: registrations[0]
+  });
 }
 const nickname =
         String(body.nickname || "").trim();
