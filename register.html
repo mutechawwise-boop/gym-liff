@@ -194,7 +194,34 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
- 
+ .payment-qr-box {
+  width: 100%;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.payment-qr-box h3 {
+  margin: 0 0 14px;
+}
+
+.payment-qr-image {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  margin: 0 auto 14px;
+  border-radius: 12px;
+}
+
+.payment-qr-note {
+  margin: 0;
+  line-height: 1.6;
+  color: #555555;
+}
  </style>
 </head>
 
@@ -403,10 +430,21 @@
 </label>
 
 <div id="transferDetails" style="display:none; margin-top:16px;">
-  <p>
-    กรุณาโอนตามบัญชีหรือ QR ที่ยิมแจ้งไว้
-    แล้วแนบหลักฐานการโอน
-  </p>
+
+  <div class="payment-qr-box">
+    <h3>ชำระเงินด้วยการโอน</h3>
+
+    <img
+      src="images/payment-qr.jpg"
+      alt="QR Code สำหรับชำระเงิน"
+      class="payment-qr-image"
+    >
+
+    <p class="payment-qr-note">
+      กรุณาสแกน QR Code เพื่อชำระเงิน
+      แล้วแนบหลักฐานการโอนด้านล่าง
+    </p>
+  </div>
 
   <label for="paymentSlip">
     หลักฐานการโอน
@@ -418,6 +456,7 @@
     type="file"
     accept="image/*"
   >
+
 </div>
 
 <button id="submitRegistrationButton" type="submit">
