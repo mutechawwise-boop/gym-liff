@@ -479,6 +479,10 @@ async function initializeLiff() {
 
     lineProfile = await liff.getProfile();
 lineIdToken = liff.getIDToken() || "";
+const decodedToken = liff.getDecodedIDToken();
+
+console.log("Decoded LINE token:", decodedToken);
+console.log("LINE Channel ID from token:", decodedToken?.aud);
 
 console.log("LINE profile:", lineProfile);
 document.getElementById("profile").style.display = "block";
