@@ -255,18 +255,6 @@
     type="tel"
     inputmode="tel"
   >
-
-  <button id="submitRegistrationButton" type="submit">
-    สมัครสมาชิก
-  </button>
-<div class="notice-box">
-  <strong>หมายเหตุ</strong>
-  <p>
-    หลังส่งข้อมูลแล้ว คำขอจะเข้าสู่ขั้นตอนตรวจสอบโดยโค้ช
-    เมื่ออนุมัติแล้ว คุณจะได้รับการแจ้งเตือนผ่าน LINE
-  </p>
-</div>
-  <p id="registrationMessage"></p>
 <hr>
 
 <h2>เลือกแผนสมาชิก</h2>
@@ -522,7 +510,13 @@ const response = await fetch("/api/create-member", {
 const data = await response.json();
 
 if (!response.ok || !data.success) {
-  throw new Error(data.error || "สมัครสมาชิกไม่สำเร็จ");
+
+    console.log(data);
+
+    throw new Error(
+        JSON.stringify(data)
+    );
+
 }
     registrationMessage.textContent =
   "ส่งคำขอสมัครสมาชิกเรียบร้อยแล้ว กรุณารอโค้ชตรวจสอบ";
