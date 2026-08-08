@@ -269,6 +269,85 @@
   <div id="memberRegistrationList" class="empty-state">
     กำลังโหลดคำขอสมัครสมาชิก...
   </div>
+<div
+  id="registrationDetail"
+  style="display:none; margin-top:20px;"
+>
+  <hr>
+
+  <h3>รายละเอียดคำขอสมัครสมาชิก</h3>
+
+  <div id="registrationDetailContent"></div>
+
+  <hr>
+
+  <h3>กำหนดสิทธิ์สมาชิก</h3>
+
+  <label for="approvalStartDate">
+    วันที่เริ่มสมาชิก
+  </label>
+
+  <input
+    id="approvalStartDate"
+    type="date"
+  >
+
+  <label for="approvalExpiryDate">
+    วันที่หมดอายุ
+  </label>
+
+  <input
+    id="approvalExpiryDate"
+    type="date"
+  >
+
+  <div id="sessionApprovalFields" style="display:none;">
+    <label for="approvalTotalSessions">
+      จำนวนครั้งทั้งหมด
+    </label>
+
+    <input
+      id="approvalTotalSessions"
+      type="number"
+      min="1"
+    >
+
+    <label for="approvalRemainingSessions">
+      จำนวนครั้งคงเหลือ
+    </label>
+
+    <input
+      id="approvalRemainingSessions"
+      type="number"
+      min="0"
+    >
+  </div>
+
+  <label for="approvalNote">
+    หมายเหตุ Owner
+  </label>
+
+  <textarea
+    id="approvalNote"
+    rows="3"
+  ></textarea>
+
+  <button
+    id="approveRegistrationButton"
+    type="button"
+  >
+    อนุมัติสมาชิก
+  </button>
+
+  <button
+    id="closeRegistrationDetailButton"
+    type="button"
+  >
+    ปิด
+  </button>
+
+  <p id="approvalMessage"></p>
+</div>
 </section>
     <section class="owner-card">
       <h2>🥋 คลาสวันนี้</h2>
@@ -436,29 +515,244 @@ if (!data.pendingRegistrations?.length) {
       })
       .join("");
 }
-  const classList =
-    document.getElementById("todayClassList");
+const classList =
+  document.getElementById("todayClassList");
 
-  if (!data.classes?.length) {
-    classList.textContent = "วันนี้ยังไม่มีคลาสที่เปิด";
-    return;
-  }
-
+if (!data.classes?.length) {
+  classList.textContent =
+    "วันนี้ยังไม่มีคลาสที่เปิด";
+} else {
   classList.innerHTML = data.classes
     .map((classItem) => `
       <div class="owner-stat">
         <strong>${classItem.name}</strong>
+
         <p>
           ${String(classItem.startTime).slice(0, 5)}
           -
           ${String(classItem.endTime).slice(0, 5)}
         </p>
+
         <span>
           เข้าเรียน ${classItem.attendanceCount} คน
         </span>
       </div>
     `)
     .join("");
+}
+
+
+/* =========================
+   MEMBER REGISTRATION DETAIL
+========================= */
+
+const registrationDetail =
+  document.getElementById("registrationDetail");
+
+const registrationDetailContent =
+  document.getElementById("registrationDetailContent");
+
+const sessionApprovalFields =
+  document.getElementById("sessionApprovalFields");
+
+const approvalStartDate =
+  document.getElementById("approvalStartDate");
+
+const approvalExpiryDate =
+  document.getElementById("approvalExpiryDate");
+
+const approvalTotalSessions =
+  document.getElementById("approvalTotalSessions");
+
+const approvalRemainingSessions =
+  document.getElementById("approvalRemainingSessions");
+
+const approvalNote =
+  document.getElementById("approvalNote");
+
+const approvalMessage =
+  document.getElementById("approvalMessage");
+
+
+registrationList
+  .querySelectorAll(".view-registration-button")
+  .forEach((button) => {
+
+    button.addEventListener("click", () => {
+
+      const registrationId =
+        Number(button.dataset.registrationId);
+
+      const registration =
+        data.pendingRegistrations.find(
+          (item) =>
+            Number(item.id) === registrationId
+        );
+
+      if (!registration) {
+        return;
+      }
+
+
+      registrationDetail.dataset.registrationId =
+        String(registration.id);
+
+
+      const fullName = [
+        registration.first_name,
+        registration.last_name
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+
+      const paymentMethod =
+        registration.payment_method === "transfer"
+          ? "เงินโอน"
+          : registration.payment_method === "cash"
+            ? "เงินสด"
+            : "-";
+
+
+      registrationDetailContent.innerHTML = `
+        <div class="owner-stat">
+
+          <p>
+            <strong>ชื่อ:</strong>
+            ${fullName || "-"}
+          </p>
+
+          <p>
+            <strong>ชื่อเล่น:</strong>
+            ${registration.nickname || "-"}
+          </p>
+
+          <p>
+            <strong>เบอร์โทร:</strong>
+            ${registration.phone || "-"}
+          </p>
+
+          <p>
+            <strong>อีเมล:</strong>
+            ${registration.email || "-"}
+          </p>
+
+          <p>
+            <strong>วันเกิด:</strong>
+            ${registration.birth_date || "-"}
+          </p>
+
+          <p>
+            <strong>เพศ:</strong>
+            ${registration.gender || "-"}
+          </p>
+
+          <p>
+            <strong>โรคประจำตัว:</strong>
+            ${registration.medical_conditions || "ไม่มี"}
+          </p>
+
+          <p>
+            <strong>แพ้อาหาร / แพ้ยา:</strong>
+            ${registration.allergies || "ไม่มี"}
+          </p>
+
+          <p>
+            <strong>ผู้ติดต่อฉุกเฉิน:</strong>
+            ${registration.emergency_contact_name || "-"}
+          </p>
+
+          <p>
+            <strong>ความสัมพันธ์:</strong>
+            ${registration.emergency_contact_relationship || "-"}
+          </p>
+
+          <p>
+            <strong>เบอร์ฉุกเฉิน:</strong>
+            ${registration.emergency_contact_phone || "-"}
+          </p>
+
+          <p>
+            <strong>แผนสมาชิก:</strong>
+            ${registration.membership_plan || "-"}
+          </p>
+
+          <p>
+            <strong>วิธีชำระเงิน:</strong>
+            ${paymentMethod}
+          </p>
+
+        </div>
+      `;
+
+
+      approvalStartDate.value = "";
+      approvalExpiryDate.value = "";
+      approvalNote.value = "";
+      approvalMessage.textContent = "";
+
+
+      const plan =
+        String(
+          registration.membership_plan || ""
+        );
+
+
+      const isClassPass =
+        plan.startsWith("class_pass_");
+
+
+      if (isClassPass) {
+
+        sessionApprovalFields.style.display =
+          "block";
+
+        const sessionMatch =
+          plan.match(/class_pass_(\d+)/);
+
+        const defaultSessions =
+          sessionMatch
+            ? Number(sessionMatch[1])
+            : "";
+
+        approvalTotalSessions.value =
+          defaultSessions;
+
+        approvalRemainingSessions.value =
+          defaultSessions;
+
+      } else {
+
+        sessionApprovalFields.style.display =
+          "none";
+
+        approvalTotalSessions.value = "";
+        approvalRemainingSessions.value = "";
+      }
+
+
+      registrationDetail.style.display =
+        "block";
+
+
+      registrationDetail.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+
+    });
+
+  });
+
+
+document
+  .getElementById("closeRegistrationDetailButton")
+  .addEventListener("click", () => {
+
+    registrationDetail.style.display =
+      "none";
+
+  });
 }
     document.getElementById("ownerDateText").textContent =
       `ภาพรวมประจำวันที่ ${new Intl.DateTimeFormat("th-TH", {
