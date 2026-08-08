@@ -218,11 +218,12 @@
     </header>
 
     <nav class="owner-nav">
-      <a href="#todayOverview">📅 ภาพรวมวันนี้</a>
-      <a href="#financeOverview">💰 การเงิน</a>
-      <a href="#payments">💳 รายการรับเงิน</a>
-      <a href="#reports">📄 รายงาน</a>
-    </nav>
+  <a href="#todayOverview">📅 ภาพรวมวันนี้</a>
+  <a href="#memberRegistrations">📥 คำขอสมัครสมาชิก</a>
+  <a href="#financeOverview">💰 การเงิน</a>
+  <a href="#payments">💳 รายการรับเงิน</a>
+  <a href="#reports">📄 รายงาน</a>
+</nav>
 
     <section id="todayOverview" class="owner-card">
       <h2>📅 ภาพรวมวันนี้</h2>
@@ -253,7 +254,22 @@
         </article>
       </div>
     </section>
+<section id="memberRegistrations" class="owner-card">
+  <div class="owner-section-header">
+    <div>
+      <h2>📥 คำขอสมัครสมาชิก</h2>
+      <p>ตรวจสอบข้อมูลและกำหนดสิทธิ์ก่อนอนุมัติสมาชิก</p>
+    </div>
 
+    <span id="pendingRegistrationCount" class="owner-badge">
+      0 รายการ
+    </span>
+  </div>
+
+  <div id="memberRegistrationList" class="empty-state">
+    กำลังโหลดคำขอสมัครสมาชิก...
+  </div>
+</section>
     <section class="owner-card">
       <h2>🥋 คลาสวันนี้</h2>
 
@@ -346,7 +362,80 @@ async function loadOwnerDashboard() {
 
   document.getElementById("todayExpiringCount").textContent =
     data.todayExpiringCount ?? 0;
+const pendingCount =
+  document.getElementById("pendingRegistrationCount");
 
+const registrationList =
+  document.getElementById("memberRegistrationList");
+
+pendingCount.textContent =
+  `${data.pendingRegistrationCount ?? 0} รายการ`;
+
+if (!data.pendingRegistrations?.length) {
+  registrationList.className = "empty-state";
+  registrationList.textContent =
+    "ยังไม่มีคำขอสมัครสมาชิกที่รออนุมัติ";
+} else {
+  registrationList.className = "";
+
+  registrationList.innerHTML =
+    data.pendingRegistrations
+      .map((registration) => {
+        const fullName = [
+          registration.first_name,
+          registration.last_name
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        const plan =
+          registration.membership_plan || "-";
+
+        const paymentMethod =
+          registration.payment_method === "transfer"
+            ? "เงินโอน"
+            : registration.payment_method === "cash"
+              ? "เงินสด"
+              : "-";
+
+        return `
+          <article class="owner-stat">
+            <strong>
+              ${fullName || registration.line_display_name || "ไม่ระบุชื่อ"}
+            </strong>
+
+            <p>
+              ชื่อเล่น:
+              ${registration.nickname || "-"}
+            </p>
+
+            <p>
+              แผนสมาชิก:
+              ${plan}
+            </p>
+
+            <p>
+              วิธีชำระเงิน:
+              ${paymentMethod}
+            </p>
+
+            <p>
+              สถานะ:
+              รออนุมัติ
+            </p>
+
+            <button
+              type="button"
+              class="view-registration-button"
+              data-registration-id="${registration.id}"
+            >
+              ดูรายละเอียด
+            </button>
+          </article>
+        `;
+      })
+      .join("");
+}
   const classList =
     document.getElementById("todayClassList");
 

@@ -118,6 +118,59 @@ if (!isCoach && !isOwner) {
       const members = await membersResponse.json();
       const sessions = await sessionsResponse.json();
       const attendance = await attendanceResponse.json();
+      let pendingRegistrations = [];
+
+if (isOwner) {
+  const registrationResponse = await supabase.request(
+    "member_registration" +
+      "?select=" +
+      [
+        "id",
+        "created_at",
+        "line_user_id",
+        "line_display_name",
+        "line_picture_url",
+        "first_name",
+        "last_name",
+        "nickname",
+        "phone",
+        "email",
+        "birth_date",
+        "gender",
+        "medical_conditions",
+        "allergies",
+        "emergency_contact_name",
+        "emergency_contact_relationship",
+        "emergency_contact_phone",
+        "membership_plan",
+        "payment_method",
+        "payment_status",
+        "registration_status",
+        "slip_url",
+        "payment_amount"
+      ].join(",") +
+      "&registration_status=eq.pending" +
+      "&order=created_at.desc"
+  );
+
+  if (!registrationResponse.ok) {
+    const errorText =
+      await registrationResponse.text();
+
+    return json(
+      {
+        success: false,
+        error:
+          "โหลดคำขอสมัครสมาชิกไม่สำเร็จ",
+        details: errorText
+      },
+      500
+    );
+  }
+
+  pendingRegistrations =
+    await registrationResponse.json();
+}
 
       let activeMembers = 0;
       let expiringSoon = 0;
@@ -222,6 +275,10 @@ if (!isCoach && !isOwner) {
         todayAttendanceCount: todayAttendance.length,
         todayNewMemberCount,
         todayExpiringCount: expiringMembers.length,
+        pendingRegistrationCount:
+  pendingRegistrations.length,
+
+pendingRegistrations,
         classes
       });
     } catch (error) {
