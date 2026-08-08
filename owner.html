@@ -743,7 +743,131 @@ registrationList
     });
 
   });
+const approveRegistrationButton =
+  document.getElementById(
+    "approveRegistrationButton"
+  );
 
+approveRegistrationButton.onclick =
+  async () => {
+    const registrationId =
+      Number(
+        registrationDetail.dataset.registrationId
+      );
+
+    if (!registrationId) {
+      approvalMessage.textContent =
+        "ไม่พบคำขอสมัครสมาชิก";
+      return;
+    }
+
+    if (
+      !approvalStartDate.value ||
+      !approvalExpiryDate.value
+    ) {
+      approvalMessage.textContent =
+        "กรุณากำหนดวันที่เริ่มและวันที่หมดอายุ";
+      return;
+    }
+
+    const isClassPass =
+      sessionApprovalFields.style.display !==
+      "none";
+
+    approveRegistrationButton.disabled = true;
+    approveRegistrationButton.textContent =
+      "กำลังอนุมัติ...";
+
+    approvalMessage.textContent = "";
+
+    try {
+      const adminKey =
+        sessionStorage.getItem(
+          "gambitAdminKey"
+        );
+
+      const response = await fetch(
+        "/api/create-member",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            "x-admin-key":
+              adminKey
+          },
+
+          body: JSON.stringify({
+            mode:
+              "owner_approve_registration",
+
+            registrationId,
+
+            membershipStartDate:
+              approvalStartDate.value,
+
+            membershipExpiryDate:
+              approvalExpiryDate.value,
+
+            totalSessions:
+              isClassPass
+                ? approvalTotalSessions.value
+                : null,
+
+            remainingSessions:
+              isClassPass
+                ? approvalRemainingSessions.value
+                : null,
+
+            ownerNote:
+              approvalNote.value
+          })
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.error ||
+          result.details ||
+          "อนุมัติสมาชิกไม่สำเร็จ"
+        );
+      }
+
+      approvalMessage.textContent =
+        "อนุมัติสมาชิกเรียบร้อยแล้ว";
+
+      registrationDetail.style.display =
+        "none";
+
+      await loadOwnerDashboard();
+
+    } catch (error) {
+      console.error(
+        "Approve registration error:",
+        error
+      );
+
+      approvalMessage.textContent =
+        error instanceof Error
+          ? error.message
+          : "อนุมัติสมาชิกไม่สำเร็จ";
+
+    } finally {
+      approveRegistrationButton.disabled =
+        false;
+
+      approveRegistrationButton.textContent =
+        "อนุมัติสมาชิก";
+    }
+   };
 
 document
   .getElementById("closeRegistrationDetailButton")

@@ -77,31 +77,48 @@ export default {
       }
 
       const body = await request.json();
-const mode = String(body.mode || "admin_create").trim();
+const mode = String(
+  body.mode || "admin_create"
+).trim();
+
 if (mode !== "line_register") {
-  const adminKey =
+  const accessKey =
     request.headers.get("x-admin-key");
 
-  const expectedAdminKey =
+  const adminKey =
     process.env.ADMIN_KEY;
 
-  if (!expectedAdminKey) {
-    return json(
-      { error: "ยังไม่ได้ตั้งค่า ADMIN_KEY" },
-      500
-    );
-  }
+  const ownerKey =
+    process.env.OWNER_KEY;
 
-  if (
-    !adminKey ||
-    adminKey !== expectedAdminKey
-  ) {
-    return json(
-      {
-        error: "ไม่มีสิทธิ์ใช้งานหน้า Admin"
-      },
-      401
-    );
+  if (mode === "owner_approve_registration") {
+    if (
+      !ownerKey ||
+      !accessKey ||
+      accessKey !== ownerKey
+    ) {
+      return json(
+        {
+          error:
+            "ไม่มีสิทธิ์อนุมัติสมาชิก"
+        },
+        401
+      );
+    }
+  } else {
+    if (
+      !adminKey ||
+      !accessKey ||
+      accessKey !== adminKey
+    ) {
+      return json(
+        {
+          error:
+            "ไม่มีสิทธิ์ใช้งานหน้า Admin"
+        },
+        401
+      );
+    }
   }
 }
   if (mode === "line_register") {
@@ -231,6 +248,380 @@ if (mode !== "line_register") {
   return json({
     success: true,
     registration: registrations[0]
+  });
+}
+if (mode === "owner_approve_registration") {
+  const registrationId =
+    Number(body.registrationId);
+
+  const membershipStartDate =
+    String(
+      body.membershipStartDate || ""
+    ).trim();
+
+  const membershipExpiryDate =
+    String(
+      body.membershipExpiryDate || ""
+    ).trim();
+
+  const totalSessions =
+    body.totalSessions === null ||
+    body.totalSessions === "" ||
+    body.totalSessions === undefined
+      ? null
+      : Number(body.totalSessions);
+
+  const remainingSessions =
+    body.remainingSessions === null ||
+    body.remainingSessions === "" ||
+    body.remainingSessions === undefined
+      ? null
+      : Number(body.remainingSessions);
+
+  const ownerNote =
+    String(body.ownerNote || "").trim();
+
+  if (
+    !Number.isInteger(registrationId) ||
+    registrationId <= 0
+  ) {
+    return json(
+      {
+        error:
+          "Registration ID ไม่ถูกต้อง"
+      },
+      400
+    );
+  }
+
+  if (
+    !membershipStartDate ||
+    !membershipExpiryDate
+  ) {
+    return json(
+      {
+        error:
+          "กรุณากำหนดวันที่เริ่มและวันที่หมดอายุ"
+      },
+      400
+    );
+  }
+
+  if (
+    membershipExpiryDate <
+    membershipStartDate
+  ) {
+    return json(
+      {
+        error:
+          "วันที่หมดอายุต้องไม่ก่อนวันที่เริ่มสมาชิก"
+      },
+      400
+    );
+  }
+
+  const supabaseHeaders = {
+    apikey: supabaseSecretKey,
+    Authorization:
+      `Bearer ${supabaseSecretKey}`,
+    "Content-Type": "application/json",
+    Prefer: "return=representation"
+  };
+
+  // อ่านคำขอสมัคร
+  const registrationResponse = await fetch(
+    `${supabaseUrl}/rest/v1/member_registration` +
+      `?id=eq.${registrationId}` +
+      `&select=*` +
+      `&limit=1`,
+    {
+      headers: supabaseHeaders
+    }
+  );
+
+  if (!registrationResponse.ok) {
+    const details =
+      await registrationResponse.text();
+
+    return json(
+      {
+        error:
+          "อ่านข้อมูลคำขอสมัครไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const registrationRows =
+    await registrationResponse.json();
+
+  const registration =
+    registrationRows[0];
+
+  if (!registration) {
+    return json(
+      {
+        error:
+          "ไม่พบคำขอสมัครสมาชิก"
+      },
+      404
+    );
+  }
+
+  if (
+    registration.registration_status !==
+    "pending"
+  ) {
+    return json(
+      {
+        error:
+          "คำขอนี้ไม่ได้อยู่ในสถานะรออนุมัติ"
+      },
+      400
+    );
+  }
+
+  const membershipPlan =
+    String(
+      registration.membership_plan || ""
+    ).trim();
+
+  const isClassPass =
+    membershipPlan.startsWith(
+      "class_pass_"
+    );
+
+  if (isClassPass) {
+    if (
+      !Number.isInteger(totalSessions) ||
+      totalSessions <= 0
+    ) {
+      return json(
+        {
+          error:
+            "กรุณาระบุจำนวนครั้งทั้งหมด"
+        },
+        400
+      );
+    }
+
+    if (
+      !Number.isInteger(
+        remainingSessions
+      ) ||
+      remainingSessions < 0 ||
+      remainingSessions > totalSessions
+    ) {
+      return json(
+        {
+          error:
+            "จำนวนครั้งคงเหลือไม่ถูกต้อง"
+        },
+        400
+      );
+    }
+  }
+
+  // เช็กว่ามีสมาชิก LINE คนนี้อยู่แล้วหรือไม่
+  const existingMemberResponse =
+    await fetch(
+      `${supabaseUrl}/rest/v1/members` +
+        `?line_user_id=eq.${encodeURIComponent(
+          registration.line_user_id
+        )}` +
+        `&select=id` +
+        `&limit=1`,
+      {
+        headers: supabaseHeaders
+      }
+    );
+
+  if (!existingMemberResponse.ok) {
+    const details =
+      await existingMemberResponse.text();
+
+    return json(
+      {
+        error:
+          "ตรวจสอบสมาชิกเดิมไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const existingMembers =
+    await existingMemberResponse.json();
+
+  const memberPayload = {
+    line_user_id:
+      registration.line_user_id,
+
+    display_name:
+      registration.line_display_name ||
+      [
+        registration.first_name,
+        registration.last_name
+      ]
+        .filter(Boolean)
+        .join(" ") ||
+      registration.nickname ||
+      "สมาชิก",
+
+    nickname:
+      registration.nickname || null,
+
+    phone:
+      registration.phone || null,
+
+    member_status: "active",
+
+    membership_plan:
+      membershipPlan || null,
+
+    membership_start_date:
+      membershipStartDate,
+
+    membership_expiry_date:
+      membershipExpiryDate,
+
+    total_sessions:
+      isClassPass
+        ? totalSessions
+        : null,
+
+    remaining_sessions:
+      isClassPass
+        ? remainingSessions
+        : null,
+
+    is_guest: false,
+
+    created_by: "owner"
+  };
+
+  let member;
+
+  if (existingMembers.length > 0) {
+    const memberId =
+      existingMembers[0].id;
+
+    const memberResponse = await fetch(
+      `${supabaseUrl}/rest/v1/members` +
+        `?id=eq.${memberId}`,
+      {
+        method: "PATCH",
+        headers: supabaseHeaders,
+        body: JSON.stringify(
+          memberPayload
+        )
+      }
+    );
+
+    if (!memberResponse.ok) {
+      const details =
+        await memberResponse.text();
+
+      return json(
+        {
+          error:
+            "อัปเดตสมาชิกไม่สำเร็จ",
+          details
+        },
+        500
+      );
+    }
+
+    const rows =
+      await memberResponse.json();
+
+    member = rows[0];
+  } else {
+    const memberResponse = await fetch(
+      `${supabaseUrl}/rest/v1/members`,
+      {
+        method: "POST",
+        headers: supabaseHeaders,
+        body: JSON.stringify(
+          memberPayload
+        )
+      }
+    );
+
+    if (!memberResponse.ok) {
+      const details =
+        await memberResponse.text();
+
+      return json(
+        {
+          error:
+            "สร้างสมาชิกไม่สำเร็จ",
+          details
+        },
+        500
+      );
+    }
+
+    const rows =
+      await memberResponse.json();
+
+    member = rows[0];
+  }
+
+  if (!member?.id) {
+    return json(
+      {
+        error:
+          "อนุมัติแล้วแต่ไม่พบ Member ID"
+      },
+      500
+    );
+  }
+
+  // ปิดคำขอสมัคร
+  const approvalResponse = await fetch(
+    `${supabaseUrl}/rest/v1/member_registration` +
+      `?id=eq.${registrationId}`,
+    {
+      method: "PATCH",
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        registration_status:
+          "approved",
+
+        approved_by:
+          "owner",
+
+        approved_at:
+          new Date().toISOString(),
+
+        coach_note:
+          ownerNote || null
+      })
+    }
+  );
+
+  if (!approvalResponse.ok) {
+    const details =
+      await approvalResponse.text();
+
+    return json(
+      {
+        error:
+          "สร้างสมาชิกสำเร็จ แต่เปลี่ยนสถานะคำขอไม่สำเร็จ",
+        member,
+        details
+      },
+      500
+    );
+  }
+
+  return json({
+    success: true,
+    message:
+      "อนุมัติสมาชิกเรียบร้อยแล้ว",
+    member
   });
 }
 const nickname =
