@@ -124,9 +124,9 @@ export default {
       // ค้นหาสมาชิกจาก LINE User ID
       const memberResponse = await fetch(
         `${supabaseUrl}/rest/v1/members` +
-          `?line_user_id=eq.${encodeURIComponent(lineUserId)}` +
-          `&select=id,line_user_id,display_name,checkin_count,last_checkin` +
-          `&limit=1`,
+         `?line_user_id=eq.${encodeURIComponent(lineUserId)}` +
+`&select=id,line_user_id,display_name,checkin_count,last_checkin,member_status,membership_plan,membership_start_date,membership_expiry_date,total_sessions,remaining_sessions` +
+`&limit=1`,
         {
           headers: commonHeaders
         }
@@ -149,41 +149,57 @@ export default {
 
       // สร้างสมาชิกใหม่ หากยังไม่มีในระบบ
       if (members.length === 0) {
-        const insertMemberResponse = await fetch(
-          `${supabaseUrl}/rest/v1/members`,
-          {
-            method: "POST",
-            headers: {
-              ...commonHeaders,
-              Prefer: "return=representation"
-            },
-            body: JSON.stringify({
-              line_user_id: lineUserId,
-              display_name: displayName,
-              last_checkin: null,
-              checkin_count: 0,
-              created_by: "line"
-            })
-          }
-        );
+  return json(
+    {
+      error: "ยังไม่พบข้อมูลสมาชิก",
+      message:
+  "กรุณาสมัครสมาชิกและรอการอนุมัติก่อนเช็กชื่อ"
+    },
+    403
+  );
+}
 
-        if (!insertMemberResponse.ok) {
-          const details = await insertMemberResponse.text();
+currentMember = members[0];
 
-          return json(
-            {
-              error: "เพิ่มสมาชิกไม่สำเร็จ",
-              details
-            },
-            500
-          );
-        }
+if (currentMember.member_status !== "active") {
+  return json(
+    {
+      error: "สมาชิกยังไม่พร้อมใช้งาน",
+      message:
+  "กรุณาติดต่อยิมเพื่อตรวจสอบสถานะสมาชิก"
+    },
+    403
+  );
+}
+if (
+  currentMember.membership_start_date &&
+  todayThailand <
+    currentMember.membership_start_date
+) {
+  return json(
+    {
+      error: "สมาชิกยังไม่ถึงวันเริ่มใช้งาน",
+      message:
+        "สิทธิ์สมาชิกของคุณยังไม่เริ่มใช้งาน"
+    },
+    403
+  );
+}
 
-        [currentMember] = await insertMemberResponse.json();
-      } else {
-        currentMember = members[0];
-      }
-
+if (
+  currentMember.membership_expiry_date &&
+  todayThailand >
+    currentMember.membership_expiry_date
+) {
+  return json(
+    {
+      error: "สมาชิกหมดอายุแล้ว",
+      message:
+        "กรุณาต่ออายุสมาชิกก่อนเข้าเรียน"
+    },
+    403
+  );
+}
       // ตรวจสอบว่าคลาสนี้มีการเช็กชื่อแล้วหรือยัง
       const attendanceResponse = await fetch(
         `${supabaseUrl}/rest/v1/attendance` +
@@ -223,7 +239,35 @@ export default {
           sessionId
         });
       }
+const membershipPlan = String(
+  currentMember.membership_plan || ""
+);
 
+const isClassPass =
+  membershipPlan.startsWith("class_pass_");
+
+let newRemainingSessions = null;
+
+if (isClassPass) {
+  const remainingSessions =
+    Number(currentMember.remaining_sessions ?? 0);
+
+  if (remainingSessions <= 0) {
+    return json(
+      {
+        error: "สิทธิ์เข้าเรียนครบแล้ว",
+        message:
+          "Class Pass ของคุณถูกใช้ครบจำนวนครั้งแล้ว กรุณาติดต่อโค้ชเพื่อต่อแพ็กเกจ",
+        membershipPlan,
+        remainingSessions: 0
+      },
+      403
+    );
+  }
+
+  newRemainingSessions =
+    remainingSessions - 1;
+}
       // บันทึกประวัติการเข้าเรียน
       const attendanceInsertResponse = await fetch(
         `${supabaseUrl}/rest/v1/attendance`,
@@ -277,11 +321,18 @@ export default {
             Prefer: "return=representation"
           },
           body: JSON.stringify({
-            display_name: displayName,
-            last_checkin: now,
-            checkin_count: newCount,
-            updated_at: now
-          })
+  display_name: displayName,
+  last_checkin: now,
+  checkin_count: newCount,
+  updated_at: now,
+
+  ...(isClassPass
+    ? {
+        remaining_sessions:
+          newRemainingSessions
+      }
+    : {})
+})
         }
       );
 
@@ -301,15 +352,23 @@ export default {
       const member = updatedMembers[0];
 
       return json({
-        success: true,
-        alreadyCheckedIn: false,
-        message: "เช็กอินสำเร็จ",
-        displayName: member.display_name,
-        checkinCount: member.checkin_count,
-        checkedInAt: member.last_checkin,
-        checkinMethod: "student",
-        sessionId
-      });
+  success: true,
+  alreadyCheckedIn: false,
+  message: "เช็กอินสำเร็จ",
+  displayName: member.display_name,
+  checkinCount: member.checkin_count,
+  checkedInAt: member.last_checkin,
+  checkinMethod: "student",
+  sessionId,
+
+  membershipPlan:
+  currentMember.membership_plan || null,
+
+remainingSessions:
+  isClassPass
+    ? member.remaining_sessions
+    : null
+});
     } catch (error) {
       return json(
         {
