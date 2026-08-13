@@ -90,18 +90,7 @@
       white-space: pre-line;
     }
 
-    #checkinButton {
-      display: none;
-      width: 100%;
-      padding: 15px 20px;
-      border: 0;
-      border-radius: 12px;
-      background: #111111;
-      color: #ffffff;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
-    }
+  
 
     #checkinButton:disabled {
       cursor: not-allowed;
@@ -421,6 +410,93 @@
     font-size: 40px;
   }
 }
+  /* =========================
+   MEMBER ACTIONS
+========================= */
+
+.member-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.member-actions .action-card {
+  width: 100%;
+  min-height: 92px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 15px;
+
+  border: 1px solid #e1e1e1;
+  border-radius: 16px;
+
+  background: #ffffff;
+  color: #181818;
+
+  text-align: left;
+  cursor: pointer;
+
+  box-shadow:
+    0 5px 16px rgba(0, 0, 0, 0.07);
+}
+
+.member-actions .action-card:hover {
+  transform: translateY(-1px);
+}
+
+.action-icon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: #111111;
+  color: #ffffff;
+
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.action-text {
+  min-width: 0;
+}
+
+.action-text strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.action-text small {
+  display: block;
+  margin-top: 4px;
+
+  color: #888888;
+  font-size: 11px;
+}
+
+
+/* ปุ่ม Check-in เน้นแดงเล็กน้อย */
+
+#checkinButton .action-icon {
+  background: #e3262e;
+}
+
+
+@media (max-width: 380px) {
+  .member-actions {
+    grid-template-columns: 1fr;
+  }
+}
   </style>
 </head>
 
@@ -531,23 +607,61 @@
 </section>
 
     <p id="status">กำลังเชื่อมต่อกับ LINE...</p>
-<section id="memberMenu" style="margin-top:20px;">
+<section id="memberMenu" class="member-actions">
 
-  <button id="registerButton" type="button">
-    📝 สมัครสมาชิก
+  <button
+    id="checkinButton"
+    class="action-card"
+    type="button"
+  >
+    <span class="action-icon">✓</span>
+
+    <span class="action-text">
+      <strong>เช็กชื่อเข้าเรียน</strong>
+      <small>Check-in Class</small>
+    </span>
   </button>
 
-  <button id="renewButton" type="button">
-    💳 ต่ออายุสมาชิก
+
+  <button
+    id="historyButton"
+    class="action-card"
+    type="button"
+  >
+    <span class="action-icon">↻</span>
+
+    <span class="action-text">
+      <strong>ประวัติการเข้าเรียน</strong>
+      <small>Class History</small>
+    </span>
   </button>
-<button id="checkinButton" type="button">
-    ✅ เช็กชื่อเข้าเรียน
-    </button>
-  <button id="historyButton" type="button">
-    📋 ประวัติการเข้าเรียน
+
+
+  <button
+    id="renewButton"
+    class="action-card"
+    type="button"
+  >
+    <span class="action-icon">▣</span>
+
+    <span class="action-text">
+      <strong>ต่ออายุสมาชิก</strong>
+      <small>Renew Membership</small>
+    </span>
   </button>
-   <button id="paymentHistoryButton" type="button">
-    💰 ประวัติการชำระเงิน
+
+
+  <button
+    id="paymentHistoryButton"
+    class="action-card"
+    type="button"
+  >
+    <span class="action-icon">฿</span>
+
+    <span class="action-text">
+      <strong>ประวัติการชำระเงิน</strong>
+      <small>Payment History</small>
+    </span>
   </button>
 
 </section>
@@ -620,22 +734,210 @@
         } else {
           pictureElement.style.display = "none";
         }
+statusElement.className = "";
+statusElement.textContent =
+  "กำลังโหลดข้อมูลสมาชิก...";
 
-       profileElement.style.display = "grid";
-        checkinButton.style.display = "block";
-
-        statusElement.className = "";
-        statusElement.textContent =
-          "พร้อมแล้ว กดปุ่มด้านล่างเพื่อเช็กชื่อเข้าเรียน";
+checkinButton.style.display = "flex";
 
        checkinButton.addEventListener("click", checkIn);
 
       } catch (error) {
-        console.error(error);
-        showError("เกิดข้อผิดพลาด: " + error.message);
-      }
-    }
+  console.error(error);
+  showError("เกิดข้อผิดพลาด: " + error.message);
+}
+}
 
+
+function formatThaiDate(dateValue) {
+  if (!dateValue) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat(
+    "th-TH",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "Asia/Bangkok"
+    }
+  ).format(
+    new Date(`${dateValue}T00:00:00`)
+  );
+}
+
+
+function formatMembershipPlan(plan) {
+  const plans = {
+    adult_monthly:
+      "Adult Monthly",
+
+    kids_monthly:
+      "Kids Monthly",
+
+    private:
+      "Private",
+
+    drop_in:
+      "Drop In",
+
+    class_pass_4:
+      "Class Pass 4 ครั้ง",
+
+    class_pass_8:
+      "Class Pass 8 ครั้ง",
+
+    class_pass_12:
+      "Class Pass 12 ครั้ง"
+  };
+
+  return plans[plan] || plan || "-";
+}
+    async function loadMemberProfile(idToken) {
+  const response = await fetch("/api/checkin", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      mode: "profile",
+      idToken
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.success) {
+    throw new Error(
+      data.error || "โหลดข้อมูลสมาชิกไม่สำเร็จ"
+    );
+  }
+
+
+  // =========================
+  // ยังไม่เคยสมัคร
+  // =========================
+
+  if (data.state === "not_registered") {
+    window.location.href = "register.html";
+    return;
+  }
+
+
+  // =========================
+  // สมัครแล้ว รออนุมัติ
+  // =========================
+
+  if (data.state === "pending") {
+    profileElement.style.display = "none";
+    memberMenu.style.display = "none";
+
+    statusElement.className = "";
+    statusElement.textContent =
+      "คำขอสมัครสมาชิกของคุณอยู่ระหว่างการตรวจสอบ\nกรุณารอการอนุมัติจากทางยิม";
+
+    return;
+  }
+
+
+  // =========================
+  // MEMBER
+  // =========================
+
+  if (data.state !== "member") {
+    throw new Error(
+      "ไม่สามารถตรวจสอบสถานะสมาชิกได้"
+    );
+  }
+
+  const member = data.member;
+
+
+  // รหัสสมาชิก
+  document.getElementById(
+    "memberCode"
+  ).textContent =
+    member.memberCode || "-";
+
+
+  // สถานะ
+  const statusBadge =
+    document.getElementById(
+      "memberStatusBadge"
+    );
+
+  statusBadge.textContent =
+    String(
+      member.memberStatus || "inactive"
+    ).toUpperCase();
+
+
+  // วันเริ่ม
+  document.getElementById(
+    "membershipStart"
+  ).textContent =
+    formatThaiDate(
+      member.membershipStartDate
+    );
+
+
+  // วันหมดอายุ
+  document.getElementById(
+    "membershipExpiry"
+  ).textContent =
+    formatThaiDate(
+      member.membershipExpiryDate
+    );
+
+
+  // Package
+  const plan =
+    String(
+      member.membershipPlan || ""
+    );
+
+  document.getElementById(
+    "membershipPlan"
+  ).textContent =
+    formatMembershipPlan(plan);
+
+
+  // Class Pass
+  const isClassPass =
+    plan.startsWith("class_pass_");
+
+  const classPassSummary =
+    document.getElementById(
+      "classPassSummary"
+    );
+
+  if (isClassPass) {
+    classPassSummary.style.display =
+      "flex";
+
+    document.getElementById(
+      "cardRemainingSessions"
+    ).textContent =
+      member.remainingSessions ?? 0;
+
+    document.getElementById(
+      "cardTotalSessions"
+    ).textContent =
+      member.totalSessions ?? 0;
+
+  } else {
+    classPassSummary.style.display =
+      "none";
+  }
+
+
+  profileElement.style.display = "grid";
+
+  statusElement.className = "";
+  statusElement.textContent =
+    "พร้อมแล้ว กดเช็กชื่อเข้าเรียนได้เลย";
+}
     async function checkIn() {
       checkinButton.disabled = true;
       checkinButton.textContent = "กำลังเช็กชื่อ...";
@@ -764,11 +1066,6 @@ if (isClassPass) {
     }
 
     initializeLiff();
-    document
-  .getElementById("registerButton")
-  .addEventListener("click", () => {
-    window.location.href = "register.html";
-  });
   </script>
 </body>
 </html>

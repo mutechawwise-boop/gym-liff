@@ -14,8 +14,13 @@ export default {
     }
 
     try {
-      const { idToken } = await request.json();
+      const body = await request.json();
 
+const idToken = body.idToken;
+
+const mode = String(
+  body.mode || "checkin"
+).trim();
       if (!idToken) {
         return json({ error: "ไม่พบ LINE ID token" }, 400);
       }
@@ -82,7 +87,173 @@ export default {
       };
 
       const todayThailand = getThailandDateKey(now);
+// =====================================
+// PROFILE MODE
+// โหลดข้อมูลสมาชิกโดยไม่ต้องมีคลาสเปิด
+// =====================================
 
+if (mode === "profile") {
+  const profileMemberResponse = await fetch(
+    `${supabaseUrl}/rest/v1/members` +
+      `?line_user_id=eq.${encodeURIComponent(lineUserId)}` +
+      `&select=id,line_user_id,display_name,nickname,member_status,membership_plan,membership_start_date,membership_expiry_date,total_sessions,remaining_sessions,checkin_count` +
+      `&limit=1`,
+    {
+      headers: commonHeaders
+    }
+  );
+
+  if (!profileMemberResponse.ok) {
+    const details =
+      await profileMemberResponse.text();
+
+    return json(
+      {
+        success: false,
+        error: "อ่านข้อมูลสมาชิกไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const profileMembers =
+    await profileMemberResponse.json();
+
+
+  // ==============================
+  // มี MEMBER แล้ว
+  // ==============================
+
+  if (profileMembers.length > 0) {
+    const member = profileMembers[0];
+
+    return json({
+      success: true,
+      state: "member",
+
+      lineProfile: {
+        displayName,
+        pictureUrl:
+          lineProfile.picture || null
+      },
+
+      member: {
+        id: member.id,
+
+        memberCode:
+          `GJ-${String(member.id).padStart(
+            4,
+            "0"
+          )}`,
+
+        displayName:
+          member.display_name ||
+          displayName,
+
+        nickname:
+          member.nickname || null,
+
+        memberStatus:
+          member.member_status,
+
+        membershipPlan:
+          member.membership_plan,
+
+        membershipStartDate:
+          member.membership_start_date,
+
+        membershipExpiryDate:
+          member.membership_expiry_date,
+
+        totalSessions:
+          member.total_sessions,
+
+        remainingSessions:
+          member.remaining_sessions,
+
+        checkinCount:
+          Number(
+            member.checkin_count || 0
+          )
+      }
+    });
+  }
+
+
+  // ==============================
+  // ยังไม่มี MEMBER
+  // ตรวจคำขอสมัครที่ยัง pending
+  // ==============================
+
+  const registrationResponse =
+    await fetch(
+      `${supabaseUrl}/rest/v1/member_registration` +
+        `?line_user_id=eq.${encodeURIComponent(lineUserId)}` +
+        `&registration_status=eq.pending` +
+        `&select=id,registration_status,created_at,membership_plan` +
+        `&order=created_at.desc` +
+        `&limit=1`,
+      {
+        headers: commonHeaders
+      }
+    );
+
+  if (!registrationResponse.ok) {
+    const details =
+      await registrationResponse.text();
+
+    return json(
+      {
+        success: false,
+        error:
+          "ตรวจสอบคำขอสมัครสมาชิกไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const registrations =
+    await registrationResponse.json();
+
+
+  // ==============================
+  // สมัครแล้ว แต่รอ Owner อนุมัติ
+  // ==============================
+
+  if (registrations.length > 0) {
+    return json({
+      success: true,
+      state: "pending",
+
+      lineProfile: {
+        displayName,
+        pictureUrl:
+          lineProfile.picture || null
+      },
+
+      registration:
+        registrations[0]
+    });
+  }
+
+
+  // ==============================
+  // ยังไม่เคยสมัคร
+  // ==============================
+
+  return json({
+    success: true,
+    state: "not_registered",
+
+    lineProfile: {
+      displayName,
+      pictureUrl:
+        lineProfile.picture || null
+    }
+  });
+}
       // หา Session ที่เปิดอยู่ของวันนี้
       const sessionResponse = await fetch(
         `${supabaseUrl}/rest/v1/class_sessions` +
@@ -246,7 +417,16 @@ if (
       attendanceRecords[0].checkin_method,
 
     sessionId,
+     memberId: currentMember.id,
 
+     memberStatus:
+     currentMember.member_status,
+
+     membershipStartDate:
+     currentMember.membership_start_date,
+
+     membershipExpiryDate:
+      currentMember.membership_expiry_date,
     membershipPlan:
       currentMember.membership_plan || null,
 
@@ -378,6 +558,16 @@ if (isClassPass) {
   checkedInAt: member.last_checkin,
   checkinMethod: "student",
   sessionId,
+  memberId: currentMember.id,
+
+memberStatus:
+  currentMember.member_status,
+
+membershipStartDate:
+  currentMember.membership_start_date,
+
+membershipExpiryDate:
+  currentMember.membership_expiry_date,
 
   membershipPlan:
   currentMember.membership_plan || null,
