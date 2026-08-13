@@ -37,10 +37,16 @@
     }
 
     .logo {
-      font-size: 52px;
-      margin-bottom: 8px;
-    }
+  margin-bottom: 8px;
+}
 
+.main-logo {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
     h1 {
       margin: 0;
       font-size: 26px;
@@ -502,7 +508,13 @@
 
 <body>
   <main class="card">
-    <div class="logo">🥋</div>
+    <div class="logo">
+  <img
+    src="images/logo.jpg"
+    alt="GAMBIT JIUJITSU"
+    class="main-logo"
+  >
+</div>
 
     <h1>GAMBIT JIUJITSU</h1>
     <p class="subtitle">ระบบเช็กชื่อเข้าเรียน</p>
@@ -577,11 +589,10 @@
   >
 
     <img
-      src="images/logo.png"
-      class="card-watermark"
-      alt=""
-    >
-
+  src="images/logo.jpg"
+  class="card-watermark"
+  alt=""
+>
     <span class="class-pass-title">
       Class Pass
     </span>
