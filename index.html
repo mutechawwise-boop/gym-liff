@@ -749,6 +749,12 @@ statusElement.className = "";
 statusElement.textContent =
   "กำลังโหลดข้อมูลสมาชิก...";
 
+console.log("STEP 1: ก่อน loadMemberProfile");
+
+await loadMemberProfile(idToken);
+
+console.log("STEP 2: loadMemberProfile เสร็จ");
+
 checkinButton.style.display = "flex";
 
        checkinButton.addEventListener("click", checkIn);
@@ -806,6 +812,8 @@ function formatMembershipPlan(plan) {
   return plans[plan] || plan || "-";
 }
     async function loadMemberProfile(idToken) {
+  console.log("STEP 1.5: เข้า loadMemberProfile แล้ว");
+
   const response = await fetch("/api/checkin", {
     method: "POST",
     headers: {
