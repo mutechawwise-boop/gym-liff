@@ -227,18 +227,36 @@ if (
       const attendanceRecords = await attendanceResponse.json();
 
       // ครูหรือนักเรียนเช็กคลาสนี้ไปแล้ว
-      if (attendanceRecords.length > 0) {
-        return json({
-          success: true,
-          alreadyCheckedIn: true,
-          message: "คลาสนี้เช็กชื่อเรียบร้อยแล้ว",
-          displayName: currentMember.display_name || displayName,
-          checkinCount: Number(currentMember.checkin_count || 0),
-          checkedInAt: attendanceRecords[0].checked_in_at,
-          checkinMethod: attendanceRecords[0].checkin_method,
-          sessionId
-        });
-      }
+    if (attendanceRecords.length > 0) {
+  return json({
+    success: true,
+    alreadyCheckedIn: true,
+    message: "คลาสนี้เช็กชื่อเรียบร้อยแล้ว",
+
+    displayName:
+      currentMember.display_name || displayName,
+
+    checkinCount:
+      Number(currentMember.checkin_count || 0),
+
+    checkedInAt:
+      attendanceRecords[0].checked_in_at,
+
+    checkinMethod:
+      attendanceRecords[0].checkin_method,
+
+    sessionId,
+
+    membershipPlan:
+      currentMember.membership_plan || null,
+
+    totalSessions:
+      currentMember.total_sessions ?? null,
+
+    remainingSessions:
+      currentMember.remaining_sessions ?? null
+  });
+}
 const membershipPlan = String(
   currentMember.membership_plan || ""
 );
@@ -363,6 +381,11 @@ if (isClassPass) {
 
   membershipPlan:
   currentMember.membership_plan || null,
+
+totalSessions:
+  isClassPass
+    ? currentMember.total_sessions
+    : null,
 
 remainingSessions:
   isClassPass
