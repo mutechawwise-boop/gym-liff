@@ -137,6 +137,290 @@
     .result p {
       margin: 6px 0;
     }
+    /* =========================
+   GAMBIT MEMBER CARD
+========================= */
+
+.member-card {
+  position: relative;
+  overflow: hidden;
+
+  display: none;
+  grid-template-columns: 1.35fr 0.85fr;
+
+  width: 100%;
+  margin: 22px 0;
+  padding: 22px;
+
+  color: #ffffff;
+  text-align: left;
+
+  background:
+    linear-gradient(
+      135deg,
+      #080808 0%,
+      #111111 55%,
+      #050505 100%
+    );
+
+  border-radius: 22px;
+
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.22);
+}
+
+.member-main {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.member-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.member-photo {
+  width: 76px;
+  height: 76px;
+
+  flex-shrink: 0;
+
+  object-fit: cover;
+  border-radius: 50%;
+
+  border: 3px solid #ffffff;
+}
+
+.member-name-area {
+  min-width: 0;
+}
+
+.member-name-area h2 {
+  margin: 0 0 8px;
+
+  color: #ffffff;
+  font-size: 26px;
+  line-height: 1.1;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-status-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  font-size: 13px;
+}
+
+.status-badge {
+  display: inline-block;
+
+  padding: 5px 9px;
+
+  border-radius: 7px;
+
+  background: #159447;
+  color: #ffffff;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.line-member {
+  color: #cccccc;
+}
+
+.member-info {
+  margin-top: 20px;
+}
+
+.member-info-row {
+  display: grid;
+
+  grid-template-columns:
+    minmax(100px, 1fr)
+    1fr;
+
+  gap: 10px;
+
+  padding: 9px 0;
+
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.13);
+}
+
+.member-info-row span {
+  color: #bcbcbc;
+  font-size: 13px;
+}
+
+.member-info-row strong {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.package-row {
+  border-bottom: 0;
+}
+
+.package-row span {
+  color: #ef2b2d;
+  font-weight: 700;
+}
+
+
+/* CLASS PASS RIGHT SIDE */
+
+.class-pass-summary {
+  position: relative;
+  z-index: 1;
+
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  padding-left: 18px;
+
+  border-left:
+    1px solid rgba(255, 255, 255, 0.25);
+}
+
+.card-watermark {
+  position: absolute;
+
+  width: 180px;
+  max-width: 150%;
+
+  opacity: 0.09;
+
+  filter: grayscale(1);
+
+  pointer-events: none;
+}
+
+.class-pass-title {
+  position: relative;
+  z-index: 2;
+
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.class-pass-number {
+  position: relative;
+  z-index: 2;
+
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+
+  gap: 8px;
+
+  margin-top: 10px;
+}
+
+.class-pass-number strong,
+.class-pass-number span {
+  font-size: 40px;
+  line-height: 1;
+}
+
+#cardRemainingSessions {
+  color: #ef2b2d;
+  font-size: 48px;
+}
+
+.class-pass-summary small {
+  position: relative;
+  z-index: 2;
+
+  margin-top: 8px;
+
+  color: #ffffff;
+  font-size: 14px;
+}
+
+
+/* RED DETAIL */
+
+.member-card::after {
+  content: "";
+
+  position: absolute;
+
+  right: -45px;
+  bottom: -70px;
+
+  width: 210px;
+  height: 120px;
+
+  background:
+    linear-gradient(
+      135deg,
+      transparent 25%,
+      rgba(239, 43, 45, 0.85)
+    );
+
+  transform: rotate(-12deg);
+
+  opacity: 0.7;
+}
+
+
+/* MOBILE */
+
+@media (max-width: 430px) {
+
+  .member-card {
+    grid-template-columns: 1fr 0.72fr;
+
+    padding: 18px 16px;
+
+    border-radius: 18px;
+  }
+
+  .member-photo {
+    width: 62px;
+    height: 62px;
+  }
+
+  .member-name-area h2 {
+    font-size: 22px;
+  }
+
+  .member-info-row {
+    grid-template-columns:
+      minmax(86px, 1fr)
+      1fr;
+  }
+
+  .class-pass-summary {
+    padding-left: 12px;
+  }
+
+  .class-pass-title {
+    font-size: 15px;
+  }
+
+  .class-pass-number strong,
+  .class-pass-number span {
+    font-size: 30px;
+  }
+
+  #cardRemainingSessions {
+    font-size: 40px;
+  }
+}
   </style>
 </head>
 
@@ -147,14 +431,104 @@
     <h1>GAMBIT JIUJITSU</h1>
     <p class="subtitle">ระบบเช็กชื่อเข้าเรียน</p>
 
-    <section id="profile" class="profile">
-      <img id="picture" alt="รูปโปรไฟล์ LINE">
+   <section id="profile" class="member-card">
 
-      <div>
-        <p id="displayName" class="profile-name"></p>
-        <p class="profile-label">สมาชิก LINE</p>
+  <div class="member-main">
+
+    <div class="member-heading">
+
+      <img
+        id="picture"
+        class="member-photo"
+        alt="รูปโปรไฟล์ LINE"
+      >
+
+      <div class="member-name-area">
+        <h2 id="displayName">-</h2>
+
+        <div class="member-status-row">
+          <span
+            id="memberStatusBadge"
+            class="status-badge"
+          >
+            ACTIVE
+          </span>
+
+          <span class="line-member">
+            สมาชิก LINE
+          </span>
+        </div>
       </div>
-    </section>
+
+    </div>
+
+
+    <div class="member-info">
+
+      <div class="member-info-row">
+        <span>รหัสสมาชิก</span>
+        <strong id="memberCode">-</strong>
+      </div>
+
+      <div class="member-info-row">
+        <span>กลุ่มสมาชิก</span>
+        <strong id="memberGroup">-</strong>
+      </div>
+
+      <div class="member-info-row">
+        <span>วันที่เริ่มต้น</span>
+        <strong id="membershipStart">-</strong>
+      </div>
+
+      <div class="member-info-row">
+        <span>วันหมดอายุ</span>
+        <strong id="membershipExpiry">-</strong>
+      </div>
+
+      <div class="member-info-row package-row">
+        <span>แพ็กเกจ</span>
+        <strong id="membershipPlan">-</strong>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div
+    id="classPassSummary"
+    class="class-pass-summary"
+  >
+
+    <img
+      src="images/logo.png"
+      class="card-watermark"
+      alt=""
+    >
+
+    <span class="class-pass-title">
+      Class Pass
+    </span>
+
+    <div class="class-pass-number">
+
+      <strong id="cardRemainingSessions">
+        -
+      </strong>
+
+      <span>/</span>
+
+      <strong id="cardTotalSessions">
+        -
+      </strong>
+
+    </div>
+
+    <small>ครั้ง</small>
+
+  </div>
+
+</section>
 
     <p id="status">กำลังเชื่อมต่อกับ LINE...</p>
 <section id="memberMenu" style="margin-top:20px;">
@@ -247,7 +621,7 @@
           pictureElement.style.display = "none";
         }
 
-        profileElement.style.display = "flex";
+       profileElement.style.display = "grid";
         checkinButton.style.display = "block";
 
         statusElement.className = "";
