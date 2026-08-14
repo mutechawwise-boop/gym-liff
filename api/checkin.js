@@ -96,7 +96,7 @@ if (mode === "profile") {
   const profileMemberResponse = await fetch(
     `${supabaseUrl}/rest/v1/members` +
       `?line_user_id=eq.${encodeURIComponent(lineUserId)}` +
-      `&select=id,line_user_id,display_name,nickname,member_status,membership_plan,membership_start_date,membership_expiry_date,total_sessions,remaining_sessions,checkin_count` +
+      `&select=id,line_user_id,display_name,nickname,member_status,member_group,membership_plan,membership_start_date,membership_expiry_date,total_sessions,remaining_sessions,checkin_count` +
       `&limit=1`,
     {
       headers: commonHeaders
@@ -157,7 +157,10 @@ if (mode === "profile") {
         memberStatus:
           member.member_status,
 
-        membershipPlan:
+        memberGroup:
+            member.member_group,
+
+          membershipPlan:
           member.membership_plan,
 
         membershipStartDate:

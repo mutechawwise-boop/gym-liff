@@ -282,7 +282,15 @@
   <hr>
 
   <h3>กำหนดสิทธิ์สมาชิก</h3>
+<label for="approvalMemberGroup">
+  กลุ่มสมาชิก
+</label>
 
+<select id="approvalMemberGroup">
+  <option value="">-- เลือกกลุ่มสมาชิก --</option>
+  <option value="adult">ADULT</option>
+  <option value="kids">KIDS</option>
+</select>
   <label for="approvalStartDate">
     วันที่เริ่มสมาชิก
   </label>
@@ -554,8 +562,10 @@ const registrationDetailContent =
 
 const sessionApprovalFields =
   document.getElementById("sessionApprovalFields");
+const approvalMemberGroup =
+  document.getElementById("approvalMemberGroup");
 
-const approvalStartDate =
+  const approvalStartDate =
   document.getElementById("approvalStartDate");
 
 const approvalExpiryDate =
@@ -686,6 +696,7 @@ registrationList
       `;
 
 
+      approvalMemberGroup.value = "";
       approvalStartDate.value = "";
       approvalExpiryDate.value = "";
       approvalNote.value = "";
@@ -786,7 +797,12 @@ approveRegistrationButton.onclick =
           "gambitAdminKey"
         );
 
-      const response = await fetch(
+      if (!approvalMemberGroup.value) {
+  approvalMessage.textContent =
+    "กรุณาเลือกกลุ่มสมาชิก ADULT หรือ KIDS";
+  return;
+}
+        const response = await fetch(
         "/api/create-member",
         {
           method: "POST",
@@ -821,7 +837,9 @@ approveRegistrationButton.onclick =
                 ? approvalRemainingSessions.value
                 : null,
 
-            ownerNote:
+            memberGroup:
+              approvalMemberGroup.value,
+                ownerNote:
               approvalNote.value
           })
         }

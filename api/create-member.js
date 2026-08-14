@@ -263,7 +263,10 @@ if (mode === "owner_approve_registration") {
     String(
       body.membershipExpiryDate || ""
     ).trim();
-
+const memberGroup =
+  String(
+    body.memberGroup || ""
+  ).trim();
   const totalSessions =
     body.totalSessions === null ||
     body.totalSessions === "" ||
@@ -319,7 +322,17 @@ if (mode === "owner_approve_registration") {
       400
     );
   }
-
+if (
+  !["adult", "kids"].includes(memberGroup)
+) {
+  return json(
+    {
+      error:
+        "กรุณาเลือกกลุ่มสมาชิก ADULT หรือ KIDS"
+    },
+    400
+  );
+}
   const supabaseHeaders = {
     apikey: supabaseSecretKey,
     Authorization:
@@ -476,6 +489,9 @@ if (mode === "owner_approve_registration") {
       registration.phone || null,
 
     member_status: "active",
+    member_group:
+  memberGroup,
+
 
     membership_plan:
       membershipPlan || null,

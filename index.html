@@ -879,6 +879,13 @@ function formatMembershipPlan(plan) {
   }
 
   const member = data.member;
+  const memberGroupElement =
+  document.getElementById("memberGroup");
+
+memberGroupElement.textContent =
+  member.memberGroup
+    ? String(member.memberGroup).toUpperCase()
+    : "-";
 
 
   // รหัสสมาชิก
