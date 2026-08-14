@@ -1095,7 +1095,17 @@ if (isClassPass) {
   resultMembership.textContent = "";
   resultRemaining.textContent = "";
 }
+if (isClassPass) {
+  document.getElementById(
+    "cardRemainingSessions"
+  ).textContent =
+    data.remainingSessions ?? 0;
 
+  document.getElementById(
+    "cardTotalSessions"
+  ).textContent =
+    data.totalSessions ?? 0;
+}
         document.getElementById("resultTime").textContent =
           `เวลา: ${formatThaiDateTime(data.checkedInAt)}`;
 
