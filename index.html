@@ -231,19 +231,18 @@
 }
 
 .member-info {
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .member-info-row {
   display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
 
-  grid-template-columns:
-    minmax(100px, 1fr)
-    1fr;
-
-  gap: 10px;
-
+  min-height: 38px;
   padding: 9px 0;
+
+  align-items: center;
 
   border-bottom:
     1px solid rgba(255, 255, 255, 0.13);
@@ -280,11 +279,10 @@
 
   display: flex;
   flex-direction: column;
-
   align-items: center;
   justify-content: center;
 
-  padding-left: 18px;
+  padding-left: 22px;
 
   border-left:
     1px solid rgba(255, 255, 255, 0.25);
@@ -293,17 +291,18 @@
 .card-watermark {
   position: absolute;
 
-  width: 270px;
-  height: 270px;
+  width: 310px;
+  height: 310px;
 
-  right: -55px;
+  right: -95px;
   top: 50%;
 
   transform: translateY(-50%);
 
   object-fit: cover;
+  border-radius: 50%;
 
-  opacity: 0.13;
+  opacity: 0.09;
 
   filter:
     grayscale(1)
@@ -311,8 +310,6 @@
     brightness(0.55);
 
   mix-blend-mode: screen;
-
-  border-radius: 50%;
 
   pointer-events: none;
 }
@@ -333,31 +330,32 @@
   align-items: baseline;
   justify-content: center;
 
-  gap: 8px;
+  gap: 10px;
 
-  margin-top: 10px;
+  margin-top: 4px;
 }
 
 .class-pass-number strong,
 .class-pass-number span {
-  font-size: 48px;
+  font-size: 54px;
   line-height: 1;
   font-weight: 800;
 }
 
 #cardRemainingSessions {
   color: #ef252d;
-  font-size: 58px;
+  font-size: 64px;
 }
 
 .class-pass-summary small {
   position: relative;
   z-index: 2;
 
-  margin-top: 8px;
+  margin-top: 10px;
 
   color: #ffffff;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 
@@ -391,13 +389,14 @@
 
 @media (max-width: 430px) {
 
-  .member-card {
-    grid-template-columns: 1fr 0.72fr;
+ .member-card {
+  grid-template-columns: 1.15fr 0.95fr;
 
-    padding: 18px 16px;
+  min-height: 360px;
+  padding: 26px;
 
-    border-radius: 18px;
-  }
+  border-radius: 24px;
+}
 
   .member-photo {
     width: 62px;
@@ -408,12 +407,12 @@
     font-size: 22px;
   }
 
-  .member-info-row {
-    grid-template-columns: 112px 1fr;
-    .member-info-row strong {
+ .member-info-row {
+  grid-template-columns: 112px 1fr;
+}
+.member-info-row strong {
   white-space: nowrap;
 }
-  }
 
   .class-pass-summary {
     padding-left: 12px;
