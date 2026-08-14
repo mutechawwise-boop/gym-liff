@@ -749,7 +749,22 @@
             "ไม่สามารถรับ LINE ID token ได้ กรุณาตรวจสอบว่า LIFF เปิด scope openid แล้ว"
           );
         }
+const decodedToken = liff.getDecodedIDToken();
+const currentTime = Math.floor(Date.now() / 1000);
 
+if (
+  !decodedToken ||
+  !decodedToken.exp ||
+  decodedToken.exp <= currentTime + 60
+) {
+  liff.logout();
+
+  liff.login({
+    redirectUri: window.location.href
+  });
+
+  return;
+}
         const profile = await liff.getProfile();
         const lineUserId = profile.userId;
 
