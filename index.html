@@ -626,7 +626,9 @@
 
     </div>
 
-    <small>ครั้ง</small>
+    <small id="classPassStatus">
+  คงเหลือ - ครั้ง
+</small>
 
   </div>
 
@@ -837,7 +839,41 @@ function formatMembershipPlan(plan) {
 
   return plans[plan] || plan || "-";
 }
-    async function loadMemberProfile(idToken) {
+   function updateClassPassStatus(
+  remainingSessions,
+  totalSessions
+) {
+  const statusElement =
+    document.getElementById("classPassStatus");
+
+  const remaining =
+    Number(remainingSessions ?? 0);
+
+  const total =
+    Number(totalSessions ?? 0);
+
+  if (remaining <= 0) {
+    statusElement.textContent =
+      "ใช้สิทธิ์ครบแล้ว";
+    return;
+  }
+
+  if (remaining === 1) {
+    statusElement.textContent =
+      "⚠ เหลืออีก 1 ครั้ง";
+    return;
+  }
+
+  if (remaining === 2) {
+    statusElement.textContent =
+      "⚠ เหลืออีก 2 ครั้ง";
+    return;
+  }
+
+  statusElement.textContent =
+    `คงเหลือ ${remaining} ครั้ง`;
+}
+async function loadMemberProfile(idToken) {
   const response = await fetch("/api/checkin", {
     method: "POST",
     headers: {
@@ -968,13 +1004,15 @@ memberGroupElement.textContent =
     document.getElementById(
       "cardRemainingSessions"
     ).textContent =
-      member.remainingSessions ?? 0;
-
     document.getElementById(
       "cardTotalSessions"
     ).textContent =
       member.totalSessions ?? 0;
 
+      updateClassPassStatus(
+      member.remainingSessions,
+      member.totalSessions
+);
   } else {
     classPassSummary.style.display =
       "none";
@@ -1105,7 +1143,11 @@ if (isClassPass) {
     "cardTotalSessions"
   ).textContent =
     data.totalSessions ?? 0;
-}
+updateClassPassStatus(
+    data.remainingSessions,
+    data.totalSessions
+      );
+  }
         document.getElementById("resultTime").textContent =
           `เวลา: ${formatThaiDateTime(data.checkedInAt)}`;
 
