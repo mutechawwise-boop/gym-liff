@@ -27,11 +27,11 @@
 
     .card {
       width: 100%;
-      max-width: 440px;
-      margin: 40px auto;
+      max-width: 520px;
+      margin: 30px auto;
       padding: 28px 22px;
       background: #ffffff;
-      border-radius: 18px;
+      border-radius: 22px;
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
       text-align: center;
     }
@@ -69,8 +69,8 @@
     }
 
     .profile img {
-      width: 56px;
-      height: 56px;
+      width: 80px;
+      height: 80px;
       border-radius: 50%;
       object-fit: cover;
       background: #dddddd;
@@ -141,11 +141,11 @@
   overflow: hidden;
 
   display: none;
-  grid-template-columns: 1.35fr 0.85fr;
+ grid-template-columns: 1.2fr 0.9fr;
 
   width: 100%;
   margin: 22px 0;
-  padding: 22px;
+  padding: 24px;
 
   color: #ffffff;
   text-align: left;
@@ -293,12 +293,26 @@
 .card-watermark {
   position: absolute;
 
-  width: 180px;
-  max-width: 150%;
+  width: 270px;
+  height: 270px;
 
-  opacity: 0.09;
+  right: -55px;
+  top: 50%;
 
-  filter: grayscale(1);
+  transform: translateY(-50%);
+
+  object-fit: cover;
+
+  opacity: 0.13;
+
+  filter:
+    grayscale(1)
+    contrast(1.8)
+    brightness(0.55);
+
+  mix-blend-mode: screen;
+
+  border-radius: 50%;
 
   pointer-events: none;
 }
@@ -307,7 +321,7 @@
   position: relative;
   z-index: 2;
 
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
 }
 
@@ -326,13 +340,14 @@
 
 .class-pass-number strong,
 .class-pass-number span {
-  font-size: 40px;
+  font-size: 48px;
   line-height: 1;
+  font-weight: 800;
 }
 
 #cardRemainingSessions {
-  color: #ef2b2d;
-  font-size: 48px;
+  color: #ef252d;
+  font-size: 58px;
 }
 
 .class-pass-summary small {
@@ -394,9 +409,10 @@
   }
 
   .member-info-row {
-    grid-template-columns:
-      minmax(86px, 1fr)
-      1fr;
+    grid-template-columns: 112px 1fr;
+    .member-info-row strong {
+  white-space: nowrap;
+}
   }
 
   .class-pass-summary {
@@ -749,11 +765,7 @@ statusElement.className = "";
 statusElement.textContent =
   "กำลังโหลดข้อมูลสมาชิก...";
 
-console.log("STEP 1: ก่อน loadMemberProfile");
-
 await loadMemberProfile(idToken);
-
-console.log("STEP 2: loadMemberProfile เสร็จ");
 
 checkinButton.style.display = "flex";
 
@@ -812,8 +824,6 @@ function formatMembershipPlan(plan) {
   return plans[plan] || plan || "-";
 }
     async function loadMemberProfile(idToken) {
-  console.log("STEP 1.5: เข้า loadMemberProfile แล้ว");
-
   const response = await fetch("/api/checkin", {
     method: "POST",
     headers: {
@@ -824,7 +834,6 @@ function formatMembershipPlan(plan) {
       idToken
     })
   });
-
   const data = await response.json();
 
   if (!response.ok || !data.success) {
