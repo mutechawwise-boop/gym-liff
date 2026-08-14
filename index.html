@@ -1002,16 +1002,18 @@ memberGroupElement.textContent =
       "flex";
 
     document.getElementById(
-      "cardRemainingSessions"
-    ).textContent =
-    document.getElementById(
-      "cardTotalSessions"
-    ).textContent =
-      member.totalSessions ?? 0;
+  "cardRemainingSessions"
+).textContent =
+  member.remainingSessions ?? 0;
 
-      updateClassPassStatus(
-      member.remainingSessions,
-      member.totalSessions
+document.getElementById(
+  "cardTotalSessions"
+).textContent =
+  member.totalSessions ?? 0;
+
+updateClassPassStatus(
+  member.remainingSessions,
+  member.totalSessions
 );
   } else {
     classPassSummary.style.display =
