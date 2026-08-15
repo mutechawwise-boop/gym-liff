@@ -394,7 +394,36 @@
         </article>
       </div>
     </section>
+</section> <!-- memberRegistrations จบ -->
 
+
+<section
+  id="membershipRenewals"
+  class="owner-card"
+>
+  <div class="owner-section-header">
+    <div>
+      <h2>🔄 คำขอต่ออายุสมาชิก</h2>
+      <p>
+        ตรวจสอบและอนุมัติคำขอต่ออายุสมาชิก
+      </p>
+    </div>
+
+    <span
+      id="pendingRenewalCount"
+      class="owner-badge"
+    >
+      0 รายการ
+    </span>
+  </div>
+
+  <div
+    id="membershipRenewalList"
+    class="empty-state"
+  >
+    กำลังโหลดคำขอต่ออายุ...
+  </div>
+</section>
     <section id="payments" class="owner-card">
       <h2>💳 รายการรับเงินล่าสุด</h2>
 
@@ -517,6 +546,76 @@ if (!data.pendingRegistrations?.length) {
               data-registration-id="${registration.id}"
             >
               ดูรายละเอียด
+            </button>
+          </article>
+        `;
+      })
+      .join("");
+}
+const pendingRenewalCount =
+  document.getElementById("pendingRenewalCount");
+
+const membershipRenewalList =
+  document.getElementById("membershipRenewalList");
+
+pendingRenewalCount.textContent =
+  `${data.pendingRenewalCount ?? 0} รายการ`;
+
+if (!data.pendingRenewals?.length) {
+  membershipRenewalList.className = "empty-state";
+  membershipRenewalList.textContent =
+    "ยังไม่มีคำขอต่ออายุสมาชิกที่รอตรวจสอบ";
+} else {
+  membershipRenewalList.className = "";
+
+  membershipRenewalList.innerHTML =
+    data.pendingRenewals
+      .map((renewal) => {
+        const member =
+          renewal.members || {};
+
+        const memberName =
+          member.display_name ||
+          member.nickname ||
+          "ไม่ระบุชื่อ";
+
+        const plan =
+          renewal.membership_plan || "-";
+
+        const paymentMethod =
+          renewal.payment_method === "transfer"
+            ? "เงินโอน"
+            : renewal.payment_method === "cash"
+              ? "เงินสด"
+              : "-";
+
+        return `
+          <article class="owner-stat">
+            <strong>
+              ${memberName}
+            </strong>
+
+            <p>
+              แพ็กเกจ:
+              ${plan}
+            </p>
+
+            <p>
+              วิธีชำระเงิน:
+              ${paymentMethod}
+            </p>
+
+            <p>
+              สถานะ:
+              รอตรวจสอบ
+            </p>
+
+            <button
+              type="button"
+              class="approve-renewal-button"
+              data-renewal-id="${renewal.id}"
+            >
+              อนุมัติ
             </button>
           </article>
         `;
@@ -866,7 +965,7 @@ approveRegistrationButton.onclick =
         "none";
 
       await loadOwnerDashboard();
-
+ฏ
     } catch (error) {
       console.error(
         "Approve registration error:",
@@ -896,7 +995,98 @@ document
 
   });
 }
-    document.getElementById("ownerDateText").textContent =
+   document.addEventListener(
+  "click",
+  async (event) => {
+    const button =
+      event.target.closest(
+        ".approve-renewal-button"
+      );
+
+    if (!button) {
+      return;
+    }
+
+    const renewalId =
+      Number(button.dataset.renewalId);
+
+    if (
+      !Number.isInteger(renewalId) ||
+      renewalId <= 0
+    ) {
+      alert("Renewal ID ไม่ถูกต้อง");
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        "ยืนยันอนุมัติการต่ออายุสมาชิก?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      button.disabled = true;
+      button.textContent =
+        "กำลังอนุมัติ...";
+
+      const adminKey =
+        sessionStorage.getItem(
+          "gambitAdminKey"
+        );
+
+      const response = await fetch(
+        "/api/update-enrollment",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+            "x-admin-key": adminKey
+          },
+          body: JSON.stringify({
+            mode: "approve_renewal",
+            renewalId
+          })
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error ||
+          "อนุมัติการต่ออายุไม่สำเร็จ"
+        );
+      }
+
+      alert(
+        "อนุมัติการต่ออายุสมาชิกเรียบร้อยแล้ว"
+      );
+
+      await loadOwnerDashboard();
+
+    } catch (error) {
+      console.error(
+        "Approve renewal error:",
+        error
+      );
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "อนุมัติการต่ออายุไม่สำเร็จ"
+      );
+
+      button.disabled = false;
+      button.textContent = "อนุมัติ";
+    }
+  }
+);
+document.getElementById("ownerDateText").textContent =
       `ภาพรวมประจำวันที่ ${new Intl.DateTimeFormat("th-TH", {
         dateStyle: "long",
         timeZone: "Asia/Bangkok"

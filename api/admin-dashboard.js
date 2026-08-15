@@ -258,7 +258,48 @@ if (isOwner) {
           attendanceCount
         };
       });
+const renewalResponse = await fetch(
+  `${supabaseUrl}/rest/v1/membership_transactions` +
+    `?transaction_type=eq.renewal` +
+    `&payment_status=eq.pending` +
+    `&select=` +
+      `id,` +
+      `member_id,` +
+      `line_user_id,` +
+      `transaction_type,` +
+      `membership_plan,` +
+      `amount,` +
+      `payment_method,` +
+      `payment_status,` +
+      `slip_url,` +
+      `requested_at,` +
+      `members(` +
+        `id,` +
+        `display_name,` +
+        `nickname,` +
+        `member_group` +
+      `)` +
+    `&order=requested_at.asc`,
+  {
+    headers: commonHeaders
+  }
+);
 
+if (!renewalResponse.ok) {
+  const details =
+    await renewalResponse.text();
+
+  return json(
+    {
+      error: "โหลดคำขอต่ออายุสมาชิกไม่สำเร็จ",
+      details
+    },
+    500
+  );
+}
+
+const pendingRenewals =
+  await renewalResponse.json();
       return json({
         success: true,
         today,
@@ -276,9 +317,13 @@ if (isOwner) {
         todayNewMemberCount,
         todayExpiringCount: expiringMembers.length,
         pendingRegistrationCount:
-  pendingRegistrations.length,
+         pendingRegistrations.length,
 
-pendingRegistrations,
+       pendingRegistrations,
+       pendingRenewalCount:
+  pendingRenewals.length,
+
+pendingRenewals,
         classes
       });
     } catch (error) {
