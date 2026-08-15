@@ -195,7 +195,93 @@ if (mode !== "line_register") {
     "Content-Type": "application/json",
     Prefer: "return=representation"
   };
+// =====================================
+// ป้องกัน LINE เดิมสมัครสมาชิกซ้ำ
+// =====================================
 
+// 1. ตรวจว่า LINE ID นี้เป็น Member อยู่แล้วหรือไม่
+const existingMemberResponse = await fetch(
+  `${supabaseUrl}/rest/v1/members` +
+    `?line_user_id=eq.${encodeURIComponent(
+      lineProfile.userId
+    )}` +
+    `&select=id,display_name,member_status` +
+    `&limit=1`,
+  {
+    headers: supabaseHeaders
+  }
+);
+
+if (!existingMemberResponse.ok) {
+  const details =
+    await existingMemberResponse.text();
+
+  return json(
+    {
+      error:
+        "ตรวจสอบข้อมูลสมาชิกเดิมไม่สำเร็จ",
+      details
+    },
+    500
+  );
+}
+
+const existingMembers =
+  await existingMemberResponse.json();
+
+if (existingMembers.length > 0) {
+  return json({
+    success: true,
+    state: "member",
+    alreadyMember: true,
+    member: existingMembers[0]
+  });
+}
+
+
+// 2. ถ้ายังไม่เป็น Member
+// ตรวจว่ามีใบสมัคร pending อยู่แล้วหรือไม่
+const pendingRegistrationResponse =
+  await fetch(
+    `${supabaseUrl}/rest/v1/member_registration` +
+      `?line_user_id=eq.${encodeURIComponent(
+        lineProfile.userId
+      )}` +
+      `&registration_status=eq.pending` +
+      `&select=id,registration_status,created_at` +
+      `&order=created_at.desc` +
+      `&limit=1`,
+    {
+      headers: supabaseHeaders
+    }
+  );
+
+if (!pendingRegistrationResponse.ok) {
+  const details =
+    await pendingRegistrationResponse.text();
+
+  return json(
+    {
+      error:
+        "ตรวจสอบคำขอสมัครเดิมไม่สำเร็จ",
+      details
+    },
+    500
+  );
+}
+
+const pendingRegistrations =
+  await pendingRegistrationResponse.json();
+
+if (pendingRegistrations.length > 0) {
+  return json({
+    success: true,
+    state: "pending",
+    alreadyRegistered: true,
+    registration:
+      pendingRegistrations[0]
+  });
+}
   const registrationResponse = await fetch(
     `${supabaseUrl}/rest/v1/member_registration`,
     {

@@ -519,6 +519,51 @@ async function initializeLiff() {
 
     lineProfile = await liff.getProfile();
 lineIdToken = liff.getIDToken() || "";
+// ตรวจสถานะก่อนแสดงแบบฟอร์มสมัคร
+if (lineIdToken) {
+  const statusResponse = await fetch(
+    "/api/checkin",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        mode: "profile",
+        idToken: lineIdToken
+      })
+    }
+  );
+
+  const statusData =
+    await statusResponse.json();
+
+  if (
+    statusResponse.ok &&
+    statusData.success
+  ) {
+
+    // เป็น Member อยู่แล้ว
+    if (statusData.state === "member") {
+      window.location.replace("index.html");
+      return;
+    }
+
+    // สมัครไว้แล้วและกำลังรออนุมัติ
+    if (statusData.state === "pending") {
+      document.getElementById(
+        "registrationForm"
+      ).style.display = "none";
+
+      document.getElementById(
+        "registrationMessage"
+      ).textContent =
+        "คุณส่งคำขอสมัครสมาชิกไว้แล้ว กรุณารอการอนุมัติจากทางยิม";
+
+      return;
+    }
+  }
+}
 const decodedToken = liff.getDecodedIDToken();
 console.log("Decoded LINE token:", decodedToken);
 console.log("LINE Channel ID from token:", decodedToken?.aud);
@@ -647,6 +692,29 @@ if (!response.ok || !data.success) {
         JSON.stringify(data)
     );
 
+}
+// LINE ID นี้เป็นสมาชิกอยู่แล้ว
+if (
+  data.state === "member" ||
+  data.alreadyMember === true
+) {
+  registrationMessage.textContent =
+    "พบข้อมูลสมาชิกเดิม กำลังเปิดบัตรสมาชิก...";
+
+  window.location.href = "index.html";
+  return;
+}
+
+
+// LINE ID นี้มีคำขอสมัครที่รออนุมัติอยู่แล้ว
+if (
+  data.state === "pending" ||
+  data.alreadyRegistered === true
+) {
+  registrationMessage.textContent =
+    "คุณส่งคำขอสมัครสมาชิกไว้แล้ว กรุณารอการอนุมัติจากทางยิม";
+
+  return;
 }
     registrationMessage.textContent =
   "ส่งคำขอสมัครสมาชิกเรียบร้อยแล้ว กรุณารอโค้ชตรวจสอบ";
