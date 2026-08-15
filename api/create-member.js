@@ -1,3 +1,4 @@
+import { pushMemberCard } from "./lib/line.js";
 async function verifyLineIdToken(idToken, lineChannelId) {
   if (!idToken) {
     throw new Error("ไม่พบ LINE ID token");
@@ -632,7 +633,19 @@ if (
       500
     );
   }
-
+// ส่ง Member Card ไป LINE หลังอนุมัติสมาชิกใหม่
+try {
+  await pushMemberCard(
+    registration.line_user_id,
+    member,
+    "✅ สมัครสมาชิกเรียบร้อยแล้ว"
+  );
+} catch (lineError) {
+  console.error(
+    "LINE new member card push failed:",
+    lineError
+  );
+}
   return json({
     success: true,
     message:
