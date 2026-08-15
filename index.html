@@ -693,6 +693,27 @@
   </button>
 
 </section>
+<section
+  id="historyPanel"
+  style="display:none; margin-top:24px;"
+>
+  <div class="history-header">
+    <h2>ประวัติการเข้าเรียน</h2>
+
+    <button
+      id="closeHistoryButton"
+      type="button"
+    >
+      ปิด
+    </button>
+  </div>
+
+  <p id="historyStatus">
+    กำลังโหลดประวัติ...
+  </p>
+
+  <div id="historyList"></div>
+</section>
     <section id="result" class="result">
       <div class="result-icon">✅</div>
     <h2 id="resultTitle">เช็คชื่อสำเร็จ</h2>
@@ -714,6 +735,20 @@
     const checkinButton = document.getElementById("checkinButton");
     const resultElement = document.getElementById("result");
     const memberMenu = document.getElementById("memberMenu");
+    const historyButton =
+  document.getElementById("historyButton");
+
+const historyPanel =
+  document.getElementById("historyPanel");
+
+const closeHistoryButton =
+  document.getElementById("closeHistoryButton");
+
+const historyStatus =
+  document.getElementById("historyStatus");
+
+const historyList =
+  document.getElementById("historyList");
 
     function showError(message) {
       statusElement.className = "error";
@@ -1167,7 +1202,95 @@ updateClassPassStatus(
         checkinButton.textContent = "ลองเช็กชื่ออีกครั้ง";
       }
     }
+historyButton.addEventListener(
+  "click",
+  async () => {
+    try {
+      historyPanel.style.display = "block";
+      historyStatus.textContent =
+        "กำลังโหลดประวัติ...";
+      historyList.innerHTML = "";
 
+      const idToken = liff.getIDToken();
+
+      if (!idToken) {
+        throw new Error(
+          "ไม่พบข้อมูลเข้าสู่ระบบ LINE"
+        );
+      }
+
+      const response = await fetch(
+        "/api/checkin",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+          body: JSON.stringify({
+            mode: "history",
+            idToken
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error ||
+          "โหลดประวัติการเข้าเรียนไม่สำเร็จ"
+        );
+      }
+
+      if (!data.history?.length) {
+        historyStatus.textContent =
+          "ยังไม่มีประวัติการเข้าเรียน";
+        return;
+      }
+
+      historyStatus.textContent =
+        `พบ ${data.history.length} รายการ`;
+
+      historyList.innerHTML =
+        data.history
+          .map((item) => `
+            <div class="history-item">
+              <strong>
+                ${formatThaiDateTime(
+                  item.checked_in_at
+                )}
+              </strong>
+
+              <div>
+                วิธีเช็กชื่อ:
+                ${
+                  item.checkin_method === "teacher"
+                    ? "Coach"
+                    : "สมาชิก"
+                }
+              </div>
+            </div>
+          `)
+          .join("");
+
+    } catch (error) {
+      console.error(error);
+
+      historyStatus.textContent =
+        error instanceof Error
+          ? error.message
+          : "โหลดประวัติไม่สำเร็จ";
+    }
+  }
+);
+
+closeHistoryButton.addEventListener(
+  "click",
+  () => {
+    historyPanel.style.display = "none";
+  }
+);
     initializeLiff();
   </script>
 </body>

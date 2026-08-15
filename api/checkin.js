@@ -257,6 +257,85 @@ if (mode === "profile") {
     }
   });
 }
+// =====================================
+// HISTORY MODE
+// โหลดประวัติการเข้าเรียนของสมาชิก
+// =====================================
+
+if (mode === "history") {
+  const memberResponse = await fetch(
+    `${supabaseUrl}/rest/v1/members` +
+      `?line_user_id=eq.${encodeURIComponent(lineUserId)}` +
+      `&select=id,display_name,nickname` +
+      `&limit=1`,
+    {
+      headers: commonHeaders
+    }
+  );
+
+  if (!memberResponse.ok) {
+    const details = await memberResponse.text();
+
+    return json(
+      {
+        error: "อ่านข้อมูลสมาชิกไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const members = await memberResponse.json();
+
+  if (members.length === 0) {
+    return json(
+      {
+        error: "ยังไม่พบข้อมูลสมาชิก"
+      },
+      404
+    );
+  }
+
+  const member = members[0];
+
+  const attendanceResponse = await fetch(
+    `${supabaseUrl}/rest/v1/attendance` +
+      `?member_id=eq.${member.id}` +
+      `&select=id,session_id,checked_in_at,checkin_method,note` +
+      `&order=checked_in_at.desc` +
+      `&limit=50`,
+    {
+      headers: commonHeaders
+    }
+  );
+
+  if (!attendanceResponse.ok) {
+    const details = await attendanceResponse.text();
+
+    return json(
+      {
+        error: "โหลดประวัติการเข้าเรียนไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const attendance = await attendanceResponse.json();
+
+  return json({
+    success: true,
+    mode: "history",
+    member: {
+      id: member.id,
+      displayName:
+        member.display_name ||
+        member.nickname ||
+        displayName
+    },
+    history: attendance
+  });
+}
       // หา Session ที่เปิดอยู่ของวันนี้
       const sessionResponse = await fetch(
         `${supabaseUrl}/rest/v1/class_sessions` +
