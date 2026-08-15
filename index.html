@@ -795,6 +795,27 @@
   <div id="historyList"></div>
 </section>
 <section
+  id="paymentHistoryPanel"
+  style="display:none; margin-top:24px;"
+>
+  <div class="history-header">
+    <h2>ประวัติการชำระเงิน</h2>
+
+    <button
+      id="closePaymentHistoryButton"
+      type="button"
+    >
+      ปิด
+    </button>
+  </div>
+
+  <p id="paymentHistoryStatus">
+    กำลังโหลดประวัติการชำระเงิน...
+  </p>
+
+  <div id="paymentHistoryList"></div>
+</section>
+<section
   id="renewPanel"
   style="display:none; margin-top:24px;"
 >
@@ -910,6 +931,20 @@ const historyStatus =
 
 const historyList =
   document.getElementById("historyList");
+const paymentHistoryButton =
+  document.getElementById("paymentHistoryButton");
+
+const paymentHistoryPanel =
+  document.getElementById("paymentHistoryPanel");
+
+const closePaymentHistoryButton =
+  document.getElementById("closePaymentHistoryButton");
+
+const paymentHistoryStatus =
+  document.getElementById("paymentHistoryStatus");
+
+const paymentHistoryList =
+  document.getElementById("paymentHistoryList");  
 const renewButton =
   document.getElementById("renewButton");
 
@@ -1392,6 +1427,9 @@ historyButton.addEventListener(
   "click",
   async () => {
     try {
+      paymentHistoryPanel.style.display = "none";
+  renewPanel.style.display = "none";
+
       historyPanel.style.display = "block";
       historyStatus.textContent =
         "กำลังโหลดประวัติ...";
@@ -1517,7 +1555,155 @@ historyButton.addEventListener(
     }
   }
 );
+paymentHistoryButton.addEventListener(
+  "click",
+  async () => {
+    try {
+      // ปิด Panel อื่น
+      historyPanel.style.display = "none";
+      renewPanel.style.display = "none";
 
+      // เปิด Payment History
+      paymentHistoryPanel.style.display = "block";
+
+      paymentHistoryStatus.textContent =
+        "กำลังโหลดประวัติการชำระเงิน...";
+
+      paymentHistoryList.innerHTML = "";
+
+      const idToken = liff.getIDToken();
+
+      if (!idToken) {
+        throw new Error(
+          "ไม่พบข้อมูลเข้าสู่ระบบ LINE"
+        );
+      }
+
+      const response = await fetch(
+        "/api/checkin",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            mode: "payment_history",
+            idToken
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error ||
+          "โหลดประวัติการชำระเงินไม่สำเร็จ"
+        );
+      }
+
+      const payments = data.payments || [];
+
+      if (!payments.length) {
+        paymentHistoryStatus.textContent =
+          "ยังไม่มีประวัติการชำระเงิน";
+
+        return;
+      }
+
+      paymentHistoryStatus.textContent =
+        `พบ ${payments.length} รายการ`;
+
+      paymentHistoryList.innerHTML =
+        payments
+          .map((payment) => {
+            const plan =
+              payment.membership_plan === "class_pass_8"
+                ? "Class Pass 8 ครั้ง"
+                : payment.membership_plan === "adult_monthly"
+                  ? "Adult Monthly"
+                  : payment.membership_plan === "kids_monthly"
+                    ? "Kids Monthly"
+                    : payment.membership_plan || "-";
+
+            const method =
+              payment.payment_method === "cash"
+                ? "เงินสด"
+                : payment.payment_method === "transfer"
+                  ? "เงินโอน"
+                  : "-";
+
+            const status =
+              payment.payment_status === "paid"
+                ? "ชำระแล้ว"
+                : payment.payment_status === "pending"
+                  ? "รอตรวจสอบ"
+                  : payment.payment_status === "rejected"
+                    ? "ไม่อนุมัติ"
+                    : payment.payment_status || "-";
+
+            const dateValue =
+              payment.approved_at ||
+              payment.requested_at;
+
+            const dateText =
+              dateValue
+                ? formatThaiDateTime(dateValue)
+                : "-";
+
+            const amount =
+              payment.amount !== null &&
+              payment.amount !== undefined
+                ? `${Number(payment.amount).toLocaleString("th-TH")} บาท`
+                : "ยังไม่ได้ระบุยอด";
+
+            return `
+              <div class="history-item">
+
+                <strong>
+                  ${dateText}
+                </strong>
+
+                <div>
+                  ${plan}
+                </div>
+
+                <div>
+                  ${amount}
+                </div>
+
+                <div>
+                  วิธีชำระ: ${method}
+                </div>
+
+                <div>
+                  สถานะ: ${status}
+                </div>
+
+              </div>
+            `;
+          })
+          .join("");
+
+    } catch (error) {
+      console.error(
+        "Payment history error:",
+        error
+      );
+
+      paymentHistoryStatus.textContent =
+        error instanceof Error
+          ? error.message
+          : "โหลดประวัติการชำระเงินไม่สำเร็จ";
+    }
+  }
+);
+closePaymentHistoryButton.addEventListener(
+  "click",
+  () => {
+    paymentHistoryPanel.style.display = "none";
+  }
+);
 closeHistoryButton.addEventListener(
   "click",
   () => {
@@ -1528,6 +1714,8 @@ renewButton.addEventListener(
   "click",
   () => {
     historyPanel.style.display = "none";
+    paymentHistoryPanel.style.display = "none";
+
     renewPanel.style.display = "block";
     renewStatus.textContent = "";
   }

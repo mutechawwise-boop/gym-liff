@@ -353,6 +353,102 @@ if (mode === "history") {
   });
 }
 // =====================================
+// PAYMENT HISTORY MODE
+// โหลดประวัติการชำระเงินของสมาชิก
+// =====================================
+
+if (mode === "payment_history") {
+  // หาสมาชิกจาก LINE ที่ Login อยู่
+  const memberResponse = await fetch(
+    `${supabaseUrl}/rest/v1/members` +
+      `?line_user_id=eq.${encodeURIComponent(lineUserId)}` +
+      `&select=id,display_name,nickname` +
+      `&limit=1`,
+    {
+      headers: commonHeaders
+    }
+  );
+
+  if (!memberResponse.ok) {
+    const details =
+      await memberResponse.text();
+
+    return json(
+      {
+        error: "อ่านข้อมูลสมาชิกไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const members =
+    await memberResponse.json();
+
+  if (!members.length) {
+    return json(
+      {
+        error: "ไม่พบข้อมูลสมาชิก"
+      },
+      404
+    );
+  }
+
+  const member = members[0];
+
+  // อ่านประวัติการชำระเงิน
+  const paymentResponse = await fetch(
+    `${supabaseUrl}/rest/v1/membership_transactions` +
+      `?member_id=eq.${member.id}` +
+      `&select=` +
+        `id,` +
+        `transaction_type,` +
+        `membership_plan,` +
+        `amount,` +
+        `payment_method,` +
+        `payment_status,` +
+        `requested_at,` +
+        `approved_at,` +
+        `note` +
+      `&order=requested_at.desc`,
+    {
+      headers: commonHeaders
+    }
+  );
+
+  if (!paymentResponse.ok) {
+    const details =
+      await paymentResponse.text();
+
+    return json(
+      {
+        error:
+          "โหลดประวัติการชำระเงินไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const payments =
+    await paymentResponse.json();
+
+  return json({
+    success: true,
+    mode: "payment_history",
+
+    member: {
+      id: member.id,
+      displayName:
+        member.display_name ||
+        member.nickname ||
+        displayName
+    },
+
+    payments
+  });
+}
+// =====================================
 // RENEW MODE
 // ส่งคำขอต่ออายุสมาชิก
 // =====================================
