@@ -385,8 +385,88 @@
 }
 
 
-/* MOBILE */
+/* HISTORY */
+#historyPanel {
+  margin-top: 26px;
+  text-align: left;
+}
 
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.history-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+#closeHistoryButton {
+  border: 1px solid #dddddd;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+#historyStatus {
+  margin: 0 0 14px;
+  color: #666666;
+  font-size: 14px;
+}
+
+#historyList {
+  display: grid;
+  gap: 12px;
+}
+
+.history-item {
+  position: relative;
+  padding: 16px 16px 16px 20px;
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.history-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #ef252d;
+}
+
+.history-item-date {
+  color: #777777;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+
+.history-item-class {
+  color: #111111;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.history-item-meta {
+  color: #555555;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.history-item-method {
+  color: #333333;
+  font-size: 13px;
+  font-weight: 600;
+}
 @media (max-width: 430px) {
 
  .member-card {
@@ -1252,27 +1332,74 @@ historyButton.addEventListener(
       historyStatus.textContent =
         `พบ ${data.history.length} รายการ`;
 
-      historyList.innerHTML =
-        data.history
-          .map((item) => `
-            <div class="history-item">
-              <strong>
-                ${formatThaiDateTime(
-                  item.checked_in_at
-                )}
-              </strong>
+     historyList.innerHTML =
+  data.history
+    .map((item) => {
+      const session =
+        item.class_sessions || {};
 
-              <div>
-                วิธีเช็กชื่อ:
-                ${
-                  item.checkin_method === "teacher"
-                    ? "Coach"
-                    : "สมาชิก"
-                }
-              </div>
-            </div>
-          `)
-          .join("");
+      const classInfo =
+        session.classes || {};
+
+      const className =
+        classInfo.name || "ไม่ระบุคลาส";
+
+      const sessionDate =
+        session.session_date
+          ? new Intl.DateTimeFormat(
+              "th-TH",
+              {
+                dateStyle: "medium",
+                timeZone: "Asia/Bangkok"
+              }
+            ).format(
+              new Date(
+                `${session.session_date}T00:00:00+07:00`
+              )
+            )
+          : "-";
+
+      const startTime =
+        session.start_time
+          ? session.start_time.slice(0, 5)
+          : "-";
+
+      const endTime =
+        session.end_time
+          ? session.end_time.slice(0, 5)
+          : "-";
+
+      const methodText =
+        item.checkin_method === "teacher"
+          ? "เช็กชื่อโดย Coach"
+          : "เช็กชื่อด้วยตนเอง";
+
+      return `
+        <div class="history-item">
+          <div class="history-item-date">
+            ${sessionDate}
+          </div>
+
+          <div class="history-item-class">
+            ${className}
+          </div>
+
+          <div class="history-item-meta">
+            🕒 ${startTime} - ${endTime}
+          </div>
+
+          <div class="history-item-method">
+            ${
+              item.checkin_method === "teacher"
+                ? "●"
+                : "✓"
+            }
+            ${methodText}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
 
     } catch (error) {
       console.error(error);
