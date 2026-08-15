@@ -301,8 +301,6 @@ if (isOwner) {
     await renewalResponse.json();
 }
 
-const pendingRenewals =
-  await renewalResponse.json();
       return json({
         success: true,
         today,
