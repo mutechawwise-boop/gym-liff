@@ -352,6 +352,174 @@ if (mode === "history") {
     history: attendance
   });
 }
+// =====================================
+// RENEW MODE
+// ส่งคำขอต่ออายุสมาชิก
+// =====================================
+
+if (mode === "renew") {
+  const membershipPlan =
+    String(body.membershipPlan || "").trim();
+
+  const paymentMethod =
+    String(body.paymentMethod || "").trim();
+
+  const slipUrl =
+    String(body.slipUrl || "").trim();
+
+  if (!membershipPlan) {
+    return json(
+      { error: "กรุณาเลือกแพ็กเกจ" },
+      400
+    );
+  }
+
+  if (
+    paymentMethod !== "cash" &&
+    paymentMethod !== "transfer"
+  ) {
+    return json(
+      { error: "กรุณาเลือกวิธีชำระเงิน" },
+      400
+    );
+  }
+
+  const allowedPlans = [
+    "adult_monthly",
+    "kids_monthly",
+    "class_pass_8"
+  ];
+
+  if (!allowedPlans.includes(membershipPlan)) {
+    return json(
+      { error: "แพ็กเกจไม่ถูกต้อง" },
+      400
+    );
+  }
+
+  // หาสมาชิกจาก LINE ที่ Login อยู่
+  const memberResponse = await fetch(
+    `${supabaseUrl}/rest/v1/members` +
+      `?line_user_id=eq.${encodeURIComponent(lineUserId)}` +
+      `&select=id,line_user_id,display_name` +
+      `&limit=1`,
+    {
+      headers: commonHeaders
+    }
+  );
+
+  if (!memberResponse.ok) {
+    const details =
+      await memberResponse.text();
+
+    return json(
+      {
+        error: "อ่านข้อมูลสมาชิกไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const members =
+    await memberResponse.json();
+
+  if (members.length === 0) {
+    return json(
+      { error: "ไม่พบข้อมูลสมาชิก" },
+      404
+    );
+  }
+
+  const member = members[0];
+
+  // กันการกดส่งคำขอซ้ำ
+  const pendingResponse = await fetch(
+    `${supabaseUrl}/rest/v1/membership_transactions` +
+      `?member_id=eq.${member.id}` +
+      `&transaction_type=eq.renewal` +
+      `&payment_status=eq.pending` +
+      `&select=id` +
+      `&limit=1`,
+    {
+      headers: commonHeaders
+    }
+  );
+
+  if (!pendingResponse.ok) {
+    const details =
+      await pendingResponse.text();
+
+    return json(
+      {
+        error: "ตรวจสอบคำขอต่ออายุไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const pendingTransactions =
+    await pendingResponse.json();
+
+  if (pendingTransactions.length > 0) {
+    return json(
+      {
+        error:
+          "คุณมีคำขอต่ออายุที่กำลังรอตรวจสอบอยู่แล้ว"
+      },
+      409
+    );
+  }
+
+  // สร้างคำขอต่ออายุ
+  const transactionResponse = await fetch(
+    `${supabaseUrl}/rest/v1/membership_transactions`,
+    {
+      method: "POST",
+      headers: {
+        ...commonHeaders,
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify({
+        member_id: member.id,
+        line_user_id: lineUserId,
+        transaction_type: "renewal",
+        membership_plan: membershipPlan,
+        payment_method: paymentMethod,
+        payment_status: "pending",
+        slip_url:
+          paymentMethod === "transfer"
+            ? slipUrl || null
+            : null
+      })
+    }
+  );
+
+  if (!transactionResponse.ok) {
+    const details =
+      await transactionResponse.text();
+
+    return json(
+      {
+        error: "ส่งคำขอต่ออายุไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const transactions =
+    await transactionResponse.json();
+
+  return json({
+    success: true,
+    mode: "renew",
+    message:
+      "ส่งคำขอต่ออายุเรียบร้อยแล้ว",
+    transaction: transactions[0]
+  });
+}
       // หา Session ที่เปิดอยู่ของวันนี้
       const sessionResponse = await fetch(
         `${supabaseUrl}/rest/v1/class_sessions` +

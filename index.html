@@ -794,6 +794,87 @@
 
   <div id="historyList"></div>
 </section>
+<section
+  id="renewPanel"
+  style="display:none; margin-top:24px;"
+>
+  <div class="history-header">
+    <h2>ต่ออายุสมาชิก</h2>
+
+    <button
+      id="closeRenewButton"
+      type="button"
+    >
+      ปิด
+    </button>
+  </div>
+
+  <label for="renewPlan">
+    แพ็กเกจ
+  </label>
+
+  <select id="renewPlan">
+    <option value="">
+      -- เลือกแพ็กเกจ --
+    </option>
+    <option value="adult_monthly">
+      Adult Monthly
+    </option>
+    <option value="kids_monthly">
+      Kids Monthly
+    </option>
+    <option value="class_pass_8">
+      Class Pass 8 ครั้ง
+    </option>
+  </select>
+
+  <label for="renewPaymentMethod">
+    วิธีชำระเงิน
+  </label>
+
+  <select id="renewPaymentMethod">
+    <option value="">
+      -- เลือกวิธีชำระเงิน --
+    </option>
+    <option value="cash">
+      เงินสด
+    </option>
+    <option value="transfer">
+      โอนเงิน
+    </option>
+  </select>
+
+  <div
+    id="renewTransferBox"
+    style="display:none; margin-top:16px;"
+  >
+    <img
+      src="/images/payment-qr.jpg"
+      alt="QR Payment"
+      style="width:100%; max-width:240px;"
+    >
+
+    <label for="renewSlipUrl">
+      ลิงก์สลิป / หลักฐานการโอน
+    </label>
+
+    <input
+      id="renewSlipUrl"
+      type="text"
+      placeholder="ใส่ URL หลักฐานการโอน"
+    >
+  </div>
+
+  <button
+    id="submitRenewButton"
+    type="button"
+    style="margin-top:18px;"
+  >
+    ส่งคำขอต่ออายุ
+  </button>
+
+  <p id="renewStatus"></p>
+</section>
     <section id="result" class="result">
       <div class="result-icon">✅</div>
     <h2 id="resultTitle">เช็คชื่อสำเร็จ</h2>
@@ -829,7 +910,32 @@ const historyStatus =
 
 const historyList =
   document.getElementById("historyList");
+const renewButton =
+  document.getElementById("renewButton");
 
+const renewPanel =
+  document.getElementById("renewPanel");
+
+const closeRenewButton =
+  document.getElementById("closeRenewButton");
+
+const renewPlan =
+  document.getElementById("renewPlan");
+
+const renewPaymentMethod =
+  document.getElementById("renewPaymentMethod");
+
+const renewTransferBox =
+  document.getElementById("renewTransferBox");
+
+const renewSlipUrl =
+  document.getElementById("renewSlipUrl");
+
+const submitRenewButton =
+  document.getElementById("submitRenewButton");
+
+const renewStatus =
+  document.getElementById("renewStatus");
     function showError(message) {
       statusElement.className = "error";
       statusElement.textContent = message;
@@ -1416,6 +1522,123 @@ closeHistoryButton.addEventListener(
   "click",
   () => {
     historyPanel.style.display = "none";
+  }
+);
+renewButton.addEventListener(
+  "click",
+  () => {
+    historyPanel.style.display = "none";
+    renewPanel.style.display = "block";
+    renewStatus.textContent = "";
+  }
+);
+
+closeRenewButton.addEventListener(
+  "click",
+  () => {
+    renewPanel.style.display = "none";
+  }
+);
+renewPaymentMethod.addEventListener(
+  "change",
+  () => {
+    if (renewPaymentMethod.value === "transfer") {
+      renewTransferBox.style.display = "block";
+    } else {
+      renewTransferBox.style.display = "none";
+      renewSlipUrl.value = "";
+    }
+  }
+);
+submitRenewButton.addEventListener(
+  "click",
+  async () => {
+    try {
+      renewStatus.className = "";
+      renewStatus.textContent = "";
+
+      const membershipPlan =
+        renewPlan.value;
+
+      const paymentMethod =
+        renewPaymentMethod.value;
+
+      const slipUrl =
+        renewSlipUrl.value.trim();
+
+      if (!membershipPlan) {
+        throw new Error(
+          "กรุณาเลือกแพ็กเกจ"
+        );
+      }
+
+      if (!paymentMethod) {
+        throw new Error(
+          "กรุณาเลือกวิธีชำระเงิน"
+        );
+      }
+
+      const idToken =
+        liff.getIDToken();
+
+      if (!idToken) {
+        throw new Error(
+          "ไม่พบข้อมูลเข้าสู่ระบบ LINE"
+        );
+      }
+
+      submitRenewButton.disabled = true;
+      submitRenewButton.textContent =
+        "กำลังส่งคำขอ...";
+
+      const response = await fetch(
+        "/api/checkin",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+          body: JSON.stringify({
+            mode: "renew",
+            idToken,
+            membershipPlan,
+            paymentMethod,
+            slipUrl
+          })
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error ||
+          "ส่งคำขอต่ออายุไม่สำเร็จ"
+        );
+      }
+
+      renewStatus.className = "success";
+      renewStatus.textContent =
+        "ส่งคำขอต่ออายุเรียบร้อยแล้ว กรุณารอการตรวจสอบจากทางยิม";
+
+      submitRenewButton.textContent =
+        "ส่งคำขอแล้ว";
+
+    } catch (error) {
+      console.error(error);
+
+      renewStatus.className = "error";
+      renewStatus.textContent =
+        error instanceof Error
+          ? error.message
+          : "ส่งคำขอต่ออายุไม่สำเร็จ";
+
+      submitRenewButton.disabled = false;
+      submitRenewButton.textContent =
+        "ส่งคำขอต่ออายุ";
+    }
   }
 );
     initializeLiff();
