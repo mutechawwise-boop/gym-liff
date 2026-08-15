@@ -1,3 +1,4 @@
+import { pushMemberCard } from "./lib/line.js";
 export default {
   async fetch(request) {
     const json = (data, status = 200) =>
@@ -267,7 +268,27 @@ if (mode === "approve_renewal") {
       500
     );
   }
+// ส่ง Member Card ไป LINE หลังอนุมัติสำเร็จ
+try {
+  const updatedMemberRows =
+    await updateMemberResponse.json();
 
+  const updatedMember =
+    updatedMemberRows[0];
+
+  if (updatedMember) {
+    await pushMemberCard(
+      renewal.line_user_id,
+      updatedMember,
+      "✅ ต่ออายุสมาชิกเรียบร้อยแล้ว"
+    );
+  }
+} catch (lineError) {
+  console.error(
+    "LINE member card push failed:",
+    lineError
+  );
+}
   return json({
     success: true,
     message:
