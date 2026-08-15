@@ -301,7 +301,23 @@ if (mode === "history") {
   const attendanceResponse = await fetch(
     `${supabaseUrl}/rest/v1/attendance` +
       `?member_id=eq.${member.id}` +
-      `&select=id,session_id,checked_in_at,checkin_method,note` +
+      `&select=` +
+  `id,` +
+  `session_id,` +
+  `checked_in_at,` +
+  `checkin_method,` +
+  `note,` +
+  `class_sessions(` +
+    `id,` +
+    `session_date,` +
+    `start_time,` +
+    `end_time,` +
+    `class_id,` +
+    `classes(` +
+      `id,` +
+      `name` +
+    `)` +
+  `)` +
       `&order=checked_in_at.desc` +
       `&limit=50`,
     {
