@@ -258,44 +258,47 @@ if (isOwner) {
           attendanceCount
         };
       });
-const renewalResponse = await fetch(
-  `${supabaseUrl}/rest/v1/membership_transactions` +
-    `?transaction_type=eq.renewal` +
-    `&payment_status=eq.pending` +
-    `&select=` +
-      `id,` +
-      `member_id,` +
-      `line_user_id,` +
-      `transaction_type,` +
-      `membership_plan,` +
-      `amount,` +
-      `payment_method,` +
-      `payment_status,` +
-      `slip_url,` +
-      `requested_at,` +
-      `members(` +
-        `id,` +
-        `display_name,` +
-        `nickname,` +
-        `member_group` +
-      `)` +
-    `&order=requested_at.asc`,
-  {
-    headers: commonHeaders
-  }
-);
+let pendingRenewals = [];
 
-if (!renewalResponse.ok) {
-  const details =
-    await renewalResponse.text();
-
-  return json(
-    {
-      error: "โหลดคำขอต่ออายุสมาชิกไม่สำเร็จ",
-      details
-    },
-    500
+if (isOwner) {
+  const renewalResponse = await supabase.request(
+    "membership_transactions" +
+      "?transaction_type=eq.renewal" +
+      "&payment_status=eq.pending" +
+      "&select=" +
+      [
+        "id",
+        "member_id",
+        "line_user_id",
+        "transaction_type",
+        "membership_plan",
+        "amount",
+        "payment_method",
+        "payment_status",
+        "slip_url",
+        "requested_at",
+        "members(id,display_name,nickname,member_group)"
+      ].join(",") +
+      "&order=requested_at.asc"
   );
+
+  if (!renewalResponse.ok) {
+    const details =
+      await renewalResponse.text();
+
+    return json(
+      {
+        success: false,
+        error:
+          "โหลดคำขอต่ออายุสมาชิกไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  pendingRenewals =
+    await renewalResponse.json();
 }
 
 const pendingRenewals =
