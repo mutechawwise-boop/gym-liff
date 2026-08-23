@@ -168,8 +168,29 @@ if (isOwner) {
     );
   }
 
-  pendingRegistrations =
-    await registrationResponse.json();
+  const registrationRows =
+  await registrationResponse.json();
+
+pendingRegistrations =
+  await Promise.all(
+    registrationRows.map(async (registration) => {
+      let slipSignedUrl = null;
+
+      if (registration.slip_url) {
+        slipSignedUrl =
+          await supabase.createSignedUrl(
+            "payment-slips",
+            registration.slip_url,
+            3600
+          );
+      }
+
+      return {
+        ...registration,
+        slip_signed_url: slipSignedUrl
+      };
+    })
+  );
 }
 
       let activeMembers = 0;

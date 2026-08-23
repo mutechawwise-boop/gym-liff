@@ -787,11 +787,64 @@ registrationList
           </p>
 
           <p>
-            <strong>วิธีชำระเงิน:</strong>
-            ${paymentMethod}
-          </p>
+  <strong>วิธีชำระเงิน:</strong>
+  ${paymentMethod}
+</p>
 
-        </div>
+${
+  registration.payment_amount
+    ? `
+      <p>
+        <strong>ยอดชำระ:</strong>
+        ${Number(registration.payment_amount).toLocaleString("th-TH")} บาท
+      </p>
+    `
+    : ""
+}
+
+${
+  registration.slip_signed_url
+    ? `
+      <div style="margin-top:18px;">
+        <p>
+          <strong>หลักฐานการชำระเงิน:</strong>
+        </p>
+
+        <a
+          href="${registration.slip_signed_url}"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img
+            src="${registration.slip_signed_url}"
+            alt="Payment Slip"
+            style="
+              display:block;
+              width:100%;
+              max-width:420px;
+              max-height:600px;
+              object-fit:contain;
+              margin-top:10px;
+              border:1px solid #ddd;
+              border-radius:12px;
+              background:#fff;
+              cursor:pointer;
+            "
+          >
+        </a>
+
+        <small>คลิกที่รูปเพื่อเปิดดูขนาดเต็ม</small>
+      </div>
+    `
+    : `
+      <p>
+        <strong>หลักฐานการชำระเงิน:</strong>
+        ไม่มีสลิป
+      </p>
+    `
+}
+
+</div>
       `;
 
 
