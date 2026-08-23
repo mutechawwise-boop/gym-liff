@@ -295,6 +295,27 @@
     <option value="female">หญิง</option>
     <option value="other">อื่น ๆ</option>
   </select>
+  <label for="nationality">
+  สัญชาติ / Nationality
+</label>
+
+<select
+  id="nationality"
+  name="nationality"
+  required
+>
+  <option value="">
+    -- เลือกสัญชาติ --
+  </option>
+
+  <option value="thai">
+    ไทย / Thai
+  </option>
+
+  <option value="foreigner">
+    ต่างชาติ / Foreigner
+  </option>
+</select>
 <label for="medicalConditions">
   โรคประจำตัว
 </label>
@@ -345,69 +366,38 @@
 
 <h2>เลือกแผนสมาชิก</h2>
 
-<label>
-  <input
-    type="radio"
-    name="membershipPlan"
-    value="adult_monthly"
-    required
-  >
-  Adult Monthly
-</label>
+<p
+  id="packageHint"
+  style="color:#777; margin-top:0;"
+>
+  กรุณาเลือกสัญชาติก่อน
+</p>
 
-<label>
-  <input
-    type="radio"
-    name="membershipPlan"
-    value="kids_monthly"
-  >
-  Kids Monthly
-</label>
+<div id="membershipPlanOptions"></div>
 
-<label>
-  <input
-    type="radio"
-    name="membershipPlan"
-    value="private"
-  >
-  Private
-</label>
+<div
+  id="selectedPriceBox"
+  style="
+    display:none;
+    margin:16px 0;
+    padding:16px;
+    border-radius:12px;
+    background:#f7f7f7;
+    text-align:center;
+  "
+>
+  <div style="font-size:13px; color:#777;">
+    ยอดชำระ
+  </div>
 
-<label>
-  <input
-    type="radio"
-    name="membershipPlan"
-    value="drop_in"
+  <strong
+    id="selectedPrice"
+    style="font-size:24px;"
   >
-  Drop In
-</label>
+    -
+  </strong>
+</div>
 
-<label>
-  <input
-    type="radio"
-    name="membershipPlan"
-    value="class_pass_4"
-  >
-  Class Pass 4 ครั้ง / 1 เดือน
-</label>
-
-<label>
-  <input
-    type="radio"
-    name="membershipPlan"
-    value="class_pass_8"
-  >
-  Class Pass 8 ครั้ง / 1 เดือน
-</label>
-
-<label>
-  <input
-    type="radio"
-    name="membershipPlan"
-    value="class_pass_12"
-  >
-  Class Pass 12 ครั้ง / 1 เดือน
-</label>
 <hr>
 
 <h2>วิธีชำระเงิน</h2>
@@ -474,10 +464,225 @@
 <p id="registrationMessage"></p>
 
 </form>
+<section
+  id="registrationSuccess"
+  style="display:none; text-align:center; padding:40px 10px;"
+>
+  <div style="font-size:56px; margin-bottom:16px;">
+    ✅
+  </div>
+
+  <h2>
+    สมัครสมาชิกเรียบร้อยแล้ว
+  </h2>
+
+  <p style="line-height:1.8; color:#555;">
+    ข้อมูลของคุณถูกส่งเรียบร้อยแล้ว
+    <br>
+    กรุณารอการตรวจสอบและอนุมัติจากทางยิม
+  </p>
+
+  <p style="line-height:1.8; color:#555;">
+    เมื่ออนุมัติเรียบร้อยแล้ว
+    <br>
+    คุณจะได้รับ Member Card ผ่าน LINE
+  </p>
+
+  <strong>
+    ไม่จำเป็นต้องสมัครซ้ำ
+  </strong>
+</section>
 </section>
 </main>
 <script>
 const LIFF_ID = "2010879060-PKqAwFmt";
+const nationalitySelect =
+  document.getElementById("nationality");
+
+const membershipPlanOptions =
+  document.getElementById("membershipPlanOptions");
+
+const packageHint =
+  document.getElementById("packageHint");
+
+const selectedPriceBox =
+  document.getElementById("selectedPriceBox");
+
+const selectedPrice =
+  document.getElementById("selectedPrice");
+
+
+const PACKAGE_OPTIONS = {
+  thai: [
+    {
+      value: "drop_in",
+      label: "Drop In",
+      price: 500,
+      priceText: "500 บาท / ครั้ง"
+    },
+    {
+      value: "class_pass_4",
+      label: "Class Pass 4 ครั้ง / 1 เดือน",
+      price: 1500,
+      priceText: "1,500 บาท"
+    },
+    {
+      value: "class_pass_8",
+      label: "Class Pass 8 ครั้ง / 1 เดือน",
+      price: 2000,
+      priceText: "2,000 บาท"
+    },
+    {
+      value: "class_pass_12",
+      label: "Class Pass 12 ครั้ง / 1 เดือน",
+      price: 2500,
+      priceText: "2,500 บาท"
+    },
+    {
+      value: "adult_monthly",
+      label: "Adult Monthly Unlimited",
+      price: 2900,
+      priceText: "2,900 บาท"
+    },
+    {
+      value: "kids_monthly",
+      label: "Kids Monthly Unlimited",
+      price: 2900,
+      priceText: "2,900 บาท"
+    },
+    {
+      value: "private",
+      label: "Private Class",
+      price: null,
+      priceText: "ติดต่อยิมเพื่อสอบถามราคา"
+    }
+  ],
+
+  foreigner: [
+    {
+      value: "drop_in",
+      label: "Drop In",
+      price: 500,
+      priceText: "500 บาท / ครั้ง"
+    },
+    {
+      value: "class_pass_12",
+      label: "Class Pass 12 ครั้ง / 1 เดือน",
+      price: 3000,
+      priceText: "3,000 บาท"
+    },
+    {
+      value: "adult_monthly",
+      label: "Adult Monthly Unlimited",
+      price: 3500,
+      priceText: "3,500 บาท"
+    },
+    {
+      value: "kids_monthly",
+      label: "Kids Monthly Unlimited",
+      price: 3500,
+      priceText: "3,500 บาท"
+    },
+    {
+      value: "private",
+      label: "Private Class",
+      price: null,
+      priceText: "ติดต่อยิมเพื่อสอบถามราคา"
+    }
+  ]
+};
+
+
+function renderMembershipPlans() {
+  const nationality =
+    nationalitySelect.value;
+
+  membershipPlanOptions.innerHTML = "";
+  selectedPriceBox.style.display = "none";
+
+  if (!nationality) {
+    packageHint.textContent =
+      "กรุณาเลือกสัญชาติก่อน";
+    return;
+  }
+
+  const packages =
+    PACKAGE_OPTIONS[nationality] || [];
+
+  packageHint.textContent =
+    nationality === "thai"
+      ? "ราคาสำหรับสมาชิกไทย"
+      : "ราคาสำหรับสมาชิกต่างชาติ";
+
+  membershipPlanOptions.innerHTML =
+    packages
+      .map((item) => `
+        <label
+          style="
+            display:block;
+            padding:12px;
+            margin-bottom:8px;
+            border:1px solid #ddd;
+            border-radius:10px;
+          "
+        >
+          <input
+            type="radio"
+            name="membershipPlan"
+            value="${item.value}"
+            required
+          >
+
+          <strong>${item.label}</strong>
+          <br>
+
+          <small style="color:#666;">
+            ${item.priceText}
+          </small>
+        </label>
+      `)
+      .join("");
+}
+
+
+nationalitySelect.addEventListener(
+  "change",
+  renderMembershipPlans
+);
+
+
+membershipPlanOptions.addEventListener(
+  "change",
+  (event) => {
+    if (
+      event.target.name !== "membershipPlan"
+    ) {
+      return;
+    }
+
+    const nationality =
+      nationalitySelect.value;
+
+    const selectedPackage =
+      PACKAGE_OPTIONS[nationality]
+        ?.find(
+          (item) =>
+            item.value === event.target.value
+        );
+
+    if (!selectedPackage) {
+      selectedPriceBox.style.display = "none";
+      return;
+    }
+
+    selectedPriceBox.style.display = "block";
+
+    selectedPrice.textContent =
+      selectedPackage.price === null
+        ? "ติดต่อยิมเพื่อสอบถามราคา"
+        : selectedPackage.priceText;
+  }
+);
 const paymentMethodInputs = document.querySelectorAll(
   'input[name="paymentMethod"]'
 );
@@ -598,12 +803,72 @@ registrationForm.addEventListener("submit", async (event) => {
   }
 
   const formData = new FormData(registrationForm);
+const paymentMethod =
+    formData.get("paymentMethod");
+let slipBase64 = "";
+let slipMimeType = "";
+let slipFileName = "";
+
+if (paymentMethod === "transfer") {
+  const slipInput =
+    document.getElementById("paymentSlip");
+
+  const slipFile =
+    slipInput?.files?.[0];
+
+  if (!slipFile) {
+    registrationMessage.textContent =
+      "กรุณาแนบหลักฐานการโอน";
+
+    submitButton.disabled = false;
+    return;
+  }
+
+  const allowedTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+  ];
+
+  if (!allowedTypes.includes(slipFile.type)) {
+    registrationMessage.textContent =
+      "กรุณาใช้ไฟล์ JPG, PNG หรือ WEBP";
+
+    submitButton.disabled = false;
+    return;
+  }
+
+  if (slipFile.size > 5 * 1024 * 1024) {
+    registrationMessage.textContent =
+      "ไฟล์สลิปต้องมีขนาดไม่เกิน 5 MB";
+
+    submitButton.disabled = false;
+    return;
+  }
+
+  slipMimeType = slipFile.type;
+  slipFileName = slipFile.name;
+
+  slipBase64 =
+    await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () =>
+        resolve(String(reader.result || ""));
+
+      reader.onerror = () =>
+        reject(
+          new Error("อ่านไฟล์สลิปไม่สำเร็จ")
+        );
+
+      reader.readAsDataURL(slipFile);
+    });
+}
 
   const membershipPlan =
     formData.get("membershipPlan");
 
-  const paymentMethod =
-    formData.get("paymentMethod");
+  
 
   if (!membershipPlan) {
     registrationMessage.textContent =
@@ -672,13 +937,17 @@ if (!freshIdToken) {
     email: formData.get("email"),
     birthDate: formData.get("birthDate"),
     gender: formData.get("gender"),
+    nationality: formData.get("nationality"),
     medicalConditions: formData.get("medicalConditions"),
     allergies: formData.get("allergies"),
     emergencyContactName: formData.get("emergencyContactName"),
     emergencyContactRelationship: formData.get("emergencyContactRelationship"),
     emergencyContactPhone: formData.get("emergencyContactPhone"),
     membershipPlan: formData.get("membershipPlan"),
-    paymentMethod: formData.get("paymentMethod")
+   paymentMethod: formData.get("paymentMethod"),
+slipBase64,
+slipMimeType,
+slipFileName
   })
 });
 
@@ -716,8 +985,16 @@ if (
 
   return;
 }
-    registrationMessage.textContent =
-  "ส่งคำขอสมัครสมาชิกเรียบร้อยแล้ว กรุณารอโค้ชตรวจสอบ";
+   registrationForm.style.display = "none";
+
+document.getElementById(
+  "registrationSuccess"
+).style.display = "block";
+
+window.scrollTo({
+  top: 0,
+  behavior: "smooth"
+});
   } catch (error) {
     console.error(error);
 

@@ -146,9 +146,8 @@ if (mode !== "line_register") {
   const email = String(body.email || "").trim();
   const birthDate = String(body.birthDate || "").trim();
   const gender = String(body.gender || "").trim();
-
-  const medicalConditions =
-    String(body.medicalConditions || "").trim();
+  const nationality =String(body.nationality || "").trim();
+  const medicalConditions = String(body.medicalConditions || "").trim();
 
   const allergies =
     String(body.allergies || "").trim();
@@ -167,17 +166,99 @@ if (mode !== "line_register") {
 
   const paymentMethod =
     String(body.paymentMethod || "").trim();
+    const slipBase64 =
+  String(body.slipBase64 || "").trim();
 
-  if (!firstName || !lastName || !nickname || !phone) {
+const slipMimeType =
+  String(body.slipMimeType || "").trim();
+
+const slipFileName =
+  String(body.slipFileName || "").trim();
+    // =====================================
+// MEMBERSHIP PRICE
+// Backend เป็นผู้กำหนดราคาจริง
+// =====================================
+
+const MEMBERSHIP_PRICES = {
+  thai: {
+    drop_in: 500,
+    class_pass_4: 1500,
+    class_pass_8: 2000,
+    class_pass_12: 2500,
+    adult_monthly: 2900,
+    kids_monthly: 2900,
+    private: null
+  },
+
+  foreigner: {
+    drop_in: 500,
+    class_pass_12: 3000,
+    adult_monthly: 3500,
+    kids_monthly: 3500,
+    private: null
+  }
+};
+
+if (
+  !["thai", "foreigner"].includes(nationality)
+) {
+  return json(
+    {
+      error: "กรุณาเลือกสัญชาติ"
+    },
+    400
+  );
+}
+if (!membershipPlan) {
+  return json(
+    { error: "กรุณาเลือกแผนสมาชิก" },
+    400
+  );
+}
+const nationalityPrices =
+  MEMBERSHIP_PRICES[nationality];
+
+if (
+  !Object.prototype.hasOwnProperty.call(
+    nationalityPrices,
+    membershipPlan
+  )
+) {
+  return json(
+    {
+      error:
+        "แพ็กเกจนี้ไม่สามารถใช้กับสัญชาติที่เลือกได้"
+    },
+    400
+  );
+}
+
+const paymentAmount =
+  nationalityPrices[membershipPlan];
+if (paymentMethod === "transfer") {
+  if (!slipBase64 || !slipMimeType) {
     return json(
-      { error: "กรุณากรอกข้อมูลที่จำเป็นให้ครบ" },
+      { error: "กรุณาแนบหลักฐานการโอน" },
       400
     );
   }
 
-  if (!membershipPlan) {
+  const allowedMimeTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+  ];
+
+  if (!allowedMimeTypes.includes(slipMimeType)) {
     return json(
-      { error: "กรุณาเลือกแผนสมาชิก" },
+      { error: "ประเภทไฟล์สลิปไม่ถูกต้อง" },
+      400
+    );
+  }
+}
+  if (!firstName || !lastName || !nickname || !phone) {
+    return json(
+      { error: "กรุณากรอกข้อมูลที่จำเป็นให้ครบ" },
       400
     );
   }
@@ -282,6 +363,127 @@ if (pendingRegistrations.length > 0) {
       pendingRegistrations[0]
   });
 }
+// =====================================
+// UPLOAD PAYMENT SLIP
+// =====================================
+
+let slipPath = null;
+let slipUploadedAt = null;
+
+if (paymentMethod === "transfer") {
+  try {
+    // ตัด data:image/...;base64, ออก
+    // เผื่อ frontend ส่งมาทั้ง data URL
+    const base64Data =
+      slipBase64.includes(",")
+        ? slipBase64.split(",").pop()
+        : slipBase64;
+
+    if (!base64Data) {
+      return json(
+        { error: "ข้อมูลสลิปไม่ถูกต้อง" },
+        400
+      );
+    }
+
+    const binaryString =
+      atob(base64Data);
+
+    const bytes =
+      new Uint8Array(binaryString.length);
+
+    for (
+      let index = 0;
+      index < binaryString.length;
+      index += 1
+    ) {
+      bytes[index] =
+        binaryString.charCodeAt(index);
+    }
+
+    // จำกัดไฟล์จริงไม่เกิน 5 MB
+    if (bytes.byteLength > 5 * 1024 * 1024) {
+      return json(
+        {
+          error:
+            "ไฟล์สลิปมีขนาดเกิน 5 MB"
+        },
+        400
+      );
+    }
+
+    const extensionMap = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp"
+    };
+
+    const extension =
+      extensionMap[slipMimeType];
+
+    const safeUserId =
+      lineProfile.userId.replace(
+        /[^a-zA-Z0-9_-]/g,
+        "_"
+      );
+
+    const storageFileName =
+      `${safeUserId}/${Date.now()}.${extension}`;
+
+    const uploadResponse = await fetch(
+      `${supabaseUrl}/storage/v1/object/payment-slips/` +
+        encodeURIComponent(storageFileName)
+          .replace(/%2F/g, "/"),
+      {
+        method: "POST",
+        headers: {
+          apikey: supabaseSecretKey,
+          Authorization:
+            `Bearer ${supabaseSecretKey}`,
+          "Content-Type": slipMimeType,
+          "x-upsert": "false"
+        },
+        body: bytes
+      }
+    );
+
+    if (!uploadResponse.ok) {
+      const details =
+        await uploadResponse.text();
+
+      return json(
+        {
+          error:
+            "อัปโหลดหลักฐานการโอนไม่สำเร็จ",
+          details
+        },
+        500
+      );
+    }
+
+    slipPath = storageFileName;
+    slipUploadedAt =
+      new Date().toISOString();
+
+  } catch (slipError) {
+    console.error(
+      "Payment slip upload error:",
+      slipError
+    );
+
+    return json(
+      {
+        error:
+          "เกิดข้อผิดพลาดขณะอัปโหลดสลิป",
+        details:
+          slipError instanceof Error
+            ? slipError.message
+            : String(slipError)
+      },
+      500
+    );
+  }
+}
   const registrationResponse = await fetch(
     `${supabaseUrl}/rest/v1/member_registration`,
     {
@@ -298,6 +500,7 @@ if (pendingRegistrations.length > 0) {
         email: email || null,
         birth_date: birthDate || null,
         gender: gender || null,
+       nationality: nationality,
         medical_conditions: medicalConditions || null,
         allergies: allergies || null,
         emergency_contact_name:
@@ -310,9 +513,9 @@ if (pendingRegistrations.length > 0) {
         payment_method: paymentMethod,
         payment_status: "pending",
         registration_status: "pending",
-        payment_amount: null,
-        slip_url: null,
-        slip_uploaded_at: null
+        payment_amount: paymentAmount,
+        slip_url: slipPath,
+slip_uploaded_at: slipUploadedAt
       })
     }
   );
