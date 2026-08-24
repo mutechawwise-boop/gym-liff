@@ -662,7 +662,25 @@ if (!data.pendingRenewals?.length) {
       สถานะ:
       รอตรวจสอบ
     </p>
+<div style="margin-top:16px;">
+  <label>
+    วันที่เริ่มแพ็กใหม่
+    <input
+      type="date"
+      class="renewal-start-date"
+      data-renewal-id="${renewal.id}"
+    >
+  </label>
 
+  <label style="margin-left:10px;">
+    วันที่หมดอายุ
+    <input
+      type="date"
+      class="renewal-expiry-date"
+      data-renewal-id="${renewal.id}"
+    >
+  </label>
+</div>
     <button
       type="button"
       class="approve-renewal-button"
@@ -1123,7 +1141,31 @@ document
       alert("Renewal ID ไม่ถูกต้อง");
       return;
     }
+const startInput =
+  document.querySelector(
+    `.renewal-start-date[data-renewal-id="${renewalId}"]`
+  );
 
+const expiryInput =
+  document.querySelector(
+    `.renewal-expiry-date[data-renewal-id="${renewalId}"]`
+  );
+
+const membershipStartDate =
+  startInput?.value || "";
+
+const membershipExpiryDate =
+  expiryInput?.value || "";
+
+if (
+  !membershipStartDate ||
+  !membershipExpiryDate
+) {
+  alert(
+    "กรุณากำหนดวันที่เริ่มและวันที่หมดอายุของแพ็กใหม่"
+  );
+  return;
+}
     const confirmed =
       window.confirm(
         "ยืนยันอนุมัติการต่ออายุสมาชิก?"
@@ -1152,11 +1194,14 @@ document
               "application/json",
             "x-admin-key": adminKey
           },
-          body: JSON.stringify({
-            mode: "approve_renewal",
-            renewalId
-          })
+         body: JSON.stringify({
+  mode: "approve_renewal",
+  renewalId,
+  membershipStartDate,
+  membershipExpiryDate
+})
         }
+        
       );
 
       const data =

@@ -58,7 +58,41 @@ if (!isAdmin && !isOwner) {
 ).trim();
 if (mode === "approve_renewal") {
   const renewalId = Number(body.renewalId);
+const membershipStartDate =
+  String(
+    body.membershipStartDate || ""
+  ).trim();
 
+const membershipExpiryDate =
+  String(
+    body.membershipExpiryDate || ""
+  ).trim();
+
+if (
+  !membershipStartDate ||
+  !membershipExpiryDate
+) {
+  return json(
+    {
+      error:
+        "กรุณากำหนดวันที่เริ่มและวันที่หมดอายุ"
+    },
+    400
+  );
+}
+
+if (
+  membershipExpiryDate <
+  membershipStartDate
+) {
+  return json(
+    {
+      error:
+        "วันที่หมดอายุต้องไม่ก่อนวันที่เริ่ม"
+    },
+    400
+  );
+}
   if (!Number.isInteger(renewalId) || renewalId <= 0) {
     return json(
       { error: "Renewal ID ไม่ถูกต้อง" },
@@ -188,44 +222,6 @@ if (mode === "approve_renewal") {
     );
   }
 
-const today = new Date();
-
-const startDate =
-  today.toISOString().slice(0, 10);
-
-const expiryDateObj =
-  new Date(today);
-
-const originalDay =
-  expiryDateObj.getUTCDate();
-
-expiryDateObj.setUTCDate(1);
-
-expiryDateObj.setUTCMonth(
-  expiryDateObj.getUTCMonth() + 1
-);
-
-const lastDayOfTargetMonth =
-  new Date(
-    Date.UTC(
-      expiryDateObj.getUTCFullYear(),
-      expiryDateObj.getUTCMonth() + 1,
-      0
-    )
-  ).getUTCDate();
-
-expiryDateObj.setUTCDate(
-  Math.min(
-    originalDay,
-    lastDayOfTargetMonth
-  )
-);
-
-const expiryDate =
-  expiryDateObj
-    .toISOString()
-    .slice(0, 10);
-
   // อัปเดตสมาชิก
   const updateMemberResponse = await fetch(
     `${supabaseUrl}/rest/v1/members` +
@@ -236,8 +232,10 @@ const expiryDate =
       body: JSON.stringify({
         member_status: "active",
         membership_plan: membershipPlan,
-        membership_start_date: startDate,
-        membership_expiry_date: expiryDate,
+        membership_start_date:
+  membershipStartDate,
+membership_expiry_date:
+  membershipExpiryDate,
        total_sessions: isClassPass
   ? totalSessions
   : null,
