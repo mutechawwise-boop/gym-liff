@@ -834,20 +834,31 @@
     แพ็กเกจ
   </label>
 
-  <select id="renewPlan">
-    <option value="">
-      -- เลือกแพ็กเกจ --
-    </option>
-    <option value="adult_monthly">
-      Adult Monthly
-    </option>
-    <option value="kids_monthly">
-      Kids Monthly
-    </option>
-    <option value="class_pass_8">
-      Class Pass 8 ครั้ง
-    </option>
-  </select>
+ <select id="renewPlan">
+  <option value="">
+    -- เลือกแพ็กเกจ --
+  </option>
+
+  <option value="adult_monthly">
+    Adult Monthly
+  </option>
+
+  <option value="kids_monthly">
+    Kids Monthly
+  </option>
+
+  <option value="class_pass_4">
+    Class Pass 4 ครั้ง
+  </option>
+
+  <option value="class_pass_8">
+    Class Pass 8 ครั้ง
+  </option>
+
+  <option value="class_pass_12">
+    Class Pass 12 ครั้ง
+  </option>
+</select>
 
   <label for="renewPaymentMethod">
     วิธีชำระเงิน
@@ -875,15 +886,20 @@
       style="width:100%; max-width:240px;"
     >
 
-    <label for="renewSlipUrl">
-      ลิงก์สลิป / หลักฐานการโอน
-    </label>
+   <label for="renewSlipFile">
+  หลักฐานการโอน
+</label>
 
-    <input
-      id="renewSlipUrl"
-      type="text"
-      placeholder="ใส่ URL หลักฐานการโอน"
-    >
+<input
+  id="renewSlipFile"
+  type="file"
+  accept="image/jpeg,image/png,image/webp"
+>
+
+<p
+  id="renewSlipFileName"
+  style="font-size:13px; color:#666;"
+></p>
   </div>
 
   <button
@@ -963,8 +979,11 @@ const renewPaymentMethod =
 const renewTransferBox =
   document.getElementById("renewTransferBox");
 
-const renewSlipUrl =
-  document.getElementById("renewSlipUrl");
+const renewSlipFile =
+  document.getElementById("renewSlipFile");
+
+const renewSlipFileName =
+  document.getElementById("renewSlipFileName");
 
 const submitRenewButton =
   document.getElementById("submitRenewButton");
@@ -1617,14 +1636,18 @@ paymentHistoryButton.addEventListener(
       paymentHistoryList.innerHTML =
         payments
           .map((payment) => {
-            const plan =
-              payment.membership_plan === "class_pass_8"
-                ? "Class Pass 8 ครั้ง"
-                : payment.membership_plan === "adult_monthly"
-                  ? "Adult Monthly"
-                  : payment.membership_plan === "kids_monthly"
-                    ? "Kids Monthly"
-                    : payment.membership_plan || "-";
+            const planLabels = {
+  adult_monthly: "Adult Monthly",
+  kids_monthly: "Kids Monthly",
+  class_pass_4: "Class Pass 4 ครั้ง",
+  class_pass_8: "Class Pass 8 ครั้ง",
+  class_pass_12: "Class Pass 12 ครั้ง"
+};
+
+const plan =
+  planLabels[payment.membership_plan] ||
+  payment.membership_plan ||
+  "-";
 
             const method =
               payment.payment_method === "cash"
@@ -1733,9 +1756,19 @@ renewPaymentMethod.addEventListener(
     if (renewPaymentMethod.value === "transfer") {
       renewTransferBox.style.display = "block";
     } else {
-      renewTransferBox.style.display = "none";
-      renewSlipUrl.value = "";
-    }
+  renewTransferBox.style.display = "none";
+  renewSlipFile.value = "";
+  renewSlipFileName.textContent = "";
+}
+  }
+);
+renewSlipFile.addEventListener(
+  "change",
+  () => {
+    const file = renewSlipFile.files?.[0];
+
+    renewSlipFileName.textContent =
+      file ? `ไฟล์ที่เลือก: ${file.name}` : "";
   }
 );
 submitRenewButton.addEventListener(
@@ -1751,8 +1784,67 @@ submitRenewButton.addEventListener(
       const paymentMethod =
         renewPaymentMethod.value;
 
-      const slipUrl =
-        renewSlipUrl.value.trim();
+      const slipFile =
+  renewSlipFile.files?.[0] || null;
+
+let slipBase64 = "";
+let slipMimeType = "";
+let slipFileName = "";
+
+if (paymentMethod === "transfer") {
+  if (!slipFile) {
+    throw new Error(
+      "กรุณาแนบหลักฐานการโอน"
+    );
+  }
+
+  const allowedTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+  ];
+
+  if (!allowedTypes.includes(slipFile.type)) {
+    throw new Error(
+      "รองรับเฉพาะไฟล์ JPG, PNG หรือ WEBP"
+    );
+  }
+
+  if (slipFile.size > 5 * 1024 * 1024) {
+    throw new Error(
+      "ไฟล์สลิปต้องมีขนาดไม่เกิน 5 MB"
+    );
+  }
+
+  slipMimeType = slipFile.type;
+  slipFileName = slipFile.name;
+
+  slipBase64 = await new Promise(
+    (resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        const result =
+          String(reader.result || "");
+
+        resolve(
+          result.includes(",")
+            ? result.split(",").pop()
+            : result
+        );
+      };
+
+      reader.onerror = () =>
+        reject(
+          new Error(
+            "ไม่สามารถอ่านไฟล์สลิปได้"
+          )
+        );
+
+      reader.readAsDataURL(slipFile);
+    }
+  );
+}
 
       if (!membershipPlan) {
         throw new Error(
@@ -1788,12 +1880,14 @@ submitRenewButton.addEventListener(
               "application/json"
           },
           body: JSON.stringify({
-            mode: "renew",
-            idToken,
-            membershipPlan,
-            paymentMethod,
-            slipUrl
-          })
+  mode: "renew",
+  idToken,
+  membershipPlan,
+  paymentMethod,
+  slipBase64,
+  slipMimeType,
+  slipFileName
+})
         }
       );
 

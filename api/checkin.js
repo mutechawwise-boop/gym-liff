@@ -460,8 +460,14 @@ if (mode === "renew") {
   const paymentMethod =
     String(body.paymentMethod || "").trim();
 
-  const slipUrl =
-    String(body.slipUrl || "").trim();
+const slipBase64 =
+  String(body.slipBase64 || "").trim();
+
+const slipMimeType =
+  String(body.slipMimeType || "").trim();
+
+const slipFileName =
+  String(body.slipFileName || "").trim();
 
   if (!membershipPlan) {
     return json(
@@ -481,10 +487,12 @@ if (mode === "renew") {
   }
 
   const allowedPlans = [
-    "adult_monthly",
-    "kids_monthly",
-    "class_pass_8"
-  ];
+  "adult_monthly",
+  "kids_monthly",
+  "class_pass_4",
+  "class_pass_8",
+  "class_pass_12"
+];
 
   if (!allowedPlans.includes(membershipPlan)) {
     return json(
@@ -528,6 +536,88 @@ if (mode === "renew") {
   }
 
   const member = members[0];
+  const registrationResponse = await fetch(
+  `${supabaseUrl}/rest/v1/member_registration` +
+    `?line_user_id=eq.${encodeURIComponent(lineUserId)}` +
+    `&registration_status=eq.approved` +
+    `&select=nationality` +
+    `&order=created_at.desc` +
+    `&limit=1`,
+  {
+    headers: commonHeaders
+  }
+);
+
+if (!registrationResponse.ok) {
+  const details =
+    await registrationResponse.text();
+
+  return json(
+    {
+      error: "อ่านข้อมูลสัญชาติสมาชิกไม่สำเร็จ",
+      details
+    },
+    500
+  );
+}
+
+const registrations =
+  await registrationResponse.json();
+
+const nationality =
+  String(
+    registrations[0]?.nationality || ""
+  ).trim();
+
+if (
+  nationality !== "thai" &&
+  nationality !== "foreigner"
+) {
+  return json(
+    {
+      error:
+        "ไม่พบข้อมูลสัญชาติของสมาชิก กรุณาติดต่อยิม"
+    },
+    400
+  );
+}
+
+const MEMBERSHIP_PRICES = {
+  thai: {
+    class_pass_4: 1500,
+    class_pass_8: 2000,
+    class_pass_12: 2500,
+    adult_monthly: 2900,
+    kids_monthly: 2900
+  },
+
+  foreigner: {
+    class_pass_12: 3000,
+    adult_monthly: 3500,
+    kids_monthly: 3500
+  }
+};
+
+const nationalityPrices =
+  MEMBERSHIP_PRICES[nationality];
+
+if (
+  !Object.prototype.hasOwnProperty.call(
+    nationalityPrices,
+    membershipPlan
+  )
+) {
+  return json(
+    {
+      error:
+        "แพ็กเกจนี้ไม่สามารถใช้กับสัญชาติของสมาชิกได้"
+    },
+    400
+  );
+}
+
+const paymentAmount =
+  nationalityPrices[membershipPlan];
 
   // กันการกดส่งคำขอซ้ำ
   const pendingResponse = await fetch(
@@ -567,7 +657,114 @@ if (mode === "renew") {
       409
     );
   }
+let slipPath = null;
 
+if (paymentMethod === "transfer") {
+  if (!slipBase64 || !slipMimeType) {
+    return json(
+      {
+        error: "กรุณาแนบหลักฐานการโอน"
+      },
+      400
+    );
+  }
+
+  const allowedMimeTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+  ];
+
+  if (!allowedMimeTypes.includes(slipMimeType)) {
+    return json(
+      {
+        error:
+          "รองรับเฉพาะไฟล์ JPG, PNG หรือ WEBP"
+      },
+      400
+    );
+  }
+
+  const base64Data =
+    slipBase64.includes(",")
+      ? slipBase64.split(",").pop()
+      : slipBase64;
+
+  const binaryString =
+    atob(base64Data);
+
+  const bytes =
+    new Uint8Array(binaryString.length);
+
+  for (
+    let index = 0;
+    index < binaryString.length;
+    index += 1
+  ) {
+    bytes[index] =
+      binaryString.charCodeAt(index);
+  }
+
+  if (bytes.byteLength > 5 * 1024 * 1024) {
+    return json(
+      {
+        error: "ไฟล์สลิปมีขนาดเกิน 5 MB"
+      },
+      400
+    );
+  }
+
+  const extensionMap = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp"
+  };
+
+  const extension =
+    extensionMap[slipMimeType];
+
+  const safeUserId =
+    lineUserId.replace(
+      /[^a-zA-Z0-9_-]/g,
+      "_"
+    );
+
+  const storageFileName =
+    `${safeUserId}/renewal-${Date.now()}.${extension}`;
+
+  const uploadResponse = await fetch(
+    `${supabaseUrl}/storage/v1/object/payment-slips/` +
+      encodeURIComponent(storageFileName)
+        .replace(/%2F/g, "/"),
+    {
+      method: "POST",
+      headers: {
+        apikey: supabaseSecretKey,
+        Authorization:
+          `Bearer ${supabaseSecretKey}`,
+        "Content-Type": slipMimeType,
+        "x-upsert": "false"
+      },
+      body: bytes
+    }
+  );
+
+  if (!uploadResponse.ok) {
+    const details =
+      await uploadResponse.text();
+
+    return json(
+      {
+        error:
+          "อัปโหลดหลักฐานการโอนไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  slipPath = storageFileName;
+}
   // สร้างคำขอต่ออายุ
   const transactionResponse = await fetch(
     `${supabaseUrl}/rest/v1/membership_transactions`,
@@ -577,18 +774,19 @@ if (mode === "renew") {
         ...commonHeaders,
         Prefer: "return=representation"
       },
-      body: JSON.stringify({
-        member_id: member.id,
-        line_user_id: lineUserId,
-        transaction_type: "renewal",
-        membership_plan: membershipPlan,
-        payment_method: paymentMethod,
-        payment_status: "pending",
-        slip_url:
-          paymentMethod === "transfer"
-            ? slipUrl || null
-            : null
-      })
+   body: JSON.stringify({
+  member_id: member.id,
+  line_user_id: lineUserId,
+  transaction_type: "renewal",
+  membership_plan: membershipPlan,
+  amount: paymentAmount,
+  payment_method: paymentMethod,
+  payment_status: "pending",
+  slip_url:
+    paymentMethod === "transfer"
+      ? slipPath
+      : null
+})
     }
   );
 

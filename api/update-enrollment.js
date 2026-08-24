@@ -188,20 +188,43 @@ if (mode === "approve_renewal") {
     );
   }
 
-  const today = new Date();
+const today = new Date();
 
-  const startDate =
-    today.toISOString().slice(0, 10);
+const startDate =
+  today.toISOString().slice(0, 10);
 
-  const expiryDateObj =
-    new Date(today);
+const expiryDateObj =
+  new Date(today);
 
-  expiryDateObj.setMonth(
-    expiryDateObj.getMonth() + 1
-  );
+const originalDay =
+  expiryDateObj.getUTCDate();
 
-  const expiryDate =
-    expiryDateObj.toISOString().slice(0, 10);
+expiryDateObj.setUTCDate(1);
+
+expiryDateObj.setUTCMonth(
+  expiryDateObj.getUTCMonth() + 1
+);
+
+const lastDayOfTargetMonth =
+  new Date(
+    Date.UTC(
+      expiryDateObj.getUTCFullYear(),
+      expiryDateObj.getUTCMonth() + 1,
+      0
+    )
+  ).getUTCDate();
+
+expiryDateObj.setUTCDate(
+  Math.min(
+    originalDay,
+    lastDayOfTargetMonth
+  )
+);
+
+const expiryDate =
+  expiryDateObj
+    .toISOString()
+    .slice(0, 10);
 
   // อัปเดตสมาชิก
   const updateMemberResponse = await fetch(
@@ -215,12 +238,13 @@ if (mode === "approve_renewal") {
         membership_plan: membershipPlan,
         membership_start_date: startDate,
         membership_expiry_date: expiryDate,
-        total_sessions: isClassPass
-          ? totalSessions
-          : null,
-        remaining_sessions: isClassPass
-          ? remainingSessions
-          : null
+       total_sessions: isClassPass
+  ? totalSessions
+  : null,
+
+remaining_sessions: isClassPass
+  ? remainingSessions
+  : null
       })
     }
   );

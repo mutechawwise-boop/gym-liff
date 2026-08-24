@@ -65,14 +65,18 @@ export async function pushMemberCard(
   const membershipPlan =
     String(member.membership_plan || "");
 
-  const planText =
-    membershipPlan === "class_pass_8"
-      ? "Class Pass 8 ครั้ง"
-      : membershipPlan === "adult_monthly"
-        ? "Adult Monthly"
-        : membershipPlan === "kids_monthly"
-          ? "Kids Monthly"
-          : membershipPlan || "-";
+const planLabels = {
+  adult_monthly: "Adult Monthly",
+  kids_monthly: "Kids Monthly",
+  class_pass_4: "Class Pass 4 ครั้ง",
+  class_pass_8: "Class Pass 8 ครั้ง",
+  class_pass_12: "Class Pass 12 ครั้ง"
+};
+
+const planText =
+  planLabels[membershipPlan] ||
+  membershipPlan ||
+  "-";
 
   const isClassPass =
     membershipPlan.startsWith("class_pass_");

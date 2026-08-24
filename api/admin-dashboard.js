@@ -318,8 +318,29 @@ if (isOwner) {
     );
   }
 
-  pendingRenewals =
-    await renewalResponse.json();
+ const renewalRows =
+  await renewalResponse.json();
+
+pendingRenewals =
+  await Promise.all(
+    renewalRows.map(async (renewal) => {
+      let slipSignedUrl = null;
+
+      if (renewal.slip_url) {
+        slipSignedUrl =
+          await supabase.createSignedUrl(
+            "payment-slips",
+            renewal.slip_url,
+            3600
+          );
+      }
+
+      return {
+        ...renewal,
+        slip_signed_url: slipSignedUrl
+      };
+    })
+  );
 }
 
       return json({

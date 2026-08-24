@@ -590,34 +590,87 @@ if (!data.pendingRenewals?.length) {
               : "-";
 
         return `
-          <article class="owner-stat">
-            <strong>
-              ${memberName}
-            </strong>
+  <article class="owner-stat">
+    <strong>
+      ${memberName}
+    </strong>
 
+    <p>
+      แพ็กเกจ:
+      ${plan}
+    </p>
+
+    <p>
+      ยอดชำระ:
+      ${
+        renewal.amount != null
+          ? `${Number(renewal.amount).toLocaleString("th-TH")} บาท`
+          : "-"
+      }
+    </p>
+
+    <p>
+      วิธีชำระเงิน:
+      ${paymentMethod}
+    </p>
+
+    ${
+      renewal.slip_signed_url
+        ? `
+          <div style="margin-top:14px;">
             <p>
-              แพ็กเกจ:
-              ${plan}
+              <strong>หลักฐานการชำระเงิน:</strong>
             </p>
 
-            <p>
-              วิธีชำระเงิน:
-              ${paymentMethod}
-            </p>
-
-            <p>
-              สถานะ:
-              รอตรวจสอบ
-            </p>
-
-            <button
-              type="button"
-              class="approve-renewal-button"
-              data-renewal-id="${renewal.id}"
+            <a
+              href="${renewal.slip_signed_url}"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              อนุมัติ
-            </button>
-          </article>
+              <img
+                src="${renewal.slip_signed_url}"
+                alt="Renewal Payment Slip"
+                style="
+                  display:block;
+                  width:100%;
+                  max-width:360px;
+                  max-height:520px;
+                  object-fit:contain;
+                  margin-top:8px;
+                  border:1px solid #ddd;
+                  border-radius:12px;
+                  background:#fff;
+                  cursor:pointer;
+                "
+              >
+            </a>
+
+            <small>
+              คลิกที่รูปเพื่อเปิดดูขนาดเต็ม
+            </small>
+          </div>
+        `
+        : `
+          <p>
+            หลักฐานการชำระเงิน:
+            ไม่มีสลิป
+          </p>
+        `
+    }
+
+    <p>
+      สถานะ:
+      รอตรวจสอบ
+    </p>
+
+    <button
+      type="button"
+      class="approve-renewal-button"
+      data-renewal-id="${renewal.id}"
+    >
+      อนุมัติ
+    </button>
+  </article>
         `;
       })
       .join("");
