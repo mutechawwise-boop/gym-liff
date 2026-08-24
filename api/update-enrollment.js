@@ -221,9 +221,22 @@ if (
       404
     );
   }
+const todayDate =
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date());
 
+const shouldActivateNow =
+  membershipStartDate <= todayDate;
   // อัปเดตสมาชิก
-  const updateMemberResponse = await fetch(
+  
+ let updateMemberResponse = null;
+
+if (shouldActivateNow) {
+  updateMemberResponse = await fetch(
     `${supabaseUrl}/rest/v1/members` +
       `?id=eq.${renewal.member_id}`,
     {
@@ -260,6 +273,7 @@ remaining_sessions: isClassPass
       500
     );
   }
+  }
 
   // ปิดคำขอต่ออายุ
   const approveResponse = await fetch(
@@ -269,11 +283,19 @@ remaining_sessions: isClassPass
       method: "PATCH",
       headers,
       body: JSON.stringify({
-        payment_status: "paid",
-        approved_at:
-          new Date().toISOString(),
-        approved_by: "owner"
-      })
+  payment_status: "paid",
+
+  membership_start_date:
+    membershipStartDate,
+
+  membership_expiry_date:
+    membershipExpiryDate,
+
+  approved_at:
+    new Date().toISOString(),
+
+  approved_by: "owner"
+})
     }
   );
 
@@ -290,24 +312,32 @@ remaining_sessions: isClassPass
       500
     );
   }
-// ส่ง Member Card ไป LINE หลังอนุมัติสำเร็จ
+// ส่ง LINE หลังอนุมัติสำเร็จ
 try {
-  const updatedMemberRows =
-    await updateMemberResponse.json();
+  if (shouldActivateNow && updateMemberResponse) {
+    const updatedMemberRows =
+      await updateMemberResponse.json();
 
-  const updatedMember =
-    updatedMemberRows[0];
+    const updatedMember =
+      updatedMemberRows[0];
 
-  if (updatedMember) {
+    if (updatedMember) {
+      await pushMemberCard(
+        renewal.line_user_id,
+        updatedMember,
+        "✅ ต่ออายุสมาชิกเรียบร้อยแล้ว"
+      );
+    }
+  } else {
     await pushMemberCard(
       renewal.line_user_id,
-      updatedMember,
-      "✅ ต่ออายุสมาชิกเรียบร้อยแล้ว"
+      member,
+      `✅ ต่ออายุสมาชิกเรียบร้อยแล้ว\nแพ็กใหม่จะเริ่มวันที่ ${membershipStartDate}`
     );
   }
 } catch (lineError) {
   console.error(
-    "LINE member card push failed:",
+    "LINE renewal notification failed:",
     lineError
   );
 }
