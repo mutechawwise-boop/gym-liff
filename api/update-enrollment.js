@@ -1,4 +1,7 @@
-import { pushMemberCard } from "./lib/line.js";
+import {
+  pushMemberCard,
+  pushLineMessage
+} from "./lib/line.js";
 export default {
   async fetch(request) {
     const json = (data, status = 200) =>
@@ -282,7 +285,7 @@ remaining_sessions: isClassPass
     {
       method: "PATCH",
       headers,
-      body: JSON.stringify({
+ body: JSON.stringify({
   payment_status: "paid",
 
   membership_start_date:
@@ -290,6 +293,11 @@ remaining_sessions: isClassPass
 
   membership_expiry_date:
     membershipExpiryDate,
+
+  activated_at:
+    shouldActivateNow
+      ? new Date().toISOString()
+      : null,
 
   approved_at:
     new Date().toISOString(),
@@ -328,13 +336,33 @@ try {
         "✅ ต่ออายุสมาชิกเรียบร้อยแล้ว"
       );
     }
-  } else {
-    await pushMemberCard(
-      renewal.line_user_id,
-      member,
-      `✅ ต่ออายุสมาชิกเรียบร้อยแล้ว\nแพ็กใหม่จะเริ่มวันที่ ${membershipStartDate}`
-    );
-  }
+} else {
+
+  const planText =
+    isClassPass
+      ? `Class Pass ${totalSessions} ครั้ง`
+      : membershipPlan === "adult_monthly"
+        ? "Adult Monthly"
+        : membershipPlan === "kids_monthly"
+          ? "Kids Monthly"
+          : membershipPlan;
+
+  const sessionText =
+    isClassPass
+      ? `\nสิทธิ์ใหม่: ${totalSessions} / ${totalSessions}`
+      : "";
+
+  await pushLineMessage(
+    renewal.line_user_id,
+    `✅ ต่ออายุสมาชิกเรียบร้อยแล้ว\n\n` +
+      `แพ็กใหม่: ${planText}` +
+      `${sessionText}\n` +
+      `เริ่มใช้งาน: ${membershipStartDate}\n` +
+      `หมดอายุ: ${membershipExpiryDate}\n\n` +
+      `แพ็กปัจจุบันยังสามารถใช้งานได้จนกว่าจะหมดอายุ`
+  );
+
+}
 } catch (lineError) {
   console.error(
     "LINE renewal notification failed:",
