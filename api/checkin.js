@@ -1078,7 +1078,7 @@ if (isClassPass) {
             ...commonHeaders,
             Prefer: "return=representation"
           },
-          body: JSON.stringify({
+      body: JSON.stringify({
   display_name: displayName,
   last_checkin: now,
   checkin_count: newCount,
@@ -1087,7 +1087,12 @@ if (isClassPass) {
   ...(isClassPass
     ? {
         remaining_sessions:
-          newRemainingSessions
+          newRemainingSessions,
+
+        member_status:
+          newRemainingSessions <= 0
+            ? "inactive"
+            : "active"
       }
     : {})
 })
@@ -1121,7 +1126,7 @@ if (isClassPass) {
   memberId: currentMember.id,
 
 memberStatus:
-  currentMember.member_status,
+  member.member_status,
 
 membershipStartDate:
   currentMember.membership_start_date,
