@@ -353,7 +353,7 @@ let finance = {
   todayCash: 0,
   todayTransfer: 0
 };
-
+let recentPayments = [];
 if (isOwner) {
   const [
     renewalFinanceResponse,
@@ -518,19 +518,19 @@ const allTransactions = [
       todayTransfer: 0
     }
   );
+ recentPayments =
+allTransactions
+ .filter(
+ (transaction) =>
+ transaction.approvedAt
+ ).sort(
+(a, b) =>
+ new Date(b.approvedAt) -
+ new Date(a.approvedAt)
+ )
+.slice(0, 10);
 }
-      const recentPayments =
-  allTransactions
-    .filter(
-      (transaction) =>
-        transaction.approvedAt
-    )
-    .sort(
-      (a, b) =>
-        new Date(b.approvedAt) -
-        new Date(a.approvedAt)
-    )
-    .slice(0, 10);
+   
 return json({
         success: true,
         today,
