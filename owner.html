@@ -478,6 +478,33 @@ async function loadOwnerDashboard() {
 
   document.getElementById("todayExpiringCount").textContent =
     data.todayExpiringCount ?? 0;
+    document.getElementById(
+  "todayRevenue"
+).textContent =
+  Number(
+    data.finance?.todayRevenue || 0
+  ).toLocaleString("th-TH");
+
+document.getElementById(
+  "monthlyRevenue"
+).textContent =
+  Number(
+    data.finance?.monthRevenue || 0
+  ).toLocaleString("th-TH");
+
+document.getElementById(
+  "todayCashRevenue"
+).textContent =
+  Number(
+    data.finance?.todayCash || 0
+  ).toLocaleString("th-TH");
+
+document.getElementById(
+  "todayTransferRevenue"
+).textContent =
+  Number(
+    data.finance?.todayTransfer || 0
+  ).toLocaleString("th-TH");
 const pendingCount =
   document.getElementById("pendingRegistrationCount");
 

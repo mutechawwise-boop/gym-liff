@@ -342,7 +342,99 @@ pendingRenewals =
     })
   );
 }
+let finance = {
+  todayRevenue: 0,
+  monthRevenue: 0,
+  todayCash: 0,
+  todayTransfer: 0
+};
 
+if (isOwner) {
+  const monthStart =
+    `${today.slice(0, 7)}-01`;
+
+  const financeResponse =
+    await supabase.request(
+      "membership_transactions" +
+        "?payment_status=eq.paid" +
+        `&approved_at=gte.${monthStart}T00:00:00+07:00` +
+        "&select=id,amount,payment_method,approved_at,transaction_type"
+    );
+
+  if (!financeResponse.ok) {
+    const details =
+      await financeResponse.text();
+
+    return json(
+      {
+        success: false,
+        error: "โหลดข้อมูลการเงินไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const financeTransactions =
+    await financeResponse.json();
+
+  finance =
+    financeTransactions.reduce(
+      (summary, transaction) => {
+        const amount =
+          Number(transaction.amount || 0);
+
+        if (!amount) {
+          return summary;
+        }
+
+        const approvedDate =
+          transaction.approved_at
+            ? new Intl.DateTimeFormat(
+                "en-CA",
+                {
+                  timeZone: "Asia/Bangkok",
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit"
+                }
+              ).format(
+                new Date(
+                  transaction.approved_at
+                )
+              )
+            : null;
+
+        summary.monthRevenue += amount;
+
+        if (approvedDate === today) {
+          summary.todayRevenue += amount;
+
+          if (
+            transaction.payment_method ===
+            "cash"
+          ) {
+            summary.todayCash += amount;
+          }
+
+          if (
+            transaction.payment_method ===
+            "transfer"
+          ) {
+            summary.todayTransfer += amount;
+          }
+        }
+
+        return summary;
+      },
+      {
+        todayRevenue: 0,
+        monthRevenue: 0,
+        todayCash: 0,
+        todayTransfer: 0
+      }
+    );
+}
       return json({
         success: true,
         today,
@@ -367,7 +459,10 @@ pendingRenewals =
   pendingRenewals.length,
 
 pendingRenewals,
-        classes
+
+finance,
+
+classes
       });
     } catch (error) {
       console.error("Admin dashboard error:", error);
