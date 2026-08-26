@@ -361,17 +361,16 @@ if (isOwner) {
   ] = await Promise.all([
     // รายรับจากการต่ออายุ
     supabase.request(
-      "membership_transactions" +
-        "?payment_status=eq.paid" +
-        "&select=id,amount,payment_method,approved_at"
-    ),
-
+  "membership_transactions" +
+    "?payment_status=eq.paid" +
+    "&select=id,amount,payment_method,approved_at,membership_plan,members(display_name,nickname)"
+),
     // รายรับจากการสมัครสมาชิกใหม่
-    supabase.request(
-      "member_registration" +
-        "?registration_status=eq.approved" +
-        "&select=id,payment_amount,payment_method,approved_at"
-    )
+   supabase.request(
+  "member_registration" +
+    "?registration_status=eq.approved" +
+    "&select=id,payment_amount,payment_method,approved_at,membership_plan,line_display_name,nickname,first_name,last_name"
+)
   ]);
 
   if (!renewalFinanceResponse.ok) {
@@ -411,24 +410,44 @@ if (isOwner) {
     await registrationFinanceResponse.json();
 
   // รวมข้อมูลให้อยู่ในรูปแบบเดียวกัน
-  const allTransactions = [
-    ...renewalTransactions.map((item) => ({
-      amount: Number(item.amount || 0),
-      paymentMethod:
-        item.payment_method || "",
-      approvedAt:
-        item.approved_at || null
-    })),
+const allTransactions = [
+  ...renewalTransactions.map((item) => ({
+    id: `renewal-${item.id}`,
+    type: "renewal",
+    memberName:
+      item.members?.display_name ||
+      item.members?.nickname ||
+      "สมาชิก",
+    membershipPlan:
+      item.membership_plan || "-",
+    amount:
+      Number(item.amount || 0),
+    paymentMethod:
+      item.payment_method || "",
+    approvedAt:
+      item.approved_at || null
+  })),
 
-    ...registrationTransactions.map((item) => ({
-      amount:
-        Number(item.payment_amount || 0),
-      paymentMethod:
-        item.payment_method || "",
-      approvedAt:
-        item.approved_at || null
-    }))
-  ];
+  ...registrationTransactions.map((item) => ({
+    id: `registration-${item.id}`,
+    type: "registration",
+    memberName:
+      item.nickname ||
+      item.line_display_name ||
+      [item.first_name, item.last_name]
+        .filter(Boolean)
+        .join(" ") ||
+      "สมาชิก",
+    membershipPlan:
+      item.membership_plan || "-",
+    amount:
+      Number(item.payment_amount || 0),
+    paymentMethod:
+      item.payment_method || "",
+    approvedAt:
+      item.approved_at || null
+  }))
+];
 
   const currentMonth =
     today.slice(0, 7);
@@ -500,7 +519,19 @@ if (isOwner) {
     }
   );
 }
-      return json({
+      const recentPayments =
+  allTransactions
+    .filter(
+      (transaction) =>
+        transaction.approvedAt
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.approvedAt) -
+        new Date(a.approvedAt)
+    )
+    .slice(0, 10);
+return json({
         success: true,
         today,
 
@@ -526,6 +557,8 @@ if (isOwner) {
 pendingRenewals,
 
 finance,
+
+recentPayments,
 
 classes
       });

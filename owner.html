@@ -427,9 +427,9 @@
     <section id="payments" class="owner-card">
       <h2>💳 รายการรับเงินล่าสุด</h2>
 
-      <div class="empty-state">
-        ยังไม่ได้เชื่อมระบบรับเงิน
-      </div>
+      <div id="recentPaymentList" class="empty-state">
+  กำลังโหลดรายการรับเงิน...
+</div>
     </section>
 
     <section id="reports" class="owner-card">
@@ -505,6 +505,99 @@ document.getElementById(
   Number(
     data.finance?.todayTransfer || 0
   ).toLocaleString("th-TH");
+  const recentPaymentList =
+  document.getElementById(
+    "recentPaymentList"
+  );
+
+if (!data.recentPayments?.length) {
+  recentPaymentList.className =
+    "empty-state";
+
+  recentPaymentList.textContent =
+    "ยังไม่มีรายการรับเงิน";
+} else {
+  recentPaymentList.className = "";
+
+  recentPaymentList.innerHTML =
+    data.recentPayments
+      .map((payment) => {
+        const typeText =
+          payment.type === "renewal"
+            ? "ต่ออายุสมาชิก"
+            : "สมัครสมาชิกใหม่";
+
+        const paymentMethodText =
+          payment.paymentMethod === "cash"
+            ? "เงินสด"
+            : payment.paymentMethod ===
+                "transfer"
+              ? "เงินโอน"
+              : "-";
+
+        const planText =
+          payment.membershipPlan ||
+          "-";
+
+        const approvedDate =
+          payment.approvedAt
+            ? new Intl.DateTimeFormat(
+                "th-TH",
+                {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                  timeZone:
+                    "Asia/Bangkok"
+                }
+              ).format(
+                new Date(
+                  payment.approvedAt
+                )
+              )
+            : "-";
+
+        return `
+          <article
+            class="owner-stat"
+            style="margin-bottom:12px;"
+          >
+            <strong>
+              ${payment.memberName || "สมาชิก"}
+            </strong>
+
+            <p>
+              ${typeText}
+            </p>
+
+            <p>
+              แพ็กเกจ:
+              ${planText}
+            </p>
+
+            <p>
+              วิธีชำระเงิน:
+              ${paymentMethodText}
+            </p>
+
+            <p>
+              ยอด:
+              <strong>
+                ${Number(
+                  payment.amount || 0
+                ).toLocaleString("th-TH")}
+                บาท
+              </strong>
+            </p>
+
+            <p>
+              วันที่รับเงิน:
+              ${approvedDate}
+            </p>
+          </article>
+        `;
+      })
+      .join("");
+}
 const pendingCount =
   document.getElementById("pendingRegistrationCount");
 
