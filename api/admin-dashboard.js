@@ -342,6 +342,11 @@ pendingRenewals =
     })
   );
 }
+// ==============================
+// Dashboard การเงิน
+// รวมสมัครสมาชิกใหม่ + ต่ออายุ
+// ==============================
+
 let finance = {
   todayRevenue: 0,
   monthRevenue: 0,
@@ -350,90 +355,150 @@ let finance = {
 };
 
 if (isOwner) {
-  const monthStart =
-    `${today.slice(0, 7)}-01`;
-
-  const financeResponse =
-    await supabase.request(
+  const [
+    renewalFinanceResponse,
+    registrationFinanceResponse
+  ] = await Promise.all([
+    // รายรับจากการต่ออายุ
+    supabase.request(
       "membership_transactions" +
         "?payment_status=eq.paid" +
-        `&approved_at=gte.${monthStart}T00:00:00+07:00` +
-        "&select=id,amount,payment_method,approved_at,transaction_type"
-    );
+        "&select=id,amount,payment_method,approved_at"
+    ),
 
-  if (!financeResponse.ok) {
+    // รายรับจากการสมัครสมาชิกใหม่
+    supabase.request(
+      "member_registration" +
+        "?registration_status=eq.approved" +
+        "&select=id,payment_amount,payment_method,approved_at"
+    )
+  ]);
+
+  if (!renewalFinanceResponse.ok) {
     const details =
-      await financeResponse.text();
+      await renewalFinanceResponse.text();
 
     return json(
       {
         success: false,
-        error: "โหลดข้อมูลการเงินไม่สำเร็จ",
+        error:
+          "โหลดข้อมูลการเงินจากการต่ออายุไม่สำเร็จ",
         details
       },
       500
     );
   }
 
-  const financeTransactions =
-    await financeResponse.json();
+  if (!registrationFinanceResponse.ok) {
+    const details =
+      await registrationFinanceResponse.text();
 
-  finance =
-    financeTransactions.reduce(
-      (summary, transaction) => {
-        const amount =
-          Number(transaction.amount || 0);
-
-        if (!amount) {
-          return summary;
-        }
-
-        const approvedDate =
-          transaction.approved_at
-            ? new Intl.DateTimeFormat(
-                "en-CA",
-                {
-                  timeZone: "Asia/Bangkok",
-                  year: "numeric",
-                  month: "2-digit",
-                  day: "2-digit"
-                }
-              ).format(
-                new Date(
-                  transaction.approved_at
-                )
-              )
-            : null;
-
-        summary.monthRevenue += amount;
-
-        if (approvedDate === today) {
-          summary.todayRevenue += amount;
-
-          if (
-            transaction.payment_method ===
-            "cash"
-          ) {
-            summary.todayCash += amount;
-          }
-
-          if (
-            transaction.payment_method ===
-            "transfer"
-          ) {
-            summary.todayTransfer += amount;
-          }
-        }
-
-        return summary;
-      },
+    return json(
       {
-        todayRevenue: 0,
-        monthRevenue: 0,
-        todayCash: 0,
-        todayTransfer: 0
-      }
+        success: false,
+        error:
+          "โหลดข้อมูลการเงินจากการสมัครสมาชิกไม่สำเร็จ",
+        details
+      },
+      500
     );
+  }
+
+  const renewalTransactions =
+    await renewalFinanceResponse.json();
+
+  const registrationTransactions =
+    await registrationFinanceResponse.json();
+
+  // รวมข้อมูลให้อยู่ในรูปแบบเดียวกัน
+  const allTransactions = [
+    ...renewalTransactions.map((item) => ({
+      amount: Number(item.amount || 0),
+      paymentMethod:
+        item.payment_method || "",
+      approvedAt:
+        item.approved_at || null
+    })),
+
+    ...registrationTransactions.map((item) => ({
+      amount:
+        Number(item.payment_amount || 0),
+      paymentMethod:
+        item.payment_method || "",
+      approvedAt:
+        item.approved_at || null
+    }))
+  ];
+
+  const currentMonth =
+    today.slice(0, 7);
+
+  finance = allTransactions.reduce(
+    (summary, transaction) => {
+      if (
+        !transaction.amount ||
+        !transaction.approvedAt
+      ) {
+        return summary;
+      }
+
+      const approvedDate =
+        new Intl.DateTimeFormat(
+          "en-CA",
+          {
+            timeZone: "Asia/Bangkok",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+          }
+        ).format(
+          new Date(
+            transaction.approvedAt
+          )
+        );
+
+      const approvedMonth =
+        approvedDate.slice(0, 7);
+
+      // รายรับเดือนนี้
+      if (
+        approvedMonth === currentMonth
+      ) {
+        summary.monthRevenue +=
+          transaction.amount;
+      }
+
+      // รายรับวันนี้
+      if (approvedDate === today) {
+        summary.todayRevenue +=
+          transaction.amount;
+
+        if (
+          transaction.paymentMethod ===
+          "cash"
+        ) {
+          summary.todayCash +=
+            transaction.amount;
+        }
+
+        if (
+          transaction.paymentMethod ===
+          "transfer"
+        ) {
+          summary.todayTransfer +=
+            transaction.amount;
+        }
+      }
+
+      return summary;
+    },
+    {
+      todayRevenue: 0,
+      monthRevenue: 0,
+      todayCash: 0,
+      todayTransfer: 0
+    }
+  );
 }
       return json({
         success: true,
