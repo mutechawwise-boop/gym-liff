@@ -291,6 +291,25 @@
   <option value="adult">ADULT</option>
   <option value="kids">KIDS</option>
 </select>
+<label for="approvalBeltLevel">
+  ระดับสาย
+</label>
+
+<select id="approvalBeltLevel">
+  <option value="">-- เลือกระดับสาย --</option>
+</select>
+
+<label for="approvalStripeCount">
+  Rank Bar
+</label>
+
+<select id="approvalStripeCount">
+  <option value="0">0 ขีด</option>
+  <option value="1">1 ขีด</option>
+  <option value="2">2 ขีด</option>
+  <option value="3">3 ขีด</option>
+  <option value="4">4 ขีด</option>
+</select>
   <label for="approvalStartDate">
     วันที่เริ่มสมาชิก
   </label>
@@ -854,7 +873,26 @@ const sessionApprovalFields =
   document.getElementById("sessionApprovalFields");
 const approvalMemberGroup =
   document.getElementById("approvalMemberGroup");
+const approvalBeltLevel =
+  document.getElementById(
+    "approvalBeltLevel"
+  );
 
+const approvalStripeCount =
+  document.getElementById(
+    "approvalStripeCount"
+  );
+approvalBeltLevel.innerHTML =
+  `<option value="">-- เลือกระดับสาย --</option>` +
+  (data.beltLevels || [])
+    .map(
+      (belt) => `
+        <option value="${belt.id}">
+          ${belt.name_th}
+        </option>
+      `
+    )
+    .join("");
   const approvalStartDate =
   document.getElementById("approvalStartDate");
 
@@ -1040,6 +1078,8 @@ ${
 
 
       approvalMemberGroup.value = "";
+      approvalBeltLevel.value = "";
+      approvalStripeCount.value = "0"; 
       approvalStartDate.value = "";
       approvalExpiryDate.value = "";
       approvalNote.value = "";
@@ -1123,7 +1163,24 @@ approveRegistrationButton.onclick =
         "กรุณากำหนดวันที่เริ่มและวันที่หมดอายุ";
       return;
     }
+if (!approvalBeltLevel.value) {
+  approvalMessage.textContent =
+    "กรุณาเลือกระดับสาย";
+  return;
+}
 
+const stripeCount =
+  Number(approvalStripeCount.value);
+
+if (
+  !Number.isInteger(stripeCount) ||
+  stripeCount < 0 ||
+  stripeCount > 4
+) {
+  approvalMessage.textContent =
+    "Rank Bar ต้องอยู่ระหว่าง 0–4 ขีด";
+  return;
+}
     const isClassPass =
       sessionApprovalFields.style.display !==
       "none";
@@ -1182,6 +1239,10 @@ approveRegistrationButton.onclick =
 
             memberGroup:
               approvalMemberGroup.value,
+              beltLevelId:
+  Number(approvalBeltLevel.value),
+
+stripeCount,
                 ownerNote:
               approvalNote.value
           })
@@ -1209,7 +1270,6 @@ approveRegistrationButton.onclick =
         "none";
 
       await loadOwnerDashboard();
-ฏ
     } catch (error) {
       console.error(
         "Approve registration error:",

@@ -557,6 +557,11 @@ const memberGroup =
   String(
     body.memberGroup || ""
   ).trim();
+  const beltLevelId =
+  Number(body.beltLevelId);
+
+const stripeCount =
+  Number(body.stripeCount);
   const totalSessions =
     body.totalSessions === null ||
     body.totalSessions === "" ||
@@ -623,6 +628,31 @@ if (
     400
   );
 }
+if (
+  !Number.isInteger(beltLevelId) ||
+  beltLevelId <= 0
+) {
+  return json(
+    {
+      error: "กรุณาเลือกระดับสาย"
+    },
+    400
+  );
+}
+
+if (
+  !Number.isInteger(stripeCount) ||
+  stripeCount < 0 ||
+  stripeCount > 4
+) {
+  return json(
+    {
+      error:
+        "Rank Bar ต้องอยู่ระหว่าง 0–4 ขีด"
+    },
+    400
+  );
+}
   const supabaseHeaders = {
     apikey: supabaseSecretKey,
     Authorization:
@@ -630,7 +660,43 @@ if (
     "Content-Type": "application/json",
     Prefer: "return=representation"
   };
+const beltResponse = await fetch(
+  `${supabaseUrl}/rest/v1/belt_levels` +
+    `?id=eq.${beltLevelId}` +
+    `&active=eq.true` +
+    `&select=id,code,name_th` +
+    `&limit=1`,
+  {
+    headers: supabaseHeaders
+  }
+);
 
+if (!beltResponse.ok) {
+  const details =
+    await beltResponse.text();
+
+  return json(
+    {
+      error:
+        "ตรวจสอบระดับสายไม่สำเร็จ",
+      details
+    },
+    500
+  );
+}
+
+const beltRows =
+  await beltResponse.json();
+
+if (!beltRows.length) {
+  return json(
+    {
+      error:
+        "ไม่พบระดับสายที่เลือก"
+    },
+    400
+  );
+}
   // อ่านคำขอสมัคร
   const registrationResponse = await fetch(
     `${supabaseUrl}/rest/v1/member_registration` +
@@ -884,7 +950,40 @@ if (
       500
     );
   }
+// บันทึกระดับสายเริ่มต้น + Rank Bar
+const beltHistoryResponse =
+  await fetch(
+    `${supabaseUrl}/rest/v1/member_belt_history`,
+    {
+      method: "POST",
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        member_id: member.id,
+        belt_level_id: beltLevelId,
+        stripe_count: stripeCount,
+        awarded_date:
+          membershipStartDate,
+        awarded_by: "Owner",
+        note:
+          ownerNote || null
+      })
+    }
+  );
 
+if (!beltHistoryResponse.ok) {
+  const details =
+    await beltHistoryResponse.text();
+
+  return json(
+    {
+      error:
+        "สร้างสมาชิกสำเร็จ แต่บันทึกระดับสายไม่สำเร็จ",
+      member,
+      details
+    },
+    500
+  );
+}
   // ปิดคำขอสมัคร
   const approvalResponse = await fetch(
     `${supabaseUrl}/rest/v1/member_registration` +

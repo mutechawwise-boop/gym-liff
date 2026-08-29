@@ -63,21 +63,31 @@ if (!isCoach && !isOwner) {
 
       const today = getBangkokDateString();
 
-      const [
-        membersResponse,
-        sessionsResponse,
-        attendanceResponse
-      ] = await Promise.all([
-        supabase.request(
-          "members?select=id,display_name,membership_expiry_date,is_guest,created_at"
-        ),
-        supabase.request(
-  `class_sessions?select=id,start_time,end_time,class_id,classes(id,name)&session_date=eq.${today}`
-),
-        supabase.request(
-          "attendance?select=id,session_id,member_id"
-        )
-      ]);
+     const [
+  membersResponse,
+  sessionsResponse,
+  attendanceResponse,
+  beltLevelsResponse
+] = await Promise.all([
+  supabase.request(
+    "members?select=id,display_name,membership_expiry_date,is_guest,created_at"
+  ),
+
+  supabase.request(
+    `class_sessions?select=id,start_time,end_time,class_id,classes(id,name)&session_date=eq.${today}`
+  ),
+
+  supabase.request(
+    "attendance?select=id,session_id,member_id"
+  ),
+
+  supabase.request(
+    "belt_levels" +
+      "?active=eq.true" +
+      "&select=id,code,name_th,rank_order,color_hex" +
+      "&order=rank_order.asc"
+  )
+]);
 
       if (!membersResponse.ok) {
         const errorText = await membersResponse.text();
@@ -114,10 +124,23 @@ if (!isCoach && !isOwner) {
           500
         );
       }
+if (!beltLevelsResponse.ok) {
+  const errorText =
+    await beltLevelsResponse.text();
 
+  return json(
+    {
+      success: false,
+      error: "โหลดระดับสายไม่สำเร็จ",
+      details: errorText
+    },
+    500
+  );
+}
       const members = await membersResponse.json();
       const sessions = await sessionsResponse.json();
       const attendance = await attendanceResponse.json();
+      const beltLevels = await beltLevelsResponse.json();
       let pendingRegistrations = [];
 
 if (isOwner) {
@@ -559,6 +582,8 @@ pendingRenewals,
 finance,
 
 recentPayments,
+
+beltLevels,
 
 classes
       });
