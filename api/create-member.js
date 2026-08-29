@@ -562,6 +562,10 @@ const memberGroup =
 
 const stripeCount =
   Number(body.stripeCount);
+  const beltAwardedDate =
+  String(
+    body.beltAwardedDate || ""
+  ).trim();
   const totalSessions =
     body.totalSessions === null ||
     body.totalSessions === "" ||
@@ -649,6 +653,20 @@ if (
     {
       error:
         "Rank Bar ต้องอยู่ระหว่าง 0–4 ขีด"
+    },
+    400
+  );
+}
+if (
+  !beltAwardedDate ||
+  !/^\d{4}-\d{2}-\d{2}$/.test(
+    beltAwardedDate
+  )
+) {
+  return json(
+    {
+      error:
+        "กรุณาระบุวันที่ได้รับสายปัจจุบัน"
     },
     400
   );
@@ -962,7 +980,7 @@ const beltHistoryResponse =
         belt_level_id: beltLevelId,
         stripe_count: stripeCount,
         awarded_date:
-          membershipStartDate,
+  beltAwardedDate,
         awarded_by: "Owner",
         note:
           ownerNote || null

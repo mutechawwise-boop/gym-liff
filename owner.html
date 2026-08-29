@@ -310,6 +310,14 @@
   <option value="3">3 ขีด</option>
   <option value="4">4 ขีด</option>
 </select>
+<label for="approvalBeltAwardedDate">
+  วันที่ได้รับสายนี้
+</label>
+
+<input
+  id="approvalBeltAwardedDate"
+  type="date"
+>
   <label for="approvalStartDate">
     วันที่เริ่มสมาชิก
   </label>
@@ -882,6 +890,10 @@ const approvalStripeCount =
   document.getElementById(
     "approvalStripeCount"
   );
+  const approvalBeltAwardedDate =
+  document.getElementById(
+    "approvalBeltAwardedDate"
+  );
 approvalBeltLevel.innerHTML =
   `<option value="">-- เลือกระดับสาย --</option>` +
   (data.beltLevels || [])
@@ -1077,9 +1089,10 @@ ${
       `;
 
 
-      approvalMemberGroup.value = "";
+     approvalMemberGroup.value = "";
       approvalBeltLevel.value = "";
-      approvalStripeCount.value = "0"; 
+      approvalStripeCount.value = "0";
+      approvalBeltAwardedDate.value = "";
       approvalStartDate.value = "";
       approvalExpiryDate.value = "";
       approvalNote.value = "";
@@ -1168,7 +1181,11 @@ if (!approvalBeltLevel.value) {
     "กรุณาเลือกระดับสาย";
   return;
 }
-
+if (!approvalBeltAwardedDate.value) {
+  approvalMessage.textContent =
+    "กรุณาระบุวันที่ได้รับสายปัจจุบัน";
+  return;
+}
 const stripeCount =
   Number(approvalStripeCount.value);
 
@@ -1243,6 +1260,8 @@ if (
   Number(approvalBeltLevel.value),
 
 stripeCount,
+beltAwardedDate:
+  approvalBeltAwardedDate.value,
                 ownerNote:
               approvalNote.value
           })
