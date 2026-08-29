@@ -268,7 +268,176 @@
   font-weight: 700;
 }
 
+/* =========================
+   MEMBER RIGHT SIDE
+========================= */
 
+.member-side {
+  position: relative;
+  z-index: 2;
+
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  padding-left: 18px;
+
+  border-left:
+    1px solid rgba(255, 255, 255, 0.25);
+}
+
+
+/* =========================
+   BELT SUMMARY
+========================= */
+
+.belt-summary {
+  position: relative;
+  z-index: 3;
+
+  width: 100%;
+
+  padding: 12px;
+
+  background:
+    rgba(10, 10, 10, 0.82);
+
+  border:
+    1px solid rgba(255, 255, 255, 0.24);
+
+  border-radius: 14px;
+}
+
+
+.belt-top-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+
+.belt-chess-icon {
+  width: 42px;
+  flex: 0 0 42px;
+
+  font-size: 38px;
+  line-height: 1;
+
+  text-align: center;
+
+  color: #2563eb;
+}
+
+
+.belt-text-block {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+}
+
+
+.belt-label {
+  color: #999999;
+
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+
+#beltName {
+  margin-top: 2px;
+
+  color: #2563eb;
+
+  font-size: 18px;
+  line-height: 1.15;
+
+  white-space: nowrap;
+}
+
+
+#beltEnglishName {
+  margin-top: 2px;
+
+  color: #bdbdbd;
+
+  font-size: 9px;
+  font-weight: 600;
+}
+
+
+.belt-divider {
+  height: 1px;
+
+  margin: 9px 0;
+
+  background:
+    rgba(255, 255, 255, 0.14);
+}
+
+
+.rank-label {
+  display: block;
+
+  color: #cccccc;
+
+  font-size: 9px;
+  font-weight: 700;
+}
+
+
+.belt-rank-bar {
+  margin-top: 4px;
+
+  color: #2563eb;
+
+  font-size: 18px;
+  line-height: 1;
+
+  letter-spacing: 2px;
+
+  white-space: nowrap;
+}
+
+
+.belt-awarded {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+
+.belt-awarded > span {
+  font-size: 15px;
+}
+
+
+.belt-awarded div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+}
+
+
+.belt-awarded small {
+  color: #999999;
+
+  font-size: 9px;
+}
+
+
+#beltAwardedDate {
+  margin-top: 1px;
+
+  color: #ffffff;
+
+  font-size: 10px;
+
+  white-space: nowrap;
+}
 /* CLASS PASS RIGHT SIDE */
 
 .class-pass-summary {
@@ -277,17 +446,19 @@
 
   min-width: 0;
 
+  flex: 1;
+
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
 
-  padding-left: 22px;
+  margin-top: 14px;
+  padding-top: 14px;
 
-  border-left:
-    1px solid rgba(255, 255, 255, 0.25);
+  border-top:
+    1px solid rgba(239, 37, 45, 0.65);
 }
-
 .card-watermark {
   position: absolute;
 
@@ -494,9 +665,33 @@
   white-space: nowrap;
 }
 
-  .class-pass-summary {
-    padding-left: 12px;
-  }
+.member-side {
+  padding-left: 10px;
+}
+
+.belt-summary {
+  padding: 9px;
+}
+
+.belt-chess-icon {
+  width: 30px;
+  flex-basis: 30px;
+  font-size: 28px;
+}
+
+#beltName {
+  font-size: 14px;
+}
+
+.belt-rank-bar {
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.class-pass-summary {
+  margin-top: 10px;
+  padding-top: 10px;
+}
 
   .class-pass-title {
     font-size: 15px;
@@ -677,17 +872,84 @@
 
   </div>
 
+<div class="member-side">
 
+  <!-- ระดับสาย -->
+  <div
+    id="beltSummary"
+    class="belt-summary"
+  >
+    <div class="belt-top-row">
+
+      <div
+        id="beltChessIcon"
+        class="belt-chess-icon"
+      >
+        ♜
+      </div>
+
+      <div class="belt-text-block">
+
+        <span class="belt-label">
+          ระดับสาย
+        </span>
+
+        <strong id="beltName">
+          -
+        </strong>
+
+        <small id="beltEnglishName">
+          -
+        </small>
+
+      </div>
+
+    </div>
+
+    <div class="belt-divider"></div>
+
+    <span class="rank-label">
+      RANK BAR
+    </span>
+
+    <div
+      id="beltRankBar"
+      class="belt-rank-bar"
+    >
+      ♖ ♖ ♖ ♖
+    </div>
+
+    <div class="belt-divider"></div>
+
+    <div class="belt-awarded">
+      <span>📅</span>
+
+      <div>
+        <small>
+          ได้รับสายเมื่อ
+        </small>
+
+        <strong id="beltAwardedDate">
+          -
+        </strong>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- Class Pass เดิม -->
   <div
     id="classPassSummary"
     class="class-pass-summary"
   >
 
     <img
-  src="images/logo.jpg"
-  class="card-watermark"
-  alt=""
->
+      src="images/logo.jpg"
+      class="card-watermark"
+      alt=""
+    >
+
     <span class="class-pass-title">
       Class Pass
     </span>
@@ -707,10 +969,12 @@
     </div>
 
     <small id="classPassStatus">
-  คงเหลือ - ครั้ง
-</small>
+      คงเหลือ - ครั้ง
+    </small>
 
   </div>
+
+</div>
 
 </section>
 
@@ -1205,6 +1469,118 @@ async function loadMemberProfile(idToken) {
   }
 
   const member = data.member;
+  // =========================
+// ระดับสายสมาชิก
+// =========================
+
+const belt = member.belt;
+
+const beltSummary =
+  document.getElementById("beltSummary");
+
+const beltNameElement =
+  document.getElementById("beltName");
+
+const beltEnglishElement =
+  document.getElementById(
+    "beltEnglishName"
+  );
+
+const beltRankBarElement =
+  document.getElementById(
+    "beltRankBar"
+  );
+
+const beltAwardedDateElement =
+  document.getElementById(
+    "beltAwardedDate"
+  );
+
+const beltChessIcon =
+  document.getElementById(
+    "beltChessIcon"
+  );
+
+if (belt) {
+
+  const beltEnglishNames = {
+    white: "WHITE BELT",
+    blue: "BLUE BELT",
+    purple: "PURPLE BELT",
+    brown: "BROWN BELT",
+    black: "BLACK BELT"
+  };
+
+  const beltColors = {
+    white: "#F5F5F5",
+    blue: "#2563EB",
+    purple: "#7E22CE",
+    brown: "#92400E",
+    black: "#777777"
+  };
+
+  const beltCode =
+    String(belt.code || "")
+      .toLowerCase();
+
+  const beltColor =
+    beltColors[beltCode] ||
+    belt.color ||
+    "#FFFFFF";
+
+  beltNameElement.textContent =
+    belt.name || "-";
+
+  beltEnglishElement.textContent =
+    beltEnglishNames[beltCode] || "";
+
+  beltNameElement.style.color =
+    beltColor;
+
+  beltChessIcon.style.color =
+    beltColor;
+
+
+  // Rank Bar 0–4 ขีด
+  const stripeCount =
+    Math.max(
+      0,
+      Math.min(
+        4,
+        Number(belt.stripeCount || 0)
+      )
+    );
+
+  const rankIcons =
+    Array.from(
+      { length: 4 },
+      (_, index) =>
+        index < stripeCount
+          ? "♜"
+          : "♖"
+    ).join(" ");
+
+  beltRankBarElement.textContent =
+    rankIcons;
+
+  beltRankBarElement.style.color =
+    beltColor;
+
+
+  // วันที่ได้รับสาย
+  beltAwardedDateElement.textContent =
+    formatThaiDate(
+      belt.awardedDate
+    );
+
+  beltSummary.style.display =
+    "block";
+
+} else {
+
+  beltSummary.style.display =
+    "none";
+}
   const memberGroupElement =
   document.getElementById("memberGroup");
 

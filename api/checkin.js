@@ -125,8 +125,50 @@ if (mode === "profile") {
   // มี MEMBER แล้ว
   // ==============================
 
-  if (profileMembers.length > 0) {
-    const member = profileMembers[0];
+if (profileMembers.length > 0) {
+  const member = profileMembers[0];
+
+  // ==============================
+  // อ่านระดับสายปัจจุบัน
+  // ==============================
+
+  const beltResponse = await fetch(
+    `${supabaseUrl}/rest/v1/member_current_belts` +
+      `?member_id=eq.${member.id}` +
+      `&select=` +
+      `member_id,` +
+      `belt_level_id,` +
+      `belt_code,` +
+      `belt_name,` +
+      `color_hex,` +
+      `awarded_date,` +
+      `stripe_count` +
+      `&limit=1`,
+    {
+      headers: commonHeaders
+    }
+  );
+
+  if (!beltResponse.ok) {
+    const details =
+      await beltResponse.text();
+
+    return json(
+      {
+        success: false,
+        error:
+          "อ่านข้อมูลระดับสายไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const beltRows =
+    await beltResponse.json();
+
+  const currentBelt =
+    beltRows[0] || null;
 
     return json({
       success: true,
@@ -178,7 +220,31 @@ if (mode === "profile") {
         checkinCount:
           Number(
             member.checkin_count || 0
-          )
+          ),
+
+belt: currentBelt
+  ? {
+      levelId:
+        currentBelt.belt_level_id,
+
+      code:
+        currentBelt.belt_code,
+
+      name:
+        currentBelt.belt_name,
+
+      color:
+        currentBelt.color_hex,
+
+      stripeCount:
+        Number(
+          currentBelt.stripe_count || 0
+        ),
+
+      awardedDate:
+        currentBelt.awarded_date
+    }
+  : null
       }
     });
   }
