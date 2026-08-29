@@ -161,34 +161,47 @@ if (
       renewal.membership_plan || ""
     ).trim();
 
-  const isClassPass =
-    membershipPlan.startsWith("class_pass_");
+ const isClassPass =
+  membershipPlan.startsWith("class_pass_");
 
-  let totalSessions = null;
-  let remainingSessions = null;
+const isDropIn =
+  membershipPlan === "drop_in";
 
-  if (isClassPass) {
-    const sessionMatch =
-      membershipPlan.match(/^class_pass_(\d+)$/);
+const isSessionBased =
+  isClassPass || isDropIn;
 
-    const sessions =
-      sessionMatch
-        ? Number(sessionMatch[1])
-        : 0;
+let totalSessions = null;
 
-    if (!Number.isInteger(sessions) || sessions <= 0) {
-      return json(
-        {
-          error:
-            "ไม่สามารถอ่านจำนวนครั้งจากแพ็กเกจได้"
-        },
-        400
-      );
-    }
+let remainingSessions = null;
 
-    totalSessions = sessions;
-    remainingSessions = sessions;
+  if (isDropIn) {
+
+  totalSessions = 1;
+  remainingSessions = 1;
+
+} else if (isClassPass) {
+
+  const sessionMatch =
+    membershipPlan.match(/^class_pass_(\d+)$/);
+
+  const sessions =
+    sessionMatch
+      ? Number(sessionMatch[1])
+      : 0;
+
+  if (!Number.isInteger(sessions) || sessions <= 0) {
+    return json(
+      {
+        error:
+          "ไม่สามารถอ่านจำนวนครั้งจากแพ็กเกจได้"
+      },
+      400
+    );
   }
+
+  totalSessions = sessions;
+  remainingSessions = sessions;
+}
 
   // อ่าน Member ปัจจุบัน
   const memberResponse = await fetch(
@@ -252,11 +265,11 @@ if (shouldActivateNow) {
   membershipStartDate,
 membership_expiry_date:
   membershipExpiryDate,
-       total_sessions: isClassPass
+       total_sessions: isSessionBased
   ? totalSessions
   : null,
 
-remaining_sessions: isClassPass
+remaining_sessions: isSessionBased
   ? remainingSessions
   : null
       })
@@ -339,7 +352,9 @@ try {
 } else {
 
   const planText =
-    isClassPass
+  isDropIn
+    ? "Drop-in 1 ครั้ง"
+    : isClassPass
       ? `Class Pass ${totalSessions} ครั้ง`
       : membershipPlan === "adult_monthly"
         ? "Adult Monthly"
@@ -348,9 +363,9 @@ try {
           : membershipPlan;
 
   const sessionText =
-    isClassPass
-      ? `\nสิทธิ์ใหม่: ${totalSessions} / ${totalSessions}`
-      : "";
+  isSessionBased
+    ? `\nสิทธิ์ใหม่: ${totalSessions} / ${totalSessions} ครั้ง`
+    : "";
 
   await pushLineMessage(
     renewal.line_user_id,

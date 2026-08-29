@@ -89,7 +89,11 @@ export async function pushMemberCard(
     membershipPlan.startsWith(
       "class_pass_"
     );
+const isDropIn =
+  membershipPlan === "drop_in";
 
+const isSessionBased =
+  isClassPass || isDropIn;
   const remaining =
     member.remaining_sessions ?? 0;
 
@@ -338,20 +342,22 @@ export async function pushMemberCard(
     ]
   });
 
-  if (isClassPass) {
+  if (isSessionBased) {
     rightContents.push({
       type: "box",
       layout: "vertical",
       margin: "xl",
       contents: [
-        {
-          type: "text",
-          text: "Class Pass",
-          weight: "bold",
-          size: "md",
-          color: "#FFFFFF",
-          align: "center"
-        },
+       {
+  type: "text",
+  text: isDropIn
+    ? "Drop-in"
+    : "Class Pass",
+  weight: "bold",
+  size: "md",
+  color: "#FFFFFF",
+  align: "center"
+},
         {
           type: "text",
           text: `${remaining} / ${total}`,

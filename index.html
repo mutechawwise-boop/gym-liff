@@ -1137,7 +1137,9 @@
   <option value="">
     -- เลือกแพ็กเกจ --
   </option>
-
+<option value="drop_in">
+  Drop In 1 ครั้ง
+</option>
   <option value="adult_monthly">
     Adult Monthly
   </option>
@@ -1674,37 +1676,60 @@ memberGroupElement.textContent =
     formatMembershipPlan(plan);
 
 
-  // Class Pass
-  const isClassPass =
-    plan.startsWith("class_pass_");
+  // =========================
+// CLASS PASS / DROP-IN
+// =========================
 
-  const classPassSummary =
-    document.getElementById(
-      "classPassSummary"
-    );
+const isClassPass =
+  plan.startsWith("class_pass_");
 
-  if (isClassPass) {
-    classPassSummary.style.display =
-      "flex";
+const isDropIn =
+  plan === "drop_in";
 
-    document.getElementById(
-  "cardRemainingSessions"
-).textContent =
-  member.remainingSessions ?? 0;
+const isSessionBased =
+  isClassPass || isDropIn;
 
-document.getElementById(
-  "cardTotalSessions"
-).textContent =
-  member.totalSessions ?? 0;
+const classPassSummary =
+  document.getElementById(
+    "classPassSummary"
+  );
 
-updateClassPassStatus(
-  member.remainingSessions,
-  member.totalSessions
-);
-  } else {
-    classPassSummary.style.display =
-      "none";
-  }
+const classPassTitle =
+  classPassSummary.querySelector(
+    ".class-pass-title"
+  );
+
+if (isSessionBased) {
+
+  classPassSummary.style.display =
+    "flex";
+
+  classPassTitle.textContent =
+    isDropIn
+      ? "Drop-in"
+      : "Class Pass";
+
+  document.getElementById(
+    "cardRemainingSessions"
+  ).textContent =
+    member.remainingSessions ?? 0;
+
+  document.getElementById(
+    "cardTotalSessions"
+  ).textContent =
+    member.totalSessions ?? 0;
+
+  updateClassPassStatus(
+    member.remainingSessions,
+    member.totalSessions
+  );
+
+} else {
+
+  classPassSummary.style.display =
+    "none";
+}
+  
 
 
   profileElement.style.display = "grid";
@@ -1798,30 +1823,46 @@ if (data.alreadyCheckedIn) {
 const resultRemaining =
   document.getElementById("resultRemaining");
 
-const isClassPass =
-  String(data.membershipPlan || "")
-    .startsWith("class_pass_");
+const checkedPlan =
+  String(data.membershipPlan || "");
 
-if (isClassPass) {
+const isClassPass =
+  checkedPlan.startsWith("class_pass_");
+
+const isDropIn =
+  checkedPlan === "drop_in";
+
+const isSessionBased =
+  isClassPass || isDropIn;
+
+if (isSessionBased) {
+
   resultMembership.textContent =
-    `แพ็กเกจ: Class Pass ${data.totalSessions} ครั้ง`;
+    isDropIn
+      ? "แพ็กเกจ: Drop-in 1 ครั้ง"
+      : `แพ็กเกจ: Class Pass ${data.totalSessions} ครั้ง`;
 
   resultRemaining.textContent =
     `สิทธิ์คงเหลือ: ${data.remainingSessions} / ${data.totalSessions} ครั้ง`;
 
   if (Number(data.remainingSessions) <= 2) {
-    resultRemaining.style.fontWeight = "bold";
+    resultRemaining.style.fontWeight =
+      "bold";
   }
 
   if (Number(data.remainingSessions) === 0) {
     resultRemaining.textContent =
-      "สิทธิ์ Class Pass ใช้ครบแล้ว กรุณาต่ออายุสมาชิก";
+      isDropIn
+        ? "ใช้สิทธิ์ Drop-in แล้ว กรุณาซื้อ Drop-in ใหม่หรือต่อแพ็กเกจ"
+        : "สิทธิ์ Class Pass ใช้ครบแล้ว กรุณาต่ออายุสมาชิก";
   }
+
 } else {
+
   resultMembership.textContent = "";
   resultRemaining.textContent = "";
 }
-if (isClassPass) {
+if (isSessionBased) {
   document.getElementById(
     "cardRemainingSessions"
   ).textContent =
@@ -2048,6 +2089,7 @@ paymentHistoryButton.addEventListener(
         payments
           .map((payment) => {
             const planLabels = {
+  drop_in: "Drop-in 1 ครั้ง",            
   adult_monthly: "Adult Monthly",
   kids_monthly: "Kids Monthly",
   class_pass_4: "Class Pass 4 ครั้ง",

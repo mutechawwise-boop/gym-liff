@@ -832,40 +832,58 @@ if (!beltRows.length) {
     ).trim();
 
   const isClassPass =
-    membershipPlan.startsWith(
-      "class_pass_"
+  membershipPlan.startsWith(
+    "class_pass_"
+  );
+
+const isDropIn =
+  membershipPlan === "drop_in";
+
+const isSessionBased =
+  isClassPass || isDropIn;
+let finalTotalSessions = totalSessions;
+let finalRemainingSessions = remainingSessions;
+
+if (isDropIn) {
+
+  finalTotalSessions = 1;
+  finalRemainingSessions = 1;
+
+} else if (isClassPass) {
+
+  if (
+    !Number.isInteger(totalSessions) ||
+    totalSessions <= 0
+  ) {
+    return json(
+      {
+        error:
+          "กรุณาระบุจำนวนครั้งทั้งหมด"
+      },
+      400
     );
-
-  if (isClassPass) {
-    if (
-      !Number.isInteger(totalSessions) ||
-      totalSessions <= 0
-    ) {
-      return json(
-        {
-          error:
-            "กรุณาระบุจำนวนครั้งทั้งหมด"
-        },
-        400
-      );
-    }
-
-    if (
-      !Number.isInteger(
-        remainingSessions
-      ) ||
-      remainingSessions < 0 ||
-      remainingSessions > totalSessions
-    ) {
-      return json(
-        {
-          error:
-            "จำนวนครั้งคงเหลือไม่ถูกต้อง"
-        },
-        400
-      );
-    }
   }
+
+  if (
+    !Number.isInteger(remainingSessions) ||
+    remainingSessions < 0 ||
+    remainingSessions > totalSessions
+  ) {
+    return json(
+      {
+        error:
+          "จำนวนครั้งคงเหลือไม่ถูกต้อง"
+      },
+      400
+    );
+  }
+
+  finalTotalSessions =
+    totalSessions;
+
+  finalRemainingSessions =
+    remainingSessions;
+}
 
   // เช็กว่ามีสมาชิก LINE คนนี้อยู่แล้วหรือไม่
   const existingMemberResponse =
@@ -933,16 +951,15 @@ if (!beltRows.length) {
     membership_expiry_date:
       membershipExpiryDate,
 
-    total_sessions:
-      isClassPass
-        ? totalSessions
-        : null,
+   total_sessions:
+  isSessionBased
+    ? finalTotalSessions
+    : null,
 
-    remaining_sessions:
-      isClassPass
-        ? remainingSessions
-        : null,
-
+remaining_sessions:
+  isSessionBased
+    ? finalRemainingSessions
+    : null,
     is_guest: false,
 
     created_by: "owner"

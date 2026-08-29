@@ -552,7 +552,8 @@ const slipFileName =
     );
   }
 
-  const allowedPlans = [
+const allowedPlans = [
+  "drop_in",
   "adult_monthly",
   "kids_monthly",
   "class_pass_4",
@@ -650,6 +651,7 @@ if (
 
 const MEMBERSHIP_PRICES = {
   thai: {
+    drop_in: 500,
     class_pass_4: 1500,
     class_pass_8: 2000,
     class_pass_12: 2500,
@@ -658,6 +660,7 @@ const MEMBERSHIP_PRICES = {
   },
 
   foreigner: {
+    drop_in: 500,
     class_pass_12: 3000,
     adult_monthly: 3500,
     kids_monthly: 3500
@@ -1070,24 +1073,32 @@ const membershipPlan = String(
 const isClassPass =
   membershipPlan.startsWith("class_pass_");
 
+const isDropIn =
+  membershipPlan === "drop_in";
+
+const isSessionBased =
+  isClassPass || isDropIn;
+
 let newRemainingSessions = null;
 
-if (isClassPass) {
+if (isSessionBased) {
   const remainingSessions =
     Number(currentMember.remaining_sessions ?? 0);
 
-  if (remainingSessions <= 0) {
-    return json(
-      {
-        error: "สิทธิ์เข้าเรียนครบแล้ว",
-        message:
-          "Class Pass ของคุณถูกใช้ครบจำนวนครั้งแล้ว กรุณาติดต่อโค้ชเพื่อต่อแพ็กเกจ",
-        membershipPlan,
-        remainingSessions: 0
-      },
-      403
-    );
-  }
+
+ if (remainingSessions <= 0) {
+  return json(
+    {
+      error: "สิทธิ์เข้าเรียนครบแล้ว",
+      message: isDropIn
+        ? "สิทธิ์ Drop-in ถูกใช้แล้ว กรุณาซื้อ Drop-in ใหม่หรือต่อแพ็กเกจ"
+        : "Class Pass ของคุณถูกใช้ครบจำนวนครั้งแล้ว กรุณาต่อแพ็กเกจ",
+      membershipPlan,
+      remainingSessions: 0
+    },
+    403
+  );
+}
 
   newRemainingSessions =
     remainingSessions - 1;
@@ -1150,7 +1161,7 @@ if (isClassPass) {
   checkin_count: newCount,
   updated_at: now,
 
-  ...(isClassPass
+  ...(isSessionBased
     ? {
         remaining_sessions:
           newRemainingSessions,
@@ -1204,12 +1215,12 @@ membershipExpiryDate:
   currentMember.membership_plan || null,
 
 totalSessions:
-  isClassPass
+  isSessionBased
     ? currentMember.total_sessions
     : null,
 
 remainingSessions:
-  isClassPass
+  isSessionBased
     ? member.remaining_sessions
     : null
 });
