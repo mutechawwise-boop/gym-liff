@@ -166,6 +166,18 @@ if (mode !== "line_register") {
 
   const paymentMethod =
     String(body.paymentMethod || "").trim();
+    // =====================================
+// TERMS & HEALTH CONSENT
+// =====================================
+
+const termsAccepted =
+  body.termsAccepted === true;
+
+const termsVersion =
+  String(body.termsVersion || "").trim();
+
+const healthConsent =
+  body.healthConsent === true;
     const slipBase64 =
   String(body.slipBase64 || "").trim();
 
@@ -269,6 +281,39 @@ if (paymentMethod === "transfer") {
       400
     );
   }
+  // =====================================
+// VALIDATE CONSENT
+// =====================================
+
+if (!termsAccepted) {
+  return json(
+    {
+      error:
+        "กรุณายอมรับข้อตกลงและเงื่อนไขก่อนสมัครสมาชิก"
+    },
+    400
+  );
+}
+
+if (termsVersion !== "2026-01") {
+  return json(
+    {
+      error:
+        "เวอร์ชันข้อตกลงไม่ถูกต้อง กรุณาเปิดหน้าสมัครใหม่"
+    },
+    400
+  );
+}
+
+if (!healthConsent) {
+  return json(
+    {
+      error:
+        "กรุณาให้ความยินยอมเกี่ยวกับข้อมูลสุขภาพ"
+    },
+    400
+  );
+}
 
   const supabaseHeaders = {
     apikey: supabaseSecretKey,
@@ -514,7 +559,19 @@ if (paymentMethod === "transfer") {
         payment_status: "pending",
         registration_status: "pending",
         payment_amount: paymentAmount,
-        slip_url: slipPath,
+
+// หลักฐานการยอมรับข้อตกลง
+terms_accepted: true,
+terms_version: termsVersion,
+terms_accepted_at:
+  new Date().toISOString(),
+
+// ความยินยอมข้อมูลสุขภาพ
+health_consent: true,
+health_consent_at:
+  new Date().toISOString(),
+
+slip_url: slipPath,
 slip_uploaded_at: slipUploadedAt
       })
     }

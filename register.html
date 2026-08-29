@@ -223,6 +223,211 @@
   line-height: 1.6;
   color: #555555;
 }
+/* =========================
+   TERMS & CONSENT
+========================= */
+
+.terms-section {
+  margin-top: 24px;
+  padding: 18px;
+  border: 1px solid #e2e2e2;
+  border-radius: 14px;
+  background: #fafafa;
+  text-align: left;
+}
+
+.terms-section h2 {
+  margin: 0 0 6px !important;
+  font-size: 18px;
+}
+
+.terms-intro {
+  margin: 0 0 14px;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.terms-read-button {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+
+  border: 1px solid #111;
+  border-radius: 10px;
+
+  background: #fff;
+  color: #111;
+
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.consent-row {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px;
+
+  margin: 12px 0 !important;
+
+  font-size: 13px;
+  font-weight: 400 !important;
+  line-height: 1.55;
+}
+
+.consent-row input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px;
+  min-width: 18px;
+
+  margin: 2px 0 0;
+  padding: 0 !important;
+
+  accent-color: #111;
+}
+
+.consent-row span {
+  flex: 1;
+}
+
+
+/* =========================
+   TERMS MODAL
+========================= */
+
+.terms-modal {
+  position: fixed;
+  inset: 0;
+
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 16px;
+}
+
+.terms-modal-backdrop {
+  position: absolute;
+  inset: 0;
+
+  background: rgba(0, 0, 0, 0.68);
+}
+
+.terms-modal-card {
+  position: relative;
+  z-index: 2;
+
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+
+  display: flex;
+  flex-direction: column;
+
+  background: #fff;
+  border-radius: 18px;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.terms-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 18px;
+
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.terms-modal-header h2 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.terms-modal-header small {
+  display: block;
+  margin-top: 4px;
+  color: #777;
+}
+
+.terms-close-button {
+  flex: 0 0 auto;
+
+  width: 34px;
+  height: 34px;
+
+  padding: 0;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: #f0f0f0;
+
+  font-size: 24px;
+  line-height: 1;
+
+  cursor: pointer;
+}
+
+.terms-content {
+  flex: 1;
+  overflow-y: auto;
+
+  padding: 18px;
+
+  text-align: left;
+}
+
+.terms-content h3 {
+  margin: 20px 0 7px;
+
+  color: #111;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.terms-content h3:first-child {
+  margin-top: 0;
+}
+
+.terms-content p {
+  margin: 0 0 10px;
+
+  color: #555;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.terms-done-button {
+  width: calc(100% - 36px);
+
+  margin: 12px 18px 18px;
+  padding: 13px 16px;
+
+  border: 0;
+  border-radius: 11px;
+
+  background: #111;
+  color: #fff;
+
+  font-size: 15px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+body.terms-open {
+  overflow: hidden;
+}
  </style>
 </head>
 
@@ -450,7 +655,67 @@
 
 </div>
 
-<button id="submitRegistrationButton" type="submit">
+<!-- =========================
+     TERMS & CONSENT
+========================= -->
+
+<div class="terms-section">
+
+  <h2>ข้อตกลงและเงื่อนไข</h2>
+
+  <p class="terms-intro">
+    กรุณาอ่านข้อตกลงและเงื่อนไขก่อนสมัครสมาชิก
+  </p>
+
+  <button
+    id="openTermsButton"
+    type="button"
+    class="terms-read-button"
+  >
+    อ่านข้อตกลงและเงื่อนไขฉบับเต็ม
+  </button>
+
+
+  <label class="consent-row">
+    <input
+      id="termsAccepted"
+      name="termsAccepted"
+      type="checkbox"
+      required
+    >
+
+    <span>
+      ข้าพเจ้าได้อ่าน เข้าใจ และยอมรับ
+      <strong>
+        ข้อตกลงและเงื่อนไขการสมัครสมาชิก
+        GAMBIT JIUJITSU
+      </strong>
+    </span>
+  </label>
+
+
+  <label class="consent-row">
+    <input
+      id="healthConsent"
+      name="healthConsent"
+      type="checkbox"
+      required
+    >
+
+    <span>
+      ข้าพเจ้ายินยอมให้ GAMBIT JIUJITSU
+      เก็บและใช้ข้อมูลสุขภาพที่ข้าพเจ้าให้ไว้
+      เพื่อความปลอดภัยในการฝึกและ
+      การช่วยเหลือกรณีฉุกเฉิน
+    </span>
+  </label>
+
+</div>
+
+<button
+  id="submitRegistrationButton"
+  type="submit"
+>
   สมัครสมาชิกและส่งข้อมูลการชำระเงิน
 </button>
 
@@ -464,6 +729,196 @@
 <p id="registrationMessage"></p>
 
 </form>
+<!-- =========================
+     TERMS MODAL
+========================= -->
+
+<div
+  id="termsModal"
+  class="terms-modal"
+  style="display:none;"
+>
+  <div class="terms-modal-backdrop"></div>
+
+  <div class="terms-modal-card">
+
+    <div class="terms-modal-header">
+      <div>
+        <h2>ข้อตกลงและเงื่อนไขการสมัครสมาชิก</h2>
+        <small>GAMBIT JIUJITSU • Version 2026-01</small>
+      </div>
+
+      <button
+        id="closeTermsButton"
+        type="button"
+        class="terms-close-button"
+      >
+        ×
+      </button>
+    </div>
+
+    <div class="terms-content">
+
+      <h3>1. การเข้าร่วมการฝึกและความเสี่ยง</h3>
+      <p>
+        Brazilian Jiu-Jitsu (BJJ) เป็นกีฬาที่มีการสัมผัสร่างกาย
+        การจับ ทุ่ม กด ล็อก และรัด ซึ่งอาจทำให้เกิดอุบัติเหตุ
+        หรือการบาดเจ็บได้ ผู้สมัครรับทราบความเสี่ยงดังกล่าว
+        และเข้าร่วมการฝึกด้วยความสมัครใจ โดยตกลงปฏิบัติตาม
+        คำแนะนำของโค้ชและกฎความปลอดภัยของยิม
+      </p>
+      <p>
+        การรับทราบความเสี่ยงนี้ไม่เป็นการตัดสิทธิของสมาชิก
+        หรือยกเว้นความรับผิดในกรณีที่กฎหมายไม่อนุญาต
+      </p>
+
+      <h3>2. สุขภาพและความพร้อมในการฝึก</h3>
+      <p>
+        ผู้สมัครยืนยันว่าข้อมูลสุขภาพ โรคประจำตัว การแพ้ยา/อาหาร
+        และข้อจำกัดทางร่างกายที่แจ้งแก่ยิมเป็นข้อมูลที่ถูกต้อง
+        ตามความเข้าใจของตน
+      </p>
+      <p>
+        หากมีอาการบาดเจ็บ เจ็บป่วย หรือภาวะที่อาจกระทบต่อความปลอดภัย
+        สมาชิกควรแจ้งโค้ชก่อนฝึกและหยุดฝึกทันทีเมื่อรู้สึกไม่ปลอดภัย
+        หากไม่แน่ใจในความพร้อมของร่างกาย ควรปรึกษาแพทย์ก่อนเข้าร่วมการฝึก
+      </p>
+
+      <h3>3. ความปลอดภัยและกฎการฝึก</h3>
+      <p>
+        สมาชิกตกลงปฏิบัติตามคำแนะนำของโค้ช ใช้เทคนิคอย่างเหมาะสม
+        กับระดับของตน ไม่จงใจทำให้ผู้อื่นได้รับบาดเจ็บ
+        และต้องหยุดหรือปล่อยเทคนิคทันทีเมื่อคู่ฝึก Tap
+        หรือส่งสัญญาณยอมแพ้
+      </p>
+      <p>
+        ยิมสงวนสิทธิ์ให้สมาชิกหยุดพักหรือหยุดการฝึก
+        หากโค้ชเห็นว่าการฝึกต่ออาจเป็นอันตรายต่อตนเองหรือผู้อื่น
+      </p>
+
+      <h3>4. สุขอนามัย</h3>
+      <p>
+        สมาชิกต้องรักษาความสะอาดของร่างกายและชุดฝึก
+        ตัดเล็บให้เหมาะสม และงดเข้าร่วมคลาสหากมีโรคติดต่อทางผิวหนัง
+        แผลเปิด หรือภาวะที่อาจแพร่เชื้อให้ผู้อื่น
+      </p>
+
+      <h3>5. แพ็กเกจและสิทธิสมาชิก</h3>
+      <p>
+        สิทธิการเข้าเรียนเป็นไปตามแพ็กเกจที่สมาชิกเลือก เช่น
+        Drop-in, Class Pass, Monthly, Private Class
+        หรือแพ็กเกจอื่นของยิม
+      </p>
+      <p>
+        วันเริ่มต้น วันหมดอายุ จำนวนครั้ง และเงื่อนไขการใช้งาน
+        เป็นไปตามข้อมูลที่แสดงในระบบหรือเงื่อนไขของแพ็กเกจ
+        ณ เวลาที่สมัคร
+      </p>
+      <p>
+        สำหรับ Class Pass ระบบจะหักสิทธิเมื่อมีการเช็กอินเข้าเรียน
+        และเมื่อใช้สิทธิครบหรือแพ็กเกจหมดอายุ
+        สมาชิกต้องต่ออายุก่อนใช้บริการต่อ
+      </p>
+
+      <h3>6. การจองและการเข้าเรียน</h3>
+      <p>
+        สมาชิกต้องจองหรือเช็กอินคลาสตามระบบที่ยิมกำหนด
+        บางคลาสอาจจำกัดจำนวนผู้เรียน อายุ ระดับสาย
+        หรือคุณสมบัติอื่นเพื่อความเหมาะสมและความปลอดภัย
+      </p>
+      <p>
+        ยิมอาจปรับตารางเรียน โค้ช หรือยกเลิกคลาสเมื่อมีเหตุจำเป็น
+        โดยจะแจ้งสมาชิกผ่านช่องทางที่เหมาะสม
+      </p>
+
+      <h3>7. การชำระเงิน การยกเลิก และการคืนเงิน</h3>
+      <p>
+        ค่าบริการเป็นไปตามราคาที่แสดงในระบบ ณ เวลาทำรายการ
+        และรายการที่ต้องตรวจสอบการชำระเงินจะมีผล
+        เมื่อยิมอนุมัติเรียบร้อยแล้ว
+      </p>
+      <p>
+        การคืนเงิน การพักสมาชิก (Freeze) การโอนสิทธิ
+        หรือการขยายอายุแพ็กเกจ ให้เป็นไปตามนโยบายของแพ็กเกจ
+        ที่ยิมประกาศ
+      </p>
+
+      <h3>8. พฤติกรรมและการใช้บริการ</h3>
+      <p>
+        สมาชิกต้องปฏิบัติต่อโค้ช สมาชิก และบุคลากรของยิมด้วยความเคารพ
+        และต้องไม่กระทำการที่เป็นอันตราย คุกคาม
+        หรือสร้างความเสียหายแก่บุคคลหรือทรัพย์สินของยิม
+      </p>
+      <p>
+        กรณีฝ่าฝืนกฎอย่างร้ายแรงหรือซ้ำ
+        ยิมอาจระงับการเข้าร่วมคลาสหรือสิทธิการใช้บริการตามความเหมาะสม
+      </p>
+
+      <h3>9. การถ่ายภาพ วิดีโอ และเนื้อหาการสอน</h3>
+      <p>
+        ไม่อนุญาตให้ถ่ายภาพ บันทึกวิดีโอ บันทึกเสียง
+        หรือบันทึกการสอนระหว่างคลาส
+        โดยไม่ได้รับอนุญาตจากโค้ชหรือทางยิม
+      </p>
+      <p>
+        ห้ามเผยแพร่ ส่งต่อ ถ่ายทอดสด หรือโพสต์เทคนิค
+        การสาธิต หรือเนื้อหาที่โค้ชกำลังสอนผ่าน Social Media
+        หรือช่องทางอื่นโดยไม่ได้รับอนุญาต
+      </p>
+      <p>
+        หากได้รับอนุญาตให้บันทึกภาพหรือวิดีโอ
+        สมาชิกต้องคำนึงถึงสิทธิและความเป็นส่วนตัวของบุคคลอื่น
+        ที่ปรากฏในเนื้อหาด้วย
+      </p>
+
+      <h3>10. ผู้สมัครที่เป็นผู้เยาว์</h3>
+      <p>
+        สมาชิกที่เป็นผู้เยาว์อาจต้องได้รับความยินยอมจากบิดา
+        มารดา หรือผู้ปกครองในการสมัคร การให้ข้อมูลสุขภาพ
+        และการเข้าร่วมกิจกรรมตามที่กฎหมายหรือยิมกำหนด
+      </p>
+
+      <h3>11. ข้อมูลส่วนบุคคล</h3>
+      <p>
+        ยิมอาจเก็บและใช้ข้อมูลที่จำเป็นต่อการให้บริการ เช่น
+        ข้อมูลติดต่อ ข้อมูล LINE ข้อมูลสมาชิก ประวัติการเข้าเรียน
+        การชำระเงิน และผู้ติดต่อฉุกเฉิน เพื่อบริหารสมาชิก
+        ติดต่อสมาชิก ตรวจสอบสิทธิและการชำระเงิน
+        และดูแลความปลอดภัย
+      </p>
+      <p>
+        ยิมจะใช้และเก็บรักษาข้อมูลเท่าที่จำเป็นตามวัตถุประสงค์
+        และข้อกำหนดของกฎหมาย พร้อมจัดให้มีมาตรการรักษาความปลอดภัย
+        ที่เหมาะสม
+      </p>
+
+      <h3>12. ข้อมูลสุขภาพ</h3>
+      <p>
+        ข้อมูลโรคประจำตัว การแพ้ยา/อาหาร
+        หรือข้อมูลสุขภาพที่สมาชิกให้ไว้
+        จะใช้เพื่อความปลอดภัยในการฝึกและการช่วยเหลือกรณีฉุกเฉิน
+        โดยระบบจะขอความยินยอมสำหรับข้อมูลสุขภาพแยกต่างหาก
+      </p>
+
+      <h3>13. การเปลี่ยนแปลงข้อตกลง</h3>
+      <p>
+        ยิมอาจปรับปรุงข้อตกลงเมื่อมีการเปลี่ยนแปลงบริการ
+        ระบบ หรือข้อกำหนดที่เกี่ยวข้อง
+        โดยจะแจ้งเวอร์ชันหรือวันที่มีผลให้สมาชิกทราบตามความเหมาะสม
+      </p>
+
+    </div>
+
+    <button
+      id="acceptTermsCloseButton"
+      type="button"
+      class="terms-done-button"
+    >
+      อ่านและเข้าใจแล้ว
+    </button>
+
+  </div>
+</div>
 <section
   id="registrationSuccess"
   style="display:none; text-align:center; padding:40px 10px;"
@@ -786,7 +1241,58 @@ document.getElementById("profile").style.display = "block";
 initializeLiff();
 const registrationForm =
   document.getElementById("registrationForm");
+// =========================
+// TERMS MODAL
+// =========================
 
+const termsModal =
+  document.getElementById("termsModal");
+
+const openTermsButton =
+  document.getElementById("openTermsButton");
+
+const closeTermsButton =
+  document.getElementById("closeTermsButton");
+
+const acceptTermsCloseButton =
+  document.getElementById(
+    "acceptTermsCloseButton"
+  );
+
+const termsBackdrop =
+  document.querySelector(
+    ".terms-modal-backdrop"
+  );
+
+function openTermsModal() {
+  termsModal.style.display = "flex";
+  document.body.classList.add("terms-open");
+}
+
+function closeTermsModal() {
+  termsModal.style.display = "none";
+  document.body.classList.remove("terms-open");
+}
+
+openTermsButton.addEventListener(
+  "click",
+  openTermsModal
+);
+
+closeTermsButton.addEventListener(
+  "click",
+  closeTermsModal
+);
+
+acceptTermsCloseButton.addEventListener(
+  "click",
+  closeTermsModal
+);
+
+termsBackdrop.addEventListener(
+  "click",
+  closeTermsModal
+);
 registrationForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -867,7 +1373,23 @@ if (paymentMethod === "transfer") {
 
   const membershipPlan =
     formData.get("membershipPlan");
+const termsAccepted =
+  formData.get("termsAccepted") === "on";
 
+const healthConsent =
+  formData.get("healthConsent") === "on";
+
+if (!termsAccepted) {
+  registrationMessage.textContent =
+    "กรุณาอ่านและยอมรับข้อตกลงและเงื่อนไข";
+  return;
+}
+
+if (!healthConsent) {
+  registrationMessage.textContent =
+    "กรุณาให้ความยินยอมเกี่ยวกับข้อมูลสุขภาพ";
+  return;
+}
   
 
   if (!membershipPlan) {
@@ -945,6 +1467,11 @@ if (!freshIdToken) {
     emergencyContactPhone: formData.get("emergencyContactPhone"),
     membershipPlan: formData.get("membershipPlan"),
    paymentMethod: formData.get("paymentMethod"),
+
+termsAccepted,
+termsVersion: "2026-01",
+healthConsent,
+
 slipBase64,
 slipMimeType,
 slipFileName
