@@ -641,12 +641,13 @@
 @media (max-width: 430px) {
 
  .member-card {
-  grid-template-columns: 1.15fr 0.95fr;
+  grid-template-columns: minmax(0, 1.15fr) minmax(120px, 0.85fr);
 
   min-height: 360px;
-  padding: 26px;
+  padding: 18px 14px;
+  column-gap: 10px;
 
-  border-radius: 24px;
+  border-radius: 22px;
 }
 
   .member-photo {
@@ -659,12 +660,19 @@
   }
 
  .member-info-row {
-  grid-template-columns: 112px 1fr;
-}
-.member-info-row strong {
-  white-space: nowrap;
+  grid-template-columns: minmax(72px, 1fr) auto;
+  gap: 6px;
 }
 
+.member-info-row span {
+  font-size: 11px;
+}
+
+.member-info-row strong {
+  font-size: 11px;
+  white-space: nowrap;
+  text-align: right;
+}
 .member-side {
   padding-left: 10px;
 }
@@ -705,6 +713,33 @@
   #cardRemainingSessions {
     font-size: 40px;
   }
+  .belt-top-row {
+  gap: 6px;
+}
+
+.belt-label {
+  font-size: 8px;
+}
+
+#beltName {
+  font-size: 12px;
+}
+
+#beltEnglishName {
+  font-size: 8px;
+}
+
+.belt-awarded {
+  gap: 4px;
+}
+
+.belt-awarded small {
+  font-size: 8px;
+}
+
+#beltAwardedDate {
+  font-size: 9px;
+}
 }
   /* =========================
    MEMBER ACTIONS
