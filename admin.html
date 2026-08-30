@@ -718,16 +718,48 @@
   >
     <div>
       <h2 style="margin:0;">
-        📅 ตารางคลาสเดือนนี้
-      </h2>
+  📅 คลาสประจำวัน
+</h2>
 
-      <p
-        id="monthlyScheduleCaption"
+<p
+  id="monthlyScheduleCaption"
         style="
           margin:6px 0 0;
           color:#777;
         "
       ></p>
+      <div
+  style="
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:10px;
+    margin:16px 0;
+    align-items:center;
+  "
+>
+  <button
+    id="previousScheduleDayButton"
+    class="secondary-button"
+    type="button"
+    style="width:auto;"
+  >
+    ←
+  </button>
+
+  <input
+    id="scheduleDate"
+    type="date"
+  >
+
+  <button
+    id="nextScheduleDayButton"
+    class="secondary-button"
+    type="button"
+    style="width:auto;"
+  >
+    →
+  </button>
+</div>
     </div>
   </div>
 
@@ -947,6 +979,18 @@ import {
       monthlyScheduleCaption:document.getElementById( "monthlyScheduleCaption"
   ),
 monthlyScheduleError:document.getElementById("monthlyScheduleError" ),
+scheduleDate:
+  document.getElementById("scheduleDate"),
+
+previousScheduleDayButton:
+  document.getElementById(
+    "previousScheduleDayButton"
+  ),
+
+nextScheduleDayButton:
+  document.getElementById(
+    "nextScheduleDayButton"
+  ),
       beltModal: document.getElementById("beltModal"),
       beltMemberName: document.getElementById("beltMemberName"),
       beltLevelSelect: document.getElementById("beltLevelSelect"),
@@ -1139,192 +1183,178 @@ function renderMonthlySchedule() {
       ? state.overview.monthlySessions
       : [];
 
-  elements.monthlyScheduleError.textContent =
-    "";
 
-  if (!sessions.length) {
-
-    elements.monthlyScheduleCaption.textContent =
-      "ยังไม่มีคลาสในเดือนนี้";
-
-    elements.monthlyScheduleList.className =
-      "empty";
-
-    elements.monthlyScheduleList.textContent =
-      "ยังไม่มีตารางคลาส";
-
-    return;
+  if (!elements.scheduleDate.value) {
+    elements.scheduleDate.value =
+      state.overview?.date ||
+      thailandDateValue();
   }
 
 
-  const firstDate =
-    sessions[0].session_date;
+  const selectedDate =
+    elements.scheduleDate.value;
 
-  const monthText =
+
+  const daySessions =
+    sessions.filter(
+      (session) =>
+        session.session_date ===
+        selectedDate
+    );
+
+
+  const dateText =
     new Intl.DateTimeFormat(
       "th-TH",
       {
+        weekday: "long",
+        day: "numeric",
         month: "long",
         year: "numeric",
         timeZone: "Asia/Bangkok"
       }
     ).format(
       new Date(
-        `${firstDate}T12:00:00+07:00`
+        `${selectedDate}T12:00:00+07:00`
       )
     );
 
 
-  const openCount =
-    sessions.filter(
-      (session) =>
-        session.status === "open"
-    ).length;
-
-  const cancelledCount =
-    sessions.filter(
-      (session) =>
-        session.status === "cancelled"
-    ).length;
-
-
   elements.monthlyScheduleCaption.textContent =
-    `${monthText} · ${sessions.length} คลาส` +
-    ` · เปิด ${openCount}` +
-    ` · ยกเลิก ${cancelledCount}`;
+    `${dateText} · ${daySessions.length} คลาส`;
 
 
-  const groups = new Map();
+  elements.monthlyScheduleError.textContent =
+    "";
 
 
-  sessions.forEach((session) => {
+  if (!daySessions.length) {
 
-    const date =
-      session.session_date;
+    elements.monthlyScheduleList.className =
+      "empty";
 
-    if (!groups.has(date)) {
-      groups.set(date, []);
-    }
+    elements.monthlyScheduleList.innerHTML =
+      `
+        <div style="font-size:32px;">
+          💤
+        </div>
 
-    groups.get(date).push(session);
-  });
+        <strong>
+          วันนี้ไม่มีคลาส
+        </strong>
+
+        <div
+          style="
+            margin-top:6px;
+            color:#777;
+          "
+        >
+          หากมี Private หรือคลาสพิเศษ
+          สามารถเพิ่มจากด้านบนได้
+        </div>
+      `;
+
+    return;
+  }
 
 
   elements.monthlyScheduleList.className =
     "";
 
+
   elements.monthlyScheduleList.innerHTML =
-    [...groups.entries()]
-      .map(([date, daySessions]) => {
+    daySessions
+      .map((session) => {
 
-        const dateText =
-          new Intl.DateTimeFormat(
-            "th-TH",
-            {
-              weekday: "short",
-              day: "numeric",
-              month: "short",
-              timeZone: "Asia/Bangkok"
-            }
-          ).format(
-            new Date(
-              `${date}T12:00:00+07:00`
-            )
-          );
-
-
-        const sessionHtml =
-          daySessions
-            .map((session) => {
-
-              const cancelled =
-                session.status ===
-                "cancelled";
-
-              return `
-                <div
-                  style="
-                    display:flex;
-                    justify-content:space-between;
-                    gap:14px;
-                    padding:12px 0;
-                    border-top:1px solid #eeeeee;
-                    ${
-                      cancelled
-                        ? "opacity:.5;"
-                        : ""
-                    }
-                  "
-                >
-                  <div>
-                    <strong>
-                      ${
-                        session.classes?.name ||
-                        "ไม่ระบุชื่อคลาส"
-                      }
-                    </strong>
-
-                    <div
-                      style="
-                        margin-top:4px;
-                        color:#666;
-                        font-size:13px;
-                      "
-                    >
-                      ${formatTime(
-                        session.start_time
-                      )}
-                      –
-                      ${formatTime(
-                        session.end_time
-                      )} น.
-                    </div>
-
-                    ${
-                      session.note
-                        ? `
-                          <div
-                            style="
-                              margin-top:4px;
-                              color:#888;
-                              font-size:12px;
-                            "
-                          >
-                            ${session.note}
-                          </div>
-                        `
-                        : ""
-                    }
-                  </div>
-
-                  <div>
-                    ${
-                      cancelled
-                        ? "❌ ยกเลิก"
-                        : "🟢 เปิด"
-                    }
-                  </div>
-                </div>
-              `;
-            })
-            .join("");
+        const cancelled =
+          session.status ===
+          "cancelled";
 
 
         return `
           <div
             style="
-              margin-bottom:14px;
-              padding:16px;
-              background:#fafafa;
-              border:1px solid #eeeeee;
+              padding:18px;
+              margin-bottom:12px;
+              border:1px solid #e5e5e5;
               border-radius:14px;
+              background:#fafafa;
+              ${
+                cancelled
+                  ? "opacity:.6;"
+                  : ""
+              }
             "
           >
-            <strong>
-              ${dateText}
-            </strong>
 
-            ${sessionHtml}
+            <div
+              style="
+                display:flex;
+                justify-content:space-between;
+                gap:16px;
+                align-items:flex-start;
+              "
+            >
+
+              <div>
+
+                <strong
+                  style="
+                    display:block;
+                    font-size:18px;
+                  "
+                >
+                  ${
+                    session.classes?.name ||
+                    "ไม่ระบุชื่อคลาส"
+                  }
+                </strong>
+
+                <div
+                  style="
+                    margin-top:6px;
+                    color:#555;
+                  "
+                >
+                  🕐
+                  ${formatTime(
+                    session.start_time
+                  )}
+                  –
+                  ${formatTime(
+                    session.end_time
+                  )} น.
+                </div>
+
+                ${
+                  session.note
+                    ? `
+                      <div
+                        style="
+                          margin-top:7px;
+                          color:#777;
+                          font-size:13px;
+                        "
+                      >
+                        ${session.note}
+                      </div>
+                    `
+                    : ""
+                }
+
+              </div>
+
+
+              <strong>
+                ${
+                  cancelled
+                    ? "🔴 ยกเลิกแล้ว"
+                    : "🟢 พร้อมเช็กชื่อ"
+                }
+              </strong>
+
+            </div>
+
           </div>
         `;
       })
@@ -1886,7 +1916,34 @@ renderSessionOptions();
   }
 }
 
-   
+   function changeScheduleDay(days) {
+
+  const currentDate =
+    elements.scheduleDate.value ||
+    thailandDateValue();
+
+  const date =
+    new Date(
+      `${currentDate}T12:00:00+07:00`
+    );
+
+  date.setDate(
+    date.getDate() + days
+  );
+
+  elements.scheduleDate.value =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone: "Asia/Bangkok",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }
+    ).format(date);
+
+  renderMonthlySchedule();
+}
 const auth = createAuth({
   elements,
   state,
@@ -1914,6 +1971,20 @@ document
     elements.refreshButton.addEventListener("click", loadOverview);
     elements.refreshMembersButton.addEventListener("click", loadOverview);
     elements.sessionSelect.addEventListener("change", renderSelectedSession);
+   elements.scheduleDate.addEventListener(
+  "change",
+  renderMonthlySchedule
+);
+
+elements.previousScheduleDayButton.addEventListener(
+  "click",
+  () => changeScheduleDay(-1)
+);
+
+elements.nextScheduleDayButton.addEventListener(
+  "click",
+  () => changeScheduleDay(1)
+);
     elements.createSessionButton.addEventListener("click", createSession);
     elements.openCreateMemberButton.addEventListener(
       "click",
