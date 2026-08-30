@@ -63,12 +63,13 @@ if (!isCoach && !isOwner) {
 
       const today = getBangkokDateString();
 
-     const [
+    const [
   membersResponse,
   sessionsResponse,
   attendanceResponse,
   beltLevelsResponse,
-  currentBeltsResponse
+  currentBeltsResponse,
+  beltHistoryResponse
 ] = await Promise.all([
  supabase.request(
   "members?select=id,display_name,nickname,member_status,member_group,membership_plan,membership_start_date,membership_expiry_date,total_sessions,remaining_sessions,is_guest,created_at"
@@ -91,6 +92,12 @@ if (!isCoach && !isOwner) {
 supabase.request(
   "member_current_belts" +
     "?select=member_id,belt_level_id,belt_code,belt_name,color_hex,stripe_count,awarded_date"
+),
+
+supabase.request(
+  "member_belt_history" +
+    "?select=id,member_id,belt_level_id,stripe_count,awarded_date,awarded_by,note,belt_levels(id,code,name_th,color_hex)" +
+    "&order=awarded_date.desc,id.desc"
 )
 ]);
 
@@ -163,6 +170,23 @@ if (!beltLevelsResponse.ok) {
 
 const currentBelts =
   await currentBeltsResponse.json();
+  if (!beltHistoryResponse.ok) {
+  const details =
+    await beltHistoryResponse.text();
+
+  return json(
+    {
+      success: false,
+      error:
+        "โหลดประวัติระดับสายไม่สำเร็จ",
+      details
+    },
+    500
+  );
+}
+
+const beltHistory =
+  await beltHistoryResponse.json();
 
 const beltByMemberId = new Map(
   currentBelts.map((belt) => [
@@ -414,6 +438,8 @@ let finance = {
   todayTransfer: 0
 };
 let recentPayments = [];
+let paymentHistory = [];
+
 if (isOwner) {
   const [
     renewalFinanceResponse,
@@ -423,7 +449,7 @@ if (isOwner) {
     supabase.request(
   "membership_transactions" +
     "?payment_status=eq.paid" +
-    "&select=id,amount,payment_method,approved_at,membership_plan,members(display_name,nickname)"
+    "&select=id,member_id,amount,payment_method,approved_at,membership_plan,members(display_name,nickname)"
 ),
     // รายรับจากการสมัครสมาชิกใหม่
    supabase.request(
@@ -474,6 +500,8 @@ const allTransactions = [
   ...renewalTransactions.map((item) => ({
     id: `renewal-${item.id}`,
     type: "renewal",
+    memberId:
+  Number(item.member_id),
     memberName:
       item.members?.display_name ||
       item.members?.nickname ||
@@ -589,6 +617,18 @@ allTransactions
  new Date(a.approvedAt)
  )
 .slice(0, 10);
+paymentHistory =
+  allTransactions
+    .filter(
+      (transaction) =>
+        transaction.approvedAt &&
+        transaction.memberId
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.approvedAt) -
+        new Date(a.approvedAt)
+    );
 }
    
 return json({
@@ -623,7 +663,11 @@ finance,
 
 recentPayments,
 
+paymentHistory,
+
 beltLevels,
+
+beltHistory,
 
 classes
       });

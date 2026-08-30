@@ -31,10 +31,11 @@ const summaryExpiring =
 const backButton =
   document.getElementById("backButton");
 
-
 let members = [];
 let today = "";
 let beltLevels = [];
+let paymentHistory = [];
+let beltHistory = [];
 
 
 function formatThaiDate(dateValue) {
@@ -459,6 +460,15 @@ if (
   Array.isArray(data.beltLevels)
     ? data.beltLevels
     : [];
+    paymentHistory =
+  Array.isArray(data.paymentHistory)
+    ? data.paymentHistory
+    : [];
+
+beltHistory =
+  Array.isArray(data.beltHistory)
+    ? data.beltHistory
+    : [];
 
 
     renderMembers();
@@ -806,7 +816,8 @@ function openMemberDetail(member) {
 
   memberDetailMessage.textContent =
     "";
-
+renderPaymentHistory(member.id);
+renderBeltHistory(member.id);
 prepareBeltEditor(member);
   memberDetailModal.classList.add(
     "open"
@@ -1404,4 +1415,173 @@ saveBeltDetailButton.addEventListener(
     }
   }
 );
+const memberPaymentHistory =
+  document.getElementById(
+    "memberPaymentHistory"
+  );
+
+const memberBeltHistory =
+  document.getElementById(
+    "memberBeltHistory"
+  );
+
+
+function formatDateTime(value) {
+
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat(
+    "th-TH",
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Asia/Bangkok"
+    }
+  ).format(
+    new Date(value)
+  );
+}
+
+
+function renderPaymentHistory(memberId) {
+
+  const rows =
+    paymentHistory.filter(
+      (item) =>
+        Number(item.memberId) ===
+        Number(memberId)
+    );
+
+
+  if (!rows.length) {
+
+    memberPaymentHistory.innerHTML =
+      `<p style="color:#777;">ยังไม่มีประวัติต่ออายุ</p>`;
+
+    return;
+  }
+
+
+  memberPaymentHistory.innerHTML =
+    rows
+      .map((item) => {
+
+        const paymentMethod =
+          item.paymentMethod === "cash"
+            ? "เงินสด"
+            : item.paymentMethod === "transfer"
+              ? "เงินโอน"
+              : "-";
+
+        return `
+          <div
+            style="
+              padding:12px 0;
+              border-bottom:1px solid #eeeeee;
+            "
+          >
+            <strong>
+              ${formatPlan(item.membershipPlan)}
+            </strong>
+
+            <div style="margin-top:5px; font-size:13px;">
+              ต่ออายุสมาชิก
+            </div>
+
+            <div style="margin-top:5px; font-size:13px; color:#666;">
+              ${Number(item.amount || 0).toLocaleString("th-TH")} บาท
+              · ${paymentMethod}
+            </div>
+
+            <div style="margin-top:5px; font-size:12px; color:#888;">
+              ${formatDateTime(item.approvedAt)}
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+}
+
+
+function renderBeltHistory(memberId) {
+
+  const rows =
+    beltHistory.filter(
+      (item) =>
+        Number(item.member_id) ===
+        Number(memberId)
+    );
+
+
+  if (!rows.length) {
+
+    memberBeltHistory.innerHTML =
+      `<p style="color:#777;">ยังไม่มีประวัติระดับสาย</p>`;
+
+    return;
+  }
+
+
+  memberBeltHistory.innerHTML =
+    rows
+      .map((item) => {
+
+        const belt =
+          item.belt_levels || {};
+
+        const beltName =
+          belt.name_th ||
+          belt.code ||
+          "ไม่ระบุสาย";
+
+        const stripeCount =
+          Number(
+            item.stripe_count || 0
+          );
+
+        return `
+          <div
+            style="
+              padding:12px 0;
+              border-bottom:1px solid #eeeeee;
+            "
+          >
+            <strong>
+              ${beltName}
+            </strong>
+
+            <div style="margin-top:5px; font-size:13px;">
+              Rank Bar ${stripeCount} ขีด
+            </div>
+
+            <div style="margin-top:5px; font-size:12px; color:#888;">
+              ได้รับเมื่อ ${formatThaiDate(item.awarded_date)}
+            </div>
+
+            ${
+              item.awarded_by
+                ? `
+                  <div style="margin-top:4px; font-size:12px; color:#888;">
+                    โดย ${item.awarded_by}
+                  </div>
+                `
+                : ""
+            }
+
+            ${
+              item.note
+                ? `
+                  <div style="margin-top:4px; font-size:12px; color:#666;">
+                    ${item.note}
+                  </div>
+                `
+                : ""
+            }
+          </div>
+        `;
+      })
+      .join("");
+}
 loadMembers();
