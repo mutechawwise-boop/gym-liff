@@ -1889,11 +1889,21 @@ function renderSessionOptions() {
       try {
         const selectedSessionId = Number(elements.sessionSelect.value);
 
-        const data = await requestJson("/api/admin-overview", {
-          method: "GET",
-          headers: { "x-admin-key": state.adminKey }
-        });
+        const overviewDate =
+  elements.scheduleDate.value ||
+  thailandDateValue();
 
+const data = await requestJson(
+  `/api/admin-overview?date=${encodeURIComponent(
+    overviewDate
+  )}`,
+  {
+    method: "GET",
+    headers: {
+      "x-admin-key": state.adminKey
+    }
+  }
+);
         state.overview = data;
 
         elements.loginArea.style.display = "none";
@@ -2288,7 +2298,136 @@ function openBeltModal(member) {
       state.selectedEnrollmentMemberId = null;
       elements.enrollmentError.textContent = "";
     }
+async function saveEnrollmentChanges() {
 
+  const member =
+    (state.overview?.members || []).find(
+      (item) =>
+        Number(item.id) ===
+        Number(
+          state.selectedEnrollmentMemberId
+        )
+    );
+
+  if (!member) {
+    elements.enrollmentError.textContent =
+      "ไม่พบข้อมูลนักเรียน";
+    return;
+  }
+
+  const selectedClassIds =
+    new Set(
+      [
+        ...elements.enrollmentClassList
+          .querySelectorAll(
+            'input[type="checkbox"]:checked'
+          )
+      ].map(
+        (input) =>
+          Number(input.value)
+      )
+    );
+
+  const currentActiveClassIds =
+    new Set(
+      (
+        Array.isArray(
+          member.member_classes
+        )
+          ? member.member_classes
+          : []
+      )
+        .filter(
+          (item) =>
+            item.status === "active"
+        )
+        .map(
+          (item) =>
+            Number(item.class_id)
+        )
+    );
+
+  const changes = [];
+
+  (state.overview?.classes || [])
+    .forEach((classItem) => {
+
+      const classId =
+        Number(classItem.id);
+
+      const shouldBeActive =
+        selectedClassIds.has(classId);
+
+      const isActive =
+        currentActiveClassIds.has(
+          classId
+        );
+
+      if (
+        shouldBeActive !== isActive
+      ) {
+        changes.push({
+          memberId:
+            state.selectedEnrollmentMemberId,
+          classId,
+          status:
+            shouldBeActive
+              ? "active"
+              : "inactive"
+        });
+      }
+    });
+
+  if (!changes.length) {
+    closeEnrollmentModal();
+    return;
+  }
+
+  elements.saveEnrollmentButton.disabled =
+    true;
+
+  elements.saveEnrollmentButton.textContent =
+    "กำลังบันทึก...";
+
+  elements.enrollmentError.textContent =
+    "";
+
+  try {
+
+    for (const change of changes) {
+
+      await requestJson(
+        "/api/update-enrollment",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+            "x-admin-key":
+              state.adminKey
+          },
+          body:
+            JSON.stringify(change)
+        }
+      );
+    }
+
+    closeEnrollmentModal();
+
+    await loadOverview();
+
+  } catch (error) {
+
+    elements.enrollmentError.textContent =
+      error.message;
+
+    elements.saveEnrollmentButton.disabled =
+      false;
+
+    elements.saveEnrollmentButton.textContent =
+      "บันทึก";
+  }
+}
     async function createSession() {
 
   const sessionDate =
@@ -2467,7 +2606,7 @@ function openCreateMemberModal() {
       }
     ).format(date);
 
-  renderMonthlySchedule();
+  loadOverview();
 }
 const auth = createAuth({
   elements,
@@ -2498,7 +2637,7 @@ document
     elements.sessionSelect.addEventListener("change", renderSelectedSession);
    elements.scheduleDate.addEventListener(
   "change",
-  renderMonthlySchedule
+  loadOverview
 );
 
 elements.previousScheduleDayButton.addEventListener(

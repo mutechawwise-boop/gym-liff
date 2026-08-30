@@ -57,15 +57,36 @@ export default {
         month: "2-digit",
         day: "2-digit"
       }).format(new Date());
-      const monthStart =
-  `${today.slice(0, 7)}-01`;
+      const requestUrl =
+  new URL(request.url);
+
+const requestedDate =
+  requestUrl.searchParams.get("date") ||
+  today;
+
+if (
+  !/^\d{4}-\d{2}-\d{2}$/.test(
+    requestedDate
+  )
+) {
+  return json(
+    {
+      error:
+        "รูปแบบวันที่ไม่ถูกต้อง"
+    },
+    400
+  );
+}
 
 const [
   currentYear,
   currentMonth
-] = today
+] = requestedDate
   .split("-")
   .map(Number);
+
+const monthStart =
+  `${requestedDate.slice(0, 7)}-01`;
 
 const monthEnd =
   new Date(
