@@ -513,5 +513,583 @@ backButton.addEventListener(
     }
   }
 );
+const memberDetailModal =
+  document.getElementById(
+    "memberDetailModal"
+  );
 
+const memberDetailName =
+  document.getElementById(
+    "memberDetailName"
+  );
+
+const memberDetailCode =
+  document.getElementById(
+    "memberDetailCode"
+  );
+
+const closeMemberDetailButton =
+  document.getElementById(
+    "closeMemberDetailButton"
+  );
+
+const detailNickname =
+  document.getElementById(
+    "detailNickname"
+  );
+
+const detailStatus =
+  document.getElementById(
+    "detailStatus"
+  );
+
+const detailGroup =
+  document.getElementById(
+    "detailGroup"
+  );
+
+const detailPlan =
+  document.getElementById(
+    "detailPlan"
+  );
+
+const detailStartDate =
+  document.getElementById(
+    "detailStartDate"
+  );
+
+const detailExpiryDate =
+  document.getElementById(
+    "detailExpiryDate"
+  );
+
+const detailSessionFields =
+  document.getElementById(
+    "detailSessionFields"
+  );
+
+const detailRemainingSessions =
+  document.getElementById(
+    "detailRemainingSessions"
+  );
+
+const detailSessionHelp =
+  document.getElementById(
+    "detailSessionHelp"
+  );
+
+const detailBeltName =
+  document.getElementById(
+    "detailBeltName"
+  );
+
+const detailStripeCount =
+  document.getElementById(
+    "detailStripeCount"
+  );
+
+const detailBeltAwardedDate =
+  document.getElementById(
+    "detailBeltAwardedDate"
+  );
+
+const ownerMemberActions =
+  document.getElementById(
+    "ownerMemberActions"
+  );
+
+const editMemberButton =
+  document.getElementById(
+    "editMemberButton"
+  );
+
+const saveMemberButton =
+  document.getElementById(
+    "saveMemberButton"
+  );
+
+const cancelMemberEditButton =
+  document.getElementById(
+    "cancelMemberEditButton"
+  );
+
+const memberDetailMessage =
+  document.getElementById(
+    "memberDetailMessage"
+  );
+
+
+let selectedMemberId = null;
+let memberEditMode = false;
+
+
+function setMemberFormDisabled(disabled) {
+
+  detailNickname.disabled =
+    disabled;
+
+  detailStatus.disabled =
+    disabled;
+
+  detailGroup.disabled =
+    disabled;
+
+  detailPlan.disabled =
+    disabled;
+
+  detailStartDate.disabled =
+    disabled;
+
+  detailExpiryDate.disabled =
+    disabled;
+
+  detailRemainingSessions.disabled =
+    disabled;
+}
+
+
+function updateDetailSessionFields() {
+
+  const plan =
+    detailPlan.value;
+
+  const isSessionBased =
+    plan === "drop_in" ||
+    plan.startsWith(
+      "class_pass_"
+    );
+
+  if (!isSessionBased) {
+
+    detailSessionFields.style.display =
+      "none";
+
+    return;
+  }
+
+
+  detailSessionFields.style.display =
+    "flex";
+
+
+  if (plan === "drop_in") {
+
+    detailSessionHelp.textContent =
+      "Drop-in มีสิทธิ์ทั้งหมด 1 ครั้ง";
+
+    detailRemainingSessions.max =
+      "1";
+
+  } else {
+
+    const match =
+      plan.match(
+        /^class_pass_(\d+)$/
+      );
+
+    const total =
+      match
+        ? Number(match[1])
+        : 0;
+
+    detailSessionHelp.textContent =
+      `สิทธิ์ทั้งหมด ${total} ครั้ง`;
+
+    detailRemainingSessions.max =
+      String(total);
+  }
+}
+
+
+function openMemberDetail(member) {
+
+  selectedMemberId =
+    Number(member.id);
+
+  memberEditMode =
+    false;
+
+
+  memberDetailName.textContent =
+    member.nickname ||
+    member.display_name ||
+    "สมาชิก";
+
+  memberDetailCode.textContent =
+    getMemberCode(member);
+
+
+  detailNickname.value =
+    member.nickname || "";
+
+  detailStatus.value =
+    member.member_status ||
+    "inactive";
+
+  detailGroup.value =
+    member.member_group ||
+    "adult";
+
+  detailPlan.value =
+    member.membership_plan ||
+    "adult_monthly";
+
+  detailStartDate.value =
+    member.membership_start_date ||
+    "";
+
+  detailExpiryDate.value =
+    member.membership_expiry_date ||
+    "";
+
+  detailRemainingSessions.value =
+    member.remaining_sessions ?? 0;
+
+
+  updateDetailSessionFields();
+
+
+  const belt =
+    member.current_belt;
+
+
+  detailBeltName.textContent =
+    belt?.belt_name ||
+    belt?.belt_code ||
+    "-";
+
+
+  detailStripeCount.textContent =
+    belt
+      ? `${Number(
+          belt.stripe_count || 0
+        )} ขีด`
+      : "-";
+
+
+  detailBeltAwardedDate.textContent =
+    belt?.awarded_date
+      ? formatThaiDate(
+          belt.awarded_date
+        )
+      : "-";
+
+
+  const role =
+    sessionStorage.getItem(
+      "gambitRole"
+    );
+
+
+  ownerMemberActions.style.display =
+    role === "owner"
+      ? "flex"
+      : "none";
+
+
+  editMemberButton.style.display =
+    "inline-block";
+
+  saveMemberButton.style.display =
+    "none";
+
+  cancelMemberEditButton.style.display =
+    "none";
+
+
+  setMemberFormDisabled(true);
+
+  memberDetailMessage.textContent =
+    "";
+
+
+  memberDetailModal.classList.add(
+    "open"
+  );
+}
+
+
+function closeMemberDetail() {
+
+  memberDetailModal.classList.remove(
+    "open"
+  );
+
+  selectedMemberId =
+    null;
+
+  memberEditMode =
+    false;
+
+  memberDetailMessage.textContent =
+    "";
+}
+
+
+function startMemberEdit() {
+
+  memberEditMode =
+    true;
+
+  setMemberFormDisabled(false);
+
+  editMemberButton.style.display =
+    "none";
+
+  saveMemberButton.style.display =
+    "inline-block";
+
+  cancelMemberEditButton.style.display =
+    "inline-block";
+
+  updateDetailSessionFields();
+}
+
+
+function cancelMemberEdit() {
+
+  const member =
+    members.find(
+      (item) =>
+        Number(item.id) ===
+        selectedMemberId
+    );
+
+  if (!member) {
+    closeMemberDetail();
+    return;
+  }
+
+  openMemberDetail(member);
+}
+
+
+async function saveMemberEdit() {
+
+  const adminKey =
+    sessionStorage.getItem(
+      "gambitAdminKey"
+    );
+
+  const role =
+    sessionStorage.getItem(
+      "gambitRole"
+    );
+
+  if (
+    role !== "owner" ||
+    !adminKey
+  ) {
+    memberDetailMessage.textContent =
+      "ไม่มีสิทธิ์แก้ไขข้อมูลสมาชิก";
+
+    return;
+  }
+
+
+  const plan =
+    detailPlan.value;
+
+  const isSessionBased =
+    plan === "drop_in" ||
+    plan.startsWith(
+      "class_pass_"
+    );
+
+
+  saveMemberButton.disabled =
+    true;
+
+  saveMemberButton.textContent =
+    "กำลังบันทึก...";
+
+  memberDetailMessage.textContent =
+    "";
+
+
+  try {
+
+    const response =
+      await fetch(
+        "/api/update-enrollment",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            "x-admin-key":
+              adminKey
+          },
+
+          body: JSON.stringify({
+            mode:
+              "update_member",
+
+            memberId:
+              selectedMemberId,
+
+            nickname:
+              detailNickname.value.trim(),
+
+            memberStatus:
+              detailStatus.value,
+
+            memberGroup:
+              detailGroup.value,
+
+            membershipPlan:
+              plan,
+
+            membershipStartDate:
+              detailStartDate.value,
+
+            membershipExpiryDate:
+              detailExpiryDate.value,
+
+            remainingSessions:
+              isSessionBased
+                ? Number(
+                    detailRemainingSessions.value
+                  )
+                : null
+          })
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (
+      !response.ok ||
+      !data.success
+    ) {
+      throw new Error(
+        data.error ||
+        data.details ||
+        "แก้ไขข้อมูลสมาชิกไม่สำเร็จ"
+      );
+    }
+
+
+    memberDetailMessage.textContent =
+      "บันทึกข้อมูลเรียบร้อยแล้ว";
+
+
+    await loadMembers();
+
+
+    const updatedMember =
+      members.find(
+        (item) =>
+          Number(item.id) ===
+          selectedMemberId
+      );
+
+
+    if (updatedMember) {
+      openMemberDetail(
+        updatedMember
+      );
+    }
+
+  } catch (error) {
+
+    memberDetailMessage.textContent =
+      error instanceof Error
+        ? error.message
+        : "แก้ไขข้อมูลสมาชิกไม่สำเร็จ";
+
+  } finally {
+
+    saveMemberButton.disabled =
+      false;
+
+    saveMemberButton.textContent =
+      "บันทึก";
+  }
+}
+membersTableBody.addEventListener(
+  "click",
+  (event) => {
+
+    const row =
+      event.target.closest(
+        "tr[data-member-id]"
+      );
+
+    if (!row) {
+      return;
+    }
+
+
+    const memberId =
+      Number(
+        row.dataset.memberId
+      );
+
+
+    const member =
+      members.find(
+        (item) =>
+          Number(item.id) ===
+          memberId
+      );
+
+
+    if (!member) {
+      return;
+    }
+
+
+    openMemberDetail(member);
+  }
+);
+
+
+closeMemberDetailButton.addEventListener(
+  "click",
+  closeMemberDetail
+);
+
+
+memberDetailModal.addEventListener(
+  "click",
+  (event) => {
+
+    if (
+      event.target ===
+      memberDetailModal
+    ) {
+      closeMemberDetail();
+    }
+  }
+);
+
+
+editMemberButton.addEventListener(
+  "click",
+  startMemberEdit
+);
+
+
+cancelMemberEditButton.addEventListener(
+  "click",
+  cancelMemberEdit
+);
+
+
+saveMemberButton.addEventListener(
+  "click",
+  saveMemberEdit
+);
+
+
+detailPlan.addEventListener(
+  "change",
+  updateDetailSessionFields
+);
 loadMembers();
