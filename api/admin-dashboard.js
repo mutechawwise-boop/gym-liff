@@ -67,11 +67,12 @@ if (!isCoach && !isOwner) {
   membersResponse,
   sessionsResponse,
   attendanceResponse,
-  beltLevelsResponse
+  beltLevelsResponse,
+  currentBeltsResponse
 ] = await Promise.all([
-  supabase.request(
-    "members?select=id,display_name,membership_expiry_date,is_guest,created_at"
-  ),
+ supabase.request(
+  "members?select=id,display_name,nickname,member_status,member_group,membership_plan,membership_start_date,membership_expiry_date,total_sessions,remaining_sessions,is_guest,created_at"
+),
 
   supabase.request(
     `class_sessions?select=id,start_time,end_time,class_id,classes(id,name)&session_date=eq.${today}`
@@ -86,7 +87,11 @@ if (!isCoach && !isOwner) {
       "?active=eq.true" +
       "&select=id,code,name_th,rank_order,color_hex" +
       "&order=rank_order.asc"
-  )
+  ),
+supabase.request(
+  "member_current_belts" +
+    "?select=member_id,belt_level_id,belt_code,belt_name,color_hex,stripe_count,awarded_date"
+)
 ]);
 
       if (!membersResponse.ok) {
@@ -141,6 +146,38 @@ if (!beltLevelsResponse.ok) {
       const sessions = await sessionsResponse.json();
       const attendance = await attendanceResponse.json();
       const beltLevels = await beltLevelsResponse.json();
+      if (!currentBeltsResponse.ok) {
+  const errorText =
+    await currentBeltsResponse.text();
+
+  return json(
+    {
+      success: false,
+      error:
+        "โหลดข้อมูลสายปัจจุบันของสมาชิกไม่สำเร็จ",
+      details: errorText
+    },
+    500
+  );
+}
+
+const currentBelts =
+  await currentBeltsResponse.json();
+
+const beltByMemberId = new Map(
+  currentBelts.map((belt) => [
+    Number(belt.member_id),
+    belt
+  ])
+);
+
+const membersWithBelts =
+  members.map((member) => ({
+    ...member,
+    current_belt:
+      beltByMemberId.get(Number(member.id)) ||
+      null
+  }));
       let pendingRegistrations = [];
 
 if (isOwner) {
@@ -557,6 +594,9 @@ allTransactions
 return json({
         success: true,
         today,
+        members: membersWithBelts.filter(
+  (member) => !member.is_guest
+),
 
         totalMembers: members.filter(
           (member) => !member.is_guest

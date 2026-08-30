@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>สมาชิกทั้งหมด | GAMBIT JIUJITSU</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f5f7;
+      color: #181818;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .page-header h1 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    .page-header p {
+      margin: 7px 0 0;
+      color: #777777;
+    }
+
+    .back-button {
+      border: 0;
+      background: #111111;
+      color: #ffffff;
+      padding: 11px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns:
+        minmax(220px, 1fr)
+        180px
+        180px;
+      gap: 12px;
+
+      padding: 18px;
+      margin-bottom: 18px;
+
+      background: #ffffff;
+      border-radius: 18px;
+
+      box-shadow:
+        0 5px 18px rgba(0, 0, 0, 0.06);
+    }
+
+    .toolbar input,
+    .toolbar select {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+
+      border: 1px solid #dddddd;
+      border-radius: 10px;
+
+      background: #ffffff;
+      font-size: 14px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .summary-card {
+      padding: 18px;
+
+      background: #ffffff;
+      border-radius: 16px;
+
+      box-shadow:
+        0 5px 18px rgba(0, 0, 0, 0.05);
+    }
+
+    .summary-card small {
+      display: block;
+      color: #777777;
+      margin-bottom: 7px;
+    }
+
+    .summary-card strong {
+      font-size: 28px;
+    }
+
+    .members-card {
+      background: #ffffff;
+      border-radius: 18px;
+      overflow: hidden;
+
+      box-shadow:
+        0 5px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    .members-header {
+      padding: 18px 20px;
+      border-bottom: 1px solid #eeeeee;
+    }
+
+    .members-header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid #eeeeee;
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    th {
+      background: #fafafa;
+      color: #666666;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    tbody tr {
+      cursor: pointer;
+    }
+
+    tbody tr:hover {
+      background: #fafafa;
+    }
+
+    .member-name {
+      font-weight: 700;
+      color: #111111;
+    }
+
+    .member-code {
+      color: #777777;
+      font-size: 12px;
+      margin-top: 3px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 9px;
+
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .status-active {
+      background: #e8f7ee;
+      color: #12813d;
+    }
+
+    .status-inactive {
+      background: #f1f1f1;
+      color: #777777;
+    }
+
+    .status-suspended {
+      background: #fff0f0;
+      color: #c62828;
+    }
+
+    .belt {
+      font-weight: 700;
+    }
+
+    .stripe {
+      font-size: 16px;
+      letter-spacing: 1px;
+    }
+
+    .loading,
+    .empty,
+    .error {
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .loading,
+    .empty {
+      color: #777777;
+    }
+
+    .error {
+      color: #c62828;
+    }
+
+    @media (max-width: 800px) {
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-grid {
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+      }
+
+      .page-header {
+        flex-direction: column;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .page {
+        padding: 20px 12px 50px;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .summary-card strong {
+        font-size: 23px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="page">
+
+    <header class="page-header">
+      <div>
+        <h1>สมาชิกทั้งหมด</h1>
+        <p>
+          All Members · GAMBIT JIUJITSU
+        </p>
+      </div>
+
+      <button
+        id="backButton"
+        class="back-button"
+        type="button"
+      >
+        ← กลับหลังบ้าน
+      </button>
+    </header>
+
+
+    <section class="toolbar">
+
+      <input
+        id="memberSearch"
+        type="search"
+        placeholder="ค้นหาชื่อ / ชื่อเล่น / รหัสสมาชิก"
+      >
+
+      <select id="statusFilter">
+        <option value="">
+          ทุกสถานะ
+        </option>
+
+        <option value="active">
+          Active
+        </option>
+
+        <option value="inactive">
+          Inactive
+        </option>
+
+        <option value="suspended">
+          Suspended
+        </option>
+      </select>
+
+      <select id="groupFilter">
+        <option value="">
+          ทุกกลุ่ม
+        </option>
+
+        <option value="adult">
+          ADULT
+        </option>
+
+        <option value="kids">
+          KIDS
+        </option>
+      </select>
+
+    </section>
+
+
+    <section class="summary-grid">
+
+      <div class="summary-card">
+        <small>สมาชิกทั้งหมด</small>
+        <strong id="summaryTotal">0</strong>
+      </div>
+
+      <div class="summary-card">
+        <small>Active</small>
+        <strong id="summaryActive">0</strong>
+      </div>
+
+      <div class="summary-card">
+        <small>Inactive</small>
+        <strong id="summaryInactive">0</strong>
+      </div>
+
+      <div class="summary-card">
+        <small>หมดอายุเร็ว ๆ นี้</small>
+        <strong id="summaryExpiring">0</strong>
+      </div>
+
+    </section>
+
+
+    <section class="members-card">
+
+      <div class="members-header">
+        <h2>รายชื่อสมาชิก</h2>
+      </div>
+
+      <div
+        id="membersStatus"
+        class="loading"
+      >
+        กำลังโหลดข้อมูลสมาชิก...
+      </div>
+
+      <div
+        id="membersTableWrap"
+        class="table-wrap"
+        style="display:none;"
+      >
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>สมาชิก</th>
+              <th>สถานะ</th>
+              <th>กลุ่ม</th>
+              <th>ระดับสาย</th>
+              <th>Rank Bar</th>
+              <th>แพ็กเกจ</th>
+              <th>สิทธิ์</th>
+              <th>วันหมดอายุ</th>
+            </tr>
+          </thead>
+
+          <tbody id="membersTableBody"></tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <script src="js/members.js"></script>
+
+</body>
+</html>
