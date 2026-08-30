@@ -816,7 +816,95 @@
       </section>
     </section>
   </main>
+<section
+  id="editSessionModal"
+  class="modal-backdrop"
+>
+  <div class="modal">
 
+    <h2>✏️ แก้ไขคลาส</h2>
+
+    <p id="editSessionName"></p>
+
+    <div class="form-group">
+      <label for="editSessionDate">
+        วันที่
+      </label>
+
+      <input
+        id="editSessionDate"
+        type="date"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="editSessionClass">
+        ประเภทคลาส
+      </label>
+
+      <select id="editSessionClass"></select>
+    </div>
+
+    <div class="form-group">
+      <label for="editSessionStartTime">
+        เวลาเริ่ม
+      </label>
+
+      <input
+        id="editSessionStartTime"
+        type="time"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="editSessionEndTime">
+        เวลาสิ้นสุด
+      </label>
+
+      <input
+        id="editSessionEndTime"
+        type="time"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="editSessionNote">
+        หมายเหตุ
+      </label>
+
+      <input
+        id="editSessionNote"
+        type="text"
+        placeholder="หมายเหตุเพิ่มเติม"
+      >
+    </div>
+
+    <p
+      id="editSessionError"
+      class="error"
+    ></p>
+
+    <div class="modal-actions">
+
+      <button
+        id="cancelEditSessionButton"
+        class="secondary-button"
+        type="button"
+      >
+        ยกเลิก
+      </button>
+
+      <button
+        id="saveEditSessionButton"
+        type="button"
+      >
+        บันทึกการแก้ไข
+      </button>
+
+    </div>
+
+  </div>
+</section>
   <section id="beltModal" class="modal-backdrop">
     <div class="modal">
       <h2>🥋 เปลี่ยนสาย</h2>
@@ -991,6 +1079,39 @@ nextScheduleDayButton:
   document.getElementById(
     "nextScheduleDayButton"
   ),
+  editSessionModal:
+  document.getElementById("editSessionModal"),
+
+editSessionName:
+  document.getElementById("editSessionName"),
+
+editSessionDate:
+  document.getElementById("editSessionDate"),
+
+editSessionClass:
+  document.getElementById("editSessionClass"),
+
+editSessionStartTime:
+  document.getElementById("editSessionStartTime"),
+
+editSessionEndTime:
+  document.getElementById("editSessionEndTime"),
+
+editSessionNote:
+  document.getElementById("editSessionNote"),
+
+editSessionError:
+  document.getElementById("editSessionError"),
+
+cancelEditSessionButton:
+  document.getElementById(
+    "cancelEditSessionButton"
+  ),
+
+saveEditSessionButton:
+  document.getElementById(
+    "saveEditSessionButton"
+  ),
       beltModal: document.getElementById("beltModal"),
       beltMemberName: document.getElementById("beltMemberName"),
       beltLevelSelect: document.getElementById("beltLevelSelect"),
@@ -1023,6 +1144,8 @@ nextScheduleDayButton:
       adminKey: "",
       role: "",
       overview: null,
+        selectedSessionId: null,
+
       selectedBeltMemberId: null,
       selectedEnrollmentMemberId: null
     };
@@ -1345,22 +1468,182 @@ function renderMonthlySchedule() {
               </div>
 
 
-              <strong>
-                ${
-                  cancelled
-                    ? "🔴 ยกเลิกแล้ว"
-                    : "🟢 พร้อมเช็กชื่อ"
-                }
-              </strong>
+              <div
+  style="
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:8px;
+  "
+>
+  <strong>
+    ${
+      cancelled
+        ? "🔴 ยกเลิกแล้ว"
+        : "🟢 พร้อมเช็กชื่อ"
+    }
+  </strong>
+
+  ${
+    cancelled
+      ? ""
+      : `
+        <button
+          type="button"
+          class="secondary-button"
+          data-edit-session="${session.id}"
+          style="
+            width:auto;
+            min-height:34px;
+            padding:7px 12px;
+            font-size:13px;
+          "
+        >
+          ✏️ แก้ไข
+        </button>
+        <button
+  type="button"
+  data-cancel-session="${session.id}"
+  style="
+    width:auto;
+    min-height:34px;
+    padding:7px 12px;
+    font-size:13px;
+    background:#fff;
+    color:#c62828;
+    border:1px solid #e3b5b5;
+  "
+>
+  ❌ ยกเลิกคลาส
+</button>
+      `
+  }
+</div>
 
             </div>
 
           </div>
         `;
-      })
+          })
       .join("");
+
+  elements.monthlyScheduleList
+    .querySelectorAll(
+      "[data-edit-session]"
+    )
+    
+    .forEach((button) => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          const sessionId =
+            Number(
+              button.dataset.editSession
+            );
+
+          const session =
+            daySessions.find(
+              (item) =>
+                Number(item.id) ===
+                sessionId
+            );
+
+          if (session) {
+            openEditSessionModal(
+              session
+            );
+          }
+        }
+      );
+    });
+    elements.monthlyScheduleList
+  .querySelectorAll(
+    "[data-cancel-session]"
+  )
+  .forEach((button) => {
+
+    button.addEventListener(
+      "click",
+      async () => {
+
+        const sessionId =
+          Number(
+            button.dataset.cancelSession
+          );
+
+        const session =
+          daySessions.find(
+            (item) =>
+              Number(item.id) ===
+              sessionId
+          );
+
+        if (!session) {
+          return;
+        }
+
+        const className =
+          session.classes?.name ||
+          "คลาสนี้";
+
+        const confirmed =
+          window.confirm(
+            `ยืนยันยกเลิก ${className} ใช่หรือไม่?`
+          );
+
+        if (!confirmed) {
+          return;
+        }
+
+        button.disabled = true;
+        button.textContent =
+          "กำลังยกเลิก...";
+
+        try {
+
+          await requestJson(
+            "/api/create-session",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                "x-admin-key":
+                  state.adminKey
+              },
+
+              body: JSON.stringify({
+                mode:
+                  "cancel_session",
+
+                sessionId
+              })
+            }
+          );
+
+          await loadOverview();
+
+        } catch (error) {
+
+          window.alert(
+            error.message
+          );
+
+          button.disabled = false;
+          button.textContent =
+            "❌ ยกเลิกคลาส";
+        }
+      }
+    );
+  });
 }
-    function renderSessionOptions() {
+
+function renderSessionOptions() {
+      
       elements.sessionSelect.innerHTML = "";
 
       const sessions = state.overview?.sessions || [];
@@ -1688,8 +1971,207 @@ renderSessionOptions();
     }
 
     
+function openEditSessionModal(session) {
 
-    function openBeltModal(member) {
+  state.selectedSessionId =
+    Number(session.id);
+
+  elements.editSessionName.textContent =
+    session.classes?.name ||
+    "ไม่ระบุชื่อคลาส";
+
+  elements.editSessionDate.value =
+    session.session_date || "";
+
+  elements.editSessionStartTime.value =
+    formatTime(session.start_time);
+
+  elements.editSessionEndTime.value =
+    formatTime(session.end_time);
+
+  elements.editSessionNote.value =
+    session.note || "";
+
+  elements.editSessionError.textContent =
+    "";
+
+  elements.editSessionClass.innerHTML =
+    "";
+
+  const classes =
+    state.overview?.classes || [];
+
+  classes.forEach((classItem) => {
+
+    const option =
+      document.createElement("option");
+
+    option.value =
+      String(classItem.id);
+
+    option.textContent =
+      classItem.name;
+
+    if (
+      Number(classItem.id) ===
+      Number(session.class_id)
+    ) {
+      option.selected = true;
+    }
+
+    elements.editSessionClass
+      .appendChild(option);
+  });
+
+  elements.saveEditSessionButton.disabled =
+    false;
+
+  elements.saveEditSessionButton.textContent =
+    "บันทึกการแก้ไข";
+
+  elements.editSessionModal
+    .classList.add("open");
+}
+
+
+function closeEditSessionModal() {
+
+  elements.editSessionModal
+    .classList.remove("open");
+
+  state.selectedSessionId =
+    null;
+
+  elements.editSessionError.textContent =
+    "";
+}
+    async function saveEditSession() {
+
+  if (!state.selectedSessionId) {
+    elements.editSessionError.textContent =
+      "ไม่พบคลาสที่ต้องการแก้ไข";
+
+    return;
+  }
+
+  const sessionDate =
+    elements.editSessionDate.value;
+
+  const classId =
+    Number(
+      elements.editSessionClass.value
+    );
+
+  const startTime =
+    elements.editSessionStartTime.value;
+
+  const endTime =
+    elements.editSessionEndTime.value;
+
+  const note =
+    elements.editSessionNote.value.trim();
+
+
+  if (!sessionDate) {
+    elements.editSessionError.textContent =
+      "กรุณาเลือกวันที่";
+
+    return;
+  }
+
+
+  if (!classId) {
+    elements.editSessionError.textContent =
+      "กรุณาเลือกประเภทคลาส";
+
+    return;
+  }
+
+
+  if (!startTime || !endTime) {
+    elements.editSessionError.textContent =
+      "กรุณาระบุเวลาเริ่มและเวลาสิ้นสุด";
+
+    return;
+  }
+
+
+  if (endTime <= startTime) {
+    elements.editSessionError.textContent =
+      "เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่ม";
+
+    return;
+  }
+
+
+  elements.saveEditSessionButton.disabled =
+    true;
+
+  elements.saveEditSessionButton.textContent =
+    "กำลังบันทึก...";
+
+  elements.editSessionError.textContent =
+    "";
+
+
+  try {
+
+    await requestJson(
+      "/api/create-session",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          "x-admin-key":
+            state.adminKey
+        },
+
+        body: JSON.stringify({
+
+          mode:
+            "update_session",
+
+          sessionId:
+            state.selectedSessionId,
+
+          sessionDate,
+
+          classId,
+
+          startTime,
+
+          endTime,
+
+          note
+        })
+      }
+    );
+
+
+    elements.scheduleDate.value =
+      sessionDate;
+
+    closeEditSessionModal();
+
+    await loadOverview();
+
+
+  } catch (error) {
+
+    elements.editSessionError.textContent =
+      error.message;
+
+    elements.saveEditSessionButton.disabled =
+      false;
+
+    elements.saveEditSessionButton.textContent =
+      "บันทึกการแก้ไข";
+  }
+}
+function openBeltModal(member) {
       state.selectedBeltMemberId = Number(member.id);
       elements.beltMemberName.textContent =
         `นักเรียน: ${getMemberName(member)}`;
@@ -1990,7 +2472,14 @@ elements.nextScheduleDayButton.addEventListener(
       "click",
       openCreateMemberModal
     );
-
+elements.cancelEditSessionButton.addEventListener(
+  "click",
+  closeEditSessionModal
+);
+elements.saveEditSessionButton.addEventListener(
+  "click",
+  saveEditSession
+);
     elements.cancelBeltButton.addEventListener("click", closeBeltModal);
     elements.saveBeltButton.addEventListener("click", saveBeltChange);
 
@@ -2013,10 +2502,11 @@ elements.nextScheduleDayButton.addEventListener(
     );
 
     [
-      [elements.beltModal, closeBeltModal],
-      [elements.enrollmentModal, closeEnrollmentModal],
-      [elements.createMemberModal, closeCreateMemberModal]
-    ].forEach(([modal, closeFunction]) => {
+  [elements.editSessionModal, closeEditSessionModal],
+  [elements.beltModal, closeBeltModal],
+  [elements.enrollmentModal, closeEnrollmentModal],
+  [elements.createMemberModal, closeCreateMemberModal]
+].forEach(([modal, closeFunction]) => {
       modal.addEventListener("click", (event) => {
         if (event.target === modal) closeFunction();
       });
