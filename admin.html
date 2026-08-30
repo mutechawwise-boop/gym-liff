@@ -2397,7 +2397,50 @@ function openBeltModal(member) {
       "➕ เพิ่มคลาส / Private";
   }
 }
+function openCreateMemberModal() {
 
+  elements.memberNickname.value = "";
+  elements.memberFullName.value = "";
+  elements.memberPhone.value = "";
+  elements.memberStatus.value = "active";
+
+  elements.membershipStartDate.value =
+    thailandDateValue();
+
+  elements.membershipExpiryDate.value =
+    "";
+
+  elements.createMemberError.textContent =
+    "";
+
+  elements.createMemberClassList.innerHTML =
+    "";
+
+  (state.overview?.classes || []).forEach(
+    (classItem) => {
+
+      elements.createMemberClassList.appendChild(
+        createClassCheckbox(
+          classItem,
+          false,
+          "create-member"
+        )
+      );
+
+    }
+  );
+
+  elements.saveCreateMemberButton.disabled =
+    false;
+
+  elements.saveCreateMemberButton.textContent =
+    "เพิ่มสมาชิก";
+
+  elements.createMemberModal
+    .classList.add("open");
+
+  elements.memberNickname.focus();
+}
    function changeScheduleDay(days) {
 
   const currentDate =
