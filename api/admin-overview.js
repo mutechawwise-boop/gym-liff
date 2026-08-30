@@ -57,6 +57,26 @@ export default {
         month: "2-digit",
         day: "2-digit"
       }).format(new Date());
+      const monthStart =
+  `${today.slice(0, 7)}-01`;
+
+const [
+  currentYear,
+  currentMonth
+] = today
+  .split("-")
+  .map(Number);
+
+const monthEnd =
+  new Date(
+    Date.UTC(
+      currentYear,
+      currentMonth,
+      0
+    )
+  )
+    .toISOString()
+    .slice(0, 10);
   
 
       // ดึงคลาสที่เปิดวันนี้
@@ -82,6 +102,33 @@ export default {
       }
 
       const sessions = await sessionsResponse.json();
+      const monthlySessionsResponse =
+  await fetch(
+    `${supabaseUrl}/rest/v1/class_sessions` +
+      `?session_date=gte.${monthStart}` +
+      `&session_date=lte.${monthEnd}` +
+      `&select=id,class_id,session_date,start_time,end_time,status,note,classes(id,name)` +
+      `&order=session_date.asc,start_time.asc`,
+    { headers }
+  );
+
+if (!monthlySessionsResponse.ok) {
+
+  const details =
+    await monthlySessionsResponse.text();
+
+  return json(
+    {
+      error:
+        "อ่านตารางคลาสรายเดือนไม่สำเร็จ",
+      details
+    },
+    500
+  );
+}
+
+const monthlySessions =
+  await monthlySessionsResponse.json();
 
       // ดึงสมาชิกทั้งหมด
      const membersResponse = await fetch(
@@ -229,10 +276,17 @@ const classes = await classesResponse.json();
 return json({
   success: true,
   date: today,
+
   sessions,
+
+  monthlySessions,
+
   members,
+
   attendance,
+
   beltLevels,
+
   classes
 });
     } catch (error) {

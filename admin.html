@@ -651,11 +651,27 @@
         </div>
         <p id="memberActionMessage"></p>
       </section>
+<section id="classes" class="card">
+  <h2 style="margin-top: 0;">
+    🗓️ จัดการตารางคลาส
+  </h2>
 
-      <section id="classes" class="card">
-        <h2 style="margin-top: 0;">➕ เปิดคลาสวันนี้</h2>
+  <p style="color:#666; margin-top:-6px;">
+    ตารางประจำถูกสร้างอัตโนมัติแล้ว
+    Coach สามารถเพิ่ม Private หรือคลาสพิเศษได้
+  </p>
 
-        <div class="toolbar">
+  <div class="toolbar">
+    <div>
+  <label for="newSessionDate">
+    วันที่
+  </label>
+
+  <input
+    id="newSessionDate"
+    type="date"
+  >
+</div>
           <div>
             <label for="newClassSelect">ประเภทคลาส</label>
             <select id="newClassSelect"></select>
@@ -682,12 +698,51 @@
         </div>
 
         <button id="createSessionButton" type="button">
-          เปิดคลาสวันนี้
-        </button>
+  ➕ เพิ่มคลาส / Private
+</button>
 
         <p id="createSessionError" class="error"></p>
       </section>
+<section
+  id="monthlyScheduleSection"
+  class="card"
+>
+  <div
+    style="
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:18px;
+    "
+  >
+    <div>
+      <h2 style="margin:0;">
+        📅 ตารางคลาสเดือนนี้
+      </h2>
 
+      <p
+        id="monthlyScheduleCaption"
+        style="
+          margin:6px 0 0;
+          color:#777;
+        "
+      ></p>
+    </div>
+  </div>
+
+  <div
+    id="monthlyScheduleList"
+    class="loading"
+  >
+    กำลังโหลดตารางคลาส...
+  </div>
+
+  <p
+    id="monthlyScheduleError"
+    class="error"
+  ></p>
+</section>
       <section id="attendance" class="toolbar card">
         <div>
           <label for="sessionSelect">เลือกคลาส</label>
@@ -881,12 +936,17 @@ import {
       remainingCount: document.getElementById("remainingCount"),
       sessionTitle: document.getElementById("sessionTitle"),
       sessionTime: document.getElementById("sessionTime"),
+      newSessionDate:document.getElementById("newSessionDate"),
       newClassSelect: document.getElementById("newClassSelect"),
-      newStartTime: document.getElementById("newStartTime"),
-      newEndTime: document.getElementById("newEndTime"),
-      newSessionNote: document.getElementById("newSessionNote"),
+      newStartTime:document.getElementById("newStartTime"),
+      newEndTime:document.getElementById("newEndTime"),
+      newSessionNote:document.getElementById("newSessionNote"),
       createSessionButton: document.getElementById("createSessionButton"),
       createSessionError: document.getElementById("createSessionError"),
+      monthlyScheduleList:document.getElementById("monthlyScheduleList" ),
+      monthlyScheduleCaption:document.getElementById( "monthlyScheduleCaption"
+  ),
+monthlyScheduleError:document.getElementById("monthlyScheduleError" ),
       beltModal: document.getElementById("beltModal"),
       beltMemberName: document.getElementById("beltMemberName"),
       beltLevelSelect: document.getElementById("beltLevelSelect"),
@@ -1070,7 +1130,206 @@ async function loadAdminDashboard() {
         elements.newClassSelect.appendChild(option);
       });
     }
+function renderMonthlySchedule() {
 
+  const sessions =
+    Array.isArray(
+      state.overview?.monthlySessions
+    )
+      ? state.overview.monthlySessions
+      : [];
+
+  elements.monthlyScheduleError.textContent =
+    "";
+
+  if (!sessions.length) {
+
+    elements.monthlyScheduleCaption.textContent =
+      "ยังไม่มีคลาสในเดือนนี้";
+
+    elements.monthlyScheduleList.className =
+      "empty";
+
+    elements.monthlyScheduleList.textContent =
+      "ยังไม่มีตารางคลาส";
+
+    return;
+  }
+
+
+  const firstDate =
+    sessions[0].session_date;
+
+  const monthText =
+    new Intl.DateTimeFormat(
+      "th-TH",
+      {
+        month: "long",
+        year: "numeric",
+        timeZone: "Asia/Bangkok"
+      }
+    ).format(
+      new Date(
+        `${firstDate}T12:00:00+07:00`
+      )
+    );
+
+
+  const openCount =
+    sessions.filter(
+      (session) =>
+        session.status === "open"
+    ).length;
+
+  const cancelledCount =
+    sessions.filter(
+      (session) =>
+        session.status === "cancelled"
+    ).length;
+
+
+  elements.monthlyScheduleCaption.textContent =
+    `${monthText} · ${sessions.length} คลาส` +
+    ` · เปิด ${openCount}` +
+    ` · ยกเลิก ${cancelledCount}`;
+
+
+  const groups = new Map();
+
+
+  sessions.forEach((session) => {
+
+    const date =
+      session.session_date;
+
+    if (!groups.has(date)) {
+      groups.set(date, []);
+    }
+
+    groups.get(date).push(session);
+  });
+
+
+  elements.monthlyScheduleList.className =
+    "";
+
+  elements.monthlyScheduleList.innerHTML =
+    [...groups.entries()]
+      .map(([date, daySessions]) => {
+
+        const dateText =
+          new Intl.DateTimeFormat(
+            "th-TH",
+            {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+              timeZone: "Asia/Bangkok"
+            }
+          ).format(
+            new Date(
+              `${date}T12:00:00+07:00`
+            )
+          );
+
+
+        const sessionHtml =
+          daySessions
+            .map((session) => {
+
+              const cancelled =
+                session.status ===
+                "cancelled";
+
+              return `
+                <div
+                  style="
+                    display:flex;
+                    justify-content:space-between;
+                    gap:14px;
+                    padding:12px 0;
+                    border-top:1px solid #eeeeee;
+                    ${
+                      cancelled
+                        ? "opacity:.5;"
+                        : ""
+                    }
+                  "
+                >
+                  <div>
+                    <strong>
+                      ${
+                        session.classes?.name ||
+                        "ไม่ระบุชื่อคลาส"
+                      }
+                    </strong>
+
+                    <div
+                      style="
+                        margin-top:4px;
+                        color:#666;
+                        font-size:13px;
+                      "
+                    >
+                      ${formatTime(
+                        session.start_time
+                      )}
+                      –
+                      ${formatTime(
+                        session.end_time
+                      )} น.
+                    </div>
+
+                    ${
+                      session.note
+                        ? `
+                          <div
+                            style="
+                              margin-top:4px;
+                              color:#888;
+                              font-size:12px;
+                            "
+                          >
+                            ${session.note}
+                          </div>
+                        `
+                        : ""
+                    }
+                  </div>
+
+                  <div>
+                    ${
+                      cancelled
+                        ? "❌ ยกเลิก"
+                        : "🟢 เปิด"
+                    }
+                  </div>
+                </div>
+              `;
+            })
+            .join("");
+
+
+        return `
+          <div
+            style="
+              margin-bottom:14px;
+              padding:16px;
+              background:#fafafa;
+              border:1px solid #eeeeee;
+              border-radius:14px;
+            "
+          >
+            <strong>
+              ${dateText}
+            </strong>
+
+            ${sessionHtml}
+          </div>
+        `;
+      })
+      .join("");
+}
     function renderSessionOptions() {
       elements.sessionSelect.innerHTML = "";
 
@@ -1326,6 +1585,10 @@ async function loadAdminDashboard() {
 
         elements.loginArea.style.display = "none";
         elements.adminArea.style.display = "block";
+        if (!elements.newSessionDate.value) {
+  elements.newSessionDate.value =
+    thailandDateValue();
+}
 
         elements.dateText.textContent =
           `รายชื่อเข้าเรียนประจำวันที่ ${new Intl.DateTimeFormat(
@@ -1337,7 +1600,8 @@ async function loadAdminDashboard() {
           ).format(new Date(`${data.date}T12:00:00+07:00`))}`;
 
         renderClassOptions();
-        renderSessionOptions();
+renderMonthlySchedule();
+renderSessionOptions();
 
         if (
           selectedSessionId &&
@@ -1393,51 +1657,7 @@ async function loadAdminDashboard() {
       }
     }
 
-    async function createSession() {
-      const classId = Number(elements.newClassSelect.value);
-      const startTime = elements.newStartTime.value;
-      const endTime = elements.newEndTime.value;
-
-      if (!classId) {
-        elements.createSessionError.textContent =
-          "กรุณาเลือกประเภทคลาส";
-        return;
-      }
-
-      if (!startTime || !endTime) {
-        elements.createSessionError.textContent =
-          "กรุณาระบุเวลาเริ่มและเวลาสิ้นสุด";
-        return;
-      }
-
-      elements.createSessionButton.disabled = true;
-      elements.createSessionButton.textContent = "กำลังเปิดคลาส...";
-      elements.createSessionError.textContent = "";
-
-      try {
-        await requestJson("/api/create-session", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-key": state.adminKey
-          },
-          body: JSON.stringify({
-            classId,
-            startTime,
-            endTime,
-            note: elements.newSessionNote.value.trim()
-          })
-        });
-
-        elements.newSessionNote.value = "";
-        await loadOverview();
-      } catch (error) {
-        elements.createSessionError.textContent = error.message;
-      } finally {
-        elements.createSessionButton.disabled = false;
-        elements.createSessionButton.textContent = "เปิดคลาสวันนี้";
-      }
-    }
+    
 
     function openBeltModal(member) {
       state.selectedBeltMemberId = Number(member.id);
@@ -1557,155 +1777,114 @@ async function loadAdminDashboard() {
       elements.enrollmentError.textContent = "";
     }
 
-    async function saveEnrollmentChanges() {
-      const member = (state.overview.members || []).find(
-        (item) => Number(item.id) === state.selectedEnrollmentMemberId
-      );
+    async function createSession() {
 
-      if (!member) {
-        elements.enrollmentError.textContent = "ไม่พบข้อมูลนักเรียน";
-        return;
+  const sessionDate =
+    elements.newSessionDate.value;
+
+  const classId =
+    Number(
+      elements.newClassSelect.value
+    );
+
+  const startTime =
+    elements.newStartTime.value;
+
+  const endTime =
+    elements.newEndTime.value;
+
+
+  if (!sessionDate) {
+    elements.createSessionError.textContent =
+      "กรุณาเลือกวันที่";
+
+    return;
+  }
+
+
+  if (!classId) {
+    elements.createSessionError.textContent =
+      "กรุณาเลือกประเภทคลาส";
+
+    return;
+  }
+
+
+  if (!startTime || !endTime) {
+    elements.createSessionError.textContent =
+      "กรุณาระบุเวลาเริ่มและเวลาสิ้นสุด";
+
+    return;
+  }
+
+
+  elements.createSessionButton.disabled =
+    true;
+
+  elements.createSessionButton.textContent =
+    "กำลังเพิ่มคลาส...";
+
+  elements.createSessionError.textContent =
+    "";
+
+
+  try {
+
+    await requestJson(
+      "/api/create-session",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          "x-admin-key":
+            state.adminKey
+        },
+
+        body: JSON.stringify({
+
+          mode:
+            "create_session",
+
+          sessionDate,
+
+          classId,
+
+          startTime,
+
+          endTime,
+
+          note:
+            elements.newSessionNote
+              .value
+              .trim()
+        })
       }
+    );
 
-      const selectedClassIds = new Set(
-        [...elements.enrollmentClassList.querySelectorAll(
-          'input[type="checkbox"]:checked'
-        )].map((input) => Number(input.value))
-      );
 
-      const currentActiveClassIds = new Set(
-        (Array.isArray(member.member_classes)
-          ? member.member_classes
-          : []
-        )
-          .filter((item) => item.status === "active")
-          .map((item) => Number(item.class_id))
-      );
+    elements.newSessionNote.value =
+      "";
 
-      const changes = [];
+    await loadOverview();
 
-      (state.overview.classes || []).forEach((classItem) => {
-        const classId = Number(classItem.id);
-        const shouldBeActive = selectedClassIds.has(classId);
-        const isActive = currentActiveClassIds.has(classId);
 
-        if (shouldBeActive !== isActive) {
-          changes.push({
-            memberId: state.selectedEnrollmentMemberId,
-            classId,
-            status: shouldBeActive ? "active" : "inactive"
-          });
-        }
-      });
+  } catch (error) {
 
-      if (!changes.length) {
-        closeEnrollmentModal();
-        return;
-      }
+    elements.createSessionError.textContent =
+      error.message;
 
-      elements.saveEnrollmentButton.disabled = true;
-      elements.saveEnrollmentButton.textContent = "กำลังบันทึก...";
-      elements.enrollmentError.textContent = "";
+  } finally {
 
-      try {
-        for (const change of changes) {
-          await requestJson("/api/update-enrollment", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-admin-key": state.adminKey
-            },
-            body: JSON.stringify(change)
-          });
-        }
+    elements.createSessionButton.disabled =
+      false;
 
-        closeEnrollmentModal();
-        await loadOverview();
-      } catch (error) {
-        elements.enrollmentError.textContent = error.message;
-        elements.saveEnrollmentButton.disabled = false;
-        elements.saveEnrollmentButton.textContent = "บันทึก";
-      }
-    }
-
-    function openCreateMemberModal() {
-      elements.memberNickname.value = "";
-      elements.memberFullName.value = "";
-      elements.memberPhone.value = "";
-      elements.memberStatus.value = "active";
-      elements.createMemberError.textContent = "";
-      elements.createMemberClassList.innerHTML = "";
-
-      (state.overview?.classes || []).forEach((classItem) => {
-        elements.createMemberClassList.appendChild(
-          createClassCheckbox(classItem, false, "create-member")
-        );
-      });
-
-      elements.saveCreateMemberButton.disabled = false;
-      elements.saveCreateMemberButton.textContent = "เพิ่มสมาชิก";
-      elements.createMemberModal.classList.add("open");
-      elements.memberNickname.focus();
-    }
-
-    function closeCreateMemberModal() {
-      elements.createMemberModal.classList.remove("open");
-      elements.createMemberError.textContent = "";
-    }
-
-    async function createMember() {
-      const nickname = elements.memberNickname.value.trim();
-      const fullName = elements.memberFullName.value.trim();
-      const phone = elements.memberPhone.value.trim();
-      const memberStatus = elements.memberStatus.value;
-      const membershipStartDate =elements.membershipStartDate.value;
-      const membershipExpiryDate =elements.membershipExpiryDate.value;
-
-      const classIds = [
-        ...elements.createMemberClassList.querySelectorAll(
-          'input[type="checkbox"]:checked'
-        )
-      ].map((input) => Number(input.value));
-
-      if (!nickname && !fullName) {
-        elements.createMemberError.textContent =
-          "กรุณากรอกชื่อเล่นหรือชื่อจริง";
-        return;
-      }
-
-      elements.saveCreateMemberButton.disabled = true;
-      elements.saveCreateMemberButton.textContent = "กำลังเพิ่ม...";
-      elements.createMemberError.textContent = "";
-
-      try {
-        await requestJson("/api/create-member", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-key": state.adminKey
-          },
-          body: JSON.stringify({
-  nickname,
-  fullName,
-  phone,
-  memberStatus,
-  membershipStartDate,
-  membershipExpiryDate,
-  classIds
-})
-        });
-
-        closeCreateMemberModal();
-        elements.memberActionMessage.className = "success";
-        elements.memberActionMessage.textContent =
-          "เพิ่มสมาชิกใหม่เรียบร้อยแล้ว";
-        await loadOverview();
-      } catch (error) {
-        elements.createMemberError.textContent = error.message;
-        elements.saveCreateMemberButton.disabled = false;
-        elements.saveCreateMemberButton.textContent = "เพิ่มสมาชิก";
-      }
-    }
+    elements.createSessionButton.textContent =
+      "➕ เพิ่มคลาส / Private";
+  }
+}
 
    
 const auth = createAuth({
