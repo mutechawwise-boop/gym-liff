@@ -1487,8 +1487,12 @@ function renderPaymentHistory(memberId) {
             </strong>
 
             <div style="margin-top:5px; font-size:13px;">
-              ต่ออายุสมาชิก
-            </div>
+  ${
+    item.type === "registration"
+      ? "สมัครสมาชิกครั้งแรก"
+      : "ต่ออายุสมาชิก"
+  }
+</div>
 
             <div style="margin-top:5px; font-size:13px; color:#666;">
               ${Number(item.amount || 0).toLocaleString("th-TH")} บาท

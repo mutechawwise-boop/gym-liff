@@ -454,8 +454,8 @@ if (isOwner) {
     // รายรับจากการสมัครสมาชิกใหม่
    supabase.request(
   "member_registration" +
-    "?registration_status=eq.approved" +
-    "&select=id,payment_amount,payment_method,approved_at,membership_plan,line_display_name,nickname,first_name,last_name"
+  "?registration_status=eq.approved" +
+  "&select=id,member_id,payment_amount,payment_method,approved_at,membership_plan,line_display_name,nickname,first_name,last_name"
 )
   ]);
 
@@ -519,6 +519,8 @@ const allTransactions = [
   ...registrationTransactions.map((item) => ({
     id: `registration-${item.id}`,
     type: "registration",
+    memberId:
+    Number(item.member_id),
     memberName:
       item.nickname ||
       item.line_display_name ||

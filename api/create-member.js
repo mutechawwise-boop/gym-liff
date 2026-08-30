@@ -1084,18 +1084,21 @@ if (!beltHistoryResponse.ok) {
       method: "PATCH",
       headers: supabaseHeaders,
       body: JSON.stringify({
-        registration_status:
-          "approved",
+  registration_status:
+    "approved",
 
-        approved_by:
-          "owner",
+  member_id:
+    member.id,
 
-        approved_at:
-          new Date().toISOString(),
+  approved_by:
+    "owner",
 
-        coach_note:
-          ownerNote || null
-      })
+  approved_at:
+    new Date().toISOString(),
+
+  coach_note:
+    ownerNote || null
+})
     }
   );
 
