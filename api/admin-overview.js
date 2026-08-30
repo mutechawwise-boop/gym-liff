@@ -100,15 +100,16 @@ const monthEnd =
     .slice(0, 10);
   
 
-      // ดึงคลาสที่เปิดวันนี้
-      const sessionsResponse = await fetch(
-        `${supabaseUrl}/rest/v1/class_sessions` +
-          `?session_date=eq.${today}` +
-          `&status=eq.open` +
-          `&select=id,session_date,start_time,end_time,status,note,classes(id,name)` +
-          `&order=start_time.asc`,
-        { headers }
-      );
+      // ดึงคลาสของวันที่ Coach เลือก
+
+const sessionsResponse = await fetch(
+  `${supabaseUrl}/rest/v1/class_sessions` +
+    `?session_date=eq.${requestedDate}` +
+    `&status=eq.open` +
+    `&select=id,session_date,start_time,end_time,status,note,classes(id,name)` +
+    `&order=start_time.asc`,
+  { headers }
+);
 
       if (!sessionsResponse.ok) {
         const details = await sessionsResponse.text();
