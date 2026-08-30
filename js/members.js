@@ -34,6 +34,7 @@ const backButton =
 
 let members = [];
 let today = "";
+let beltLevels = [];
 
 
 function formatThaiDate(dateValue) {
@@ -454,6 +455,10 @@ if (
 
     today =
       data.today || "";
+      beltLevels =
+  Array.isArray(data.beltLevels)
+    ? data.beltLevels
+    : [];
 
 
     renderMembers();
@@ -802,7 +807,7 @@ function openMemberDetail(member) {
   memberDetailMessage.textContent =
     "";
 
-
+prepareBeltEditor(member);
   memberDetailModal.classList.add(
     "open"
   );
@@ -1091,5 +1096,312 @@ saveMemberButton.addEventListener(
 detailPlan.addEventListener(
   "change",
   updateDetailSessionFields
+);
+const ownerBeltEditArea =
+  document.getElementById(
+    "ownerBeltEditArea"
+  );
+
+const editBeltButton =
+  document.getElementById(
+    "editBeltButton"
+  );
+
+const beltEditForm =
+  document.getElementById(
+    "beltEditForm"
+  );
+
+const detailBeltLevel =
+  document.getElementById(
+    "detailBeltLevel"
+  );
+
+const detailBeltStripe =
+  document.getElementById(
+    "detailBeltStripe"
+  );
+
+const detailBeltDate =
+  document.getElementById(
+    "detailBeltDate"
+  );
+
+const detailBeltBy =
+  document.getElementById(
+    "detailBeltBy"
+  );
+
+const detailBeltNote =
+  document.getElementById(
+    "detailBeltNote"
+  );
+
+const saveBeltDetailButton =
+  document.getElementById(
+    "saveBeltDetailButton"
+  );
+
+const cancelBeltDetailButton =
+  document.getElementById(
+    "cancelBeltDetailButton"
+  );
+
+const beltDetailMessage =
+  document.getElementById(
+    "beltDetailMessage"
+  );
+
+function prepareBeltEditor(member) {
+
+  const role =
+    sessionStorage.getItem(
+      "gambitRole"
+    );
+
+  ownerBeltEditArea.style.display =
+    role === "owner"
+      ? "block"
+      : "none";
+
+  beltEditForm.style.display =
+    "none";
+
+  beltDetailMessage.textContent =
+    "";
+
+  detailBeltLevel.innerHTML =
+    `<option value="">-- เลือกระดับสาย --</option>` +
+    beltLevels
+      .map(
+        (belt) => `
+          <option value="${belt.id}">
+            ${belt.name_th}
+          </option>
+        `
+      )
+      .join("");
+
+
+  const currentBelt =
+    member.current_belt;
+
+
+  if (currentBelt) {
+
+    detailBeltLevel.value =
+      String(
+        currentBelt.belt_level_id || ""
+      );
+
+    detailBeltStripe.value =
+      String(
+        currentBelt.stripe_count ?? 0
+      );
+
+    detailBeltDate.value =
+      currentBelt.awarded_date || "";
+
+  } else {
+
+    detailBeltLevel.value = "";
+    detailBeltStripe.value = "0";
+    detailBeltDate.value = "";
+  }
+
+
+  detailBeltBy.value =
+    "Owner";
+
+  detailBeltNote.value =
+    "";
+}
+editBeltButton.addEventListener(
+  "click",
+  () => {
+    beltEditForm.style.display =
+      "block";
+
+    beltDetailMessage.textContent =
+      "";
+  }
+);
+
+
+cancelBeltDetailButton.addEventListener(
+  "click",
+  () => {
+    const member =
+      members.find(
+        (item) =>
+          Number(item.id) ===
+          selectedMemberId
+      );
+
+    if (!member) {
+      return;
+    }
+
+    prepareBeltEditor(member);
+  }
+);
+
+
+saveBeltDetailButton.addEventListener(
+  "click",
+  async () => {
+
+    const adminKey =
+      sessionStorage.getItem(
+        "gambitAdminKey"
+      );
+
+    const role =
+      sessionStorage.getItem(
+        "gambitRole"
+      );
+
+
+    if (
+      role !== "owner" ||
+      !adminKey
+    ) {
+      beltDetailMessage.textContent =
+        "ไม่มีสิทธิ์แก้ไขระดับสาย";
+
+      return;
+    }
+
+
+    const beltLevelId =
+      Number(
+        detailBeltLevel.value
+      );
+
+    const stripeCount =
+      Number(
+        detailBeltStripe.value
+      );
+
+    const awardedDate =
+      detailBeltDate.value;
+
+
+    if (!beltLevelId) {
+      beltDetailMessage.textContent =
+        "กรุณาเลือกระดับสาย";
+
+      return;
+    }
+
+
+    if (!awardedDate) {
+      beltDetailMessage.textContent =
+        "กรุณาระบุวันที่ได้รับสาย";
+
+      return;
+    }
+
+
+    saveBeltDetailButton.disabled =
+      true;
+
+    saveBeltDetailButton.textContent =
+      "กำลังบันทึก...";
+
+    beltDetailMessage.textContent =
+      "";
+
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/update-belt",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+
+              "x-admin-key":
+                adminKey
+            },
+
+            body: JSON.stringify({
+              memberId:
+                selectedMemberId,
+
+              beltLevelId,
+
+              stripeCount,
+
+              awardedDate,
+
+              awardedBy:
+                detailBeltBy.value.trim() ||
+                "Owner",
+
+              note:
+                detailBeltNote.value.trim()
+            })
+          }
+        );
+
+
+      const data =
+        await response.json();
+
+
+      if (
+        !response.ok ||
+        !data.success
+      ) {
+        throw new Error(
+          data.error ||
+          data.details ||
+          "บันทึกระดับสายไม่สำเร็จ"
+        );
+      }
+
+
+      beltDetailMessage.textContent =
+        "บันทึกระดับสายเรียบร้อยแล้ว";
+
+
+      await loadMembers();
+
+
+      const updatedMember =
+        members.find(
+          (item) =>
+            Number(item.id) ===
+            selectedMemberId
+        );
+
+
+      if (updatedMember) {
+        openMemberDetail(
+          updatedMember
+        );
+      }
+
+    } catch (error) {
+
+      beltDetailMessage.textContent =
+        error instanceof Error
+          ? error.message
+          : "บันทึกระดับสายไม่สำเร็จ";
+
+    } finally {
+
+      saveBeltDetailButton.disabled =
+        false;
+
+      saveBeltDetailButton.textContent =
+        "บันทึกระดับสาย";
+    }
+  }
 );
 loadMembers();

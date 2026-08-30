@@ -768,7 +768,130 @@
         การแก้ระดับสายจะทำผ่านระบบเปลี่ยนสาย
         เพื่อเก็บประวัติการเลื่อนสายให้ถูกต้อง
       </small>
+<div
+  id="ownerBeltEditArea"
+  style="display:none; margin-top:16px;"
+>
 
+  <button
+    id="editBeltButton"
+    type="button"
+    style="
+      border:0;
+      background:#111;
+      color:#fff;
+      padding:10px 14px;
+      border-radius:10px;
+      font-weight:700;
+      cursor:pointer;
+    "
+  >
+    🥋 แก้ไขระดับสาย / Rank Bar
+  </button>
+
+
+  <div
+    id="beltEditForm"
+    style="display:none; margin-top:16px;"
+  >
+
+    <div class="member-form-grid">
+
+      <div class="member-form-group">
+        <label for="detailBeltLevel">
+          ระดับสาย
+        </label>
+
+        <select id="detailBeltLevel">
+          <option value="">
+            -- เลือกระดับสาย --
+          </option>
+        </select>
+      </div>
+
+
+      <div class="member-form-group">
+        <label for="detailBeltStripe">
+          Rank Bar
+        </label>
+
+        <select id="detailBeltStripe">
+          <option value="0">0 ขีด</option>
+          <option value="1">1 ขีด</option>
+          <option value="2">2 ขีด</option>
+          <option value="3">3 ขีด</option>
+          <option value="4">4 ขีด</option>
+        </select>
+      </div>
+
+
+      <div class="member-form-group">
+        <label for="detailBeltDate">
+          วันที่ได้รับสาย
+        </label>
+
+        <input
+          id="detailBeltDate"
+          type="date"
+        >
+      </div>
+
+
+      <div class="member-form-group">
+        <label for="detailBeltBy">
+          ผู้มอบสาย
+        </label>
+
+        <input
+          id="detailBeltBy"
+          type="text"
+          value="Owner"
+        >
+      </div>
+
+
+      <div class="member-form-group full">
+        <label for="detailBeltNote">
+          หมายเหตุ
+        </label>
+
+        <input
+          id="detailBeltNote"
+          type="text"
+          placeholder="เช่น ปรับ Rank Bar / เลื่อนสาย"
+        >
+      </div>
+
+    </div>
+
+
+    <div class="member-edit-actions">
+
+      <button
+        id="saveBeltDetailButton"
+        type="button"
+        style="
+          background:#111;
+          color:#fff;
+        "
+      >
+        บันทึกระดับสาย
+      </button>
+
+      <button
+        id="cancelBeltDetailButton"
+        type="button"
+      >
+        ยกเลิก
+      </button>
+
+    </div>
+
+    <p id="beltDetailMessage"></p>
+
+  </div>
+
+</div>
     </section>
 
 
