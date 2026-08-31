@@ -84,9 +84,152 @@ export default {
           attendance: existingRecords[0]
         });
       }
+// อ่านข้อมูลสมาชิก + สิทธิ์คงเหลือ
 
-      const now = new Date().toISOString();
+const memberResponse = await fetch(
+  `${supabaseUrl}/rest/v1/members` +
+    `?id=eq.${Number(memberId)}` +
+    `&select=id,member_status,membership_plan,remaining_sessions,checkin_count` +
+    `&limit=1`,
+  { headers }
+);
 
+      if (!memberResponse.ok) {
+        const details = await memberResponse.text();
+
+        return json(
+          {
+            error: "อ่านข้อมูลสมาชิกไม่สำเร็จ",
+            details
+          },
+          500
+        );
+      }
+
+      const members = await memberResponse.json();
+
+      if (!members.length) {
+        return json({ error: "ไม่พบสมาชิก" }, 404);
+      }
+const member = members[0];
+
+if (member.member_status !== "active") {
+  return json(
+    {
+      error: "สมาชิกไม่ได้อยู่ในสถานะ Active"
+    },
+    403
+  );
+}
+
+const membershipPlan =
+  String(member.membership_plan || "");
+
+const isClassPass =
+  membershipPlan.startsWith("class_pass_");
+
+const isDropIn =
+  membershipPlan === "drop_in";
+
+const isSessionBased =
+  isClassPass || isDropIn;
+
+if (
+  isSessionBased &&
+  Number(member.remaining_sessions || 0) <= 0
+) {
+  return json(
+    {
+      error: "สิทธิ์เข้าเรียนหมดแล้ว"
+    },
+    403
+  );
+}
+
+const newRemainingSessions =
+  isSessionBased
+    ? Number(member.remaining_sessions) - 1
+    : null;
+    // =====================================
+// ตรวจว่าสมาชิกมีสิทธิ์ในคลาสนี้จริง
+// =====================================
+
+// อ่าน class_id ของ session
+const sessionResponse = await fetch(
+  `${supabaseUrl}/rest/v1/class_sessions` +
+    `?id=eq.${Number(sessionId)}` +
+    `&status=eq.open` +
+    `&select=id,class_id` +
+    `&limit=1`,
+  { headers }
+);
+
+if (!sessionResponse.ok) {
+  const details =
+    await sessionResponse.text();
+
+  return json(
+    {
+      error: "ตรวจสอบข้อมูลคลาสไม่สำเร็จ",
+      details
+    },
+    500
+  );
+}
+
+const sessionRows =
+  await sessionResponse.json();
+
+if (!sessionRows.length) {
+  return json(
+    {
+      error:
+        "ไม่พบคลาส หรือคลาสนี้ถูกยกเลิกแล้ว"
+    },
+    404
+  );
+}
+
+const session =
+  sessionRows[0];
+
+const classAccessResponse = await fetch(
+  `${supabaseUrl}/rest/v1/member_classes` +
+    `?member_id=eq.${Number(memberId)}` +
+    `&class_id=eq.${Number(session.class_id)}` +
+    `&status=eq.active` +
+    `&select=id` +
+    `&limit=1`,
+  { headers }
+);
+
+if (!classAccessResponse.ok) {
+  const details =
+    await classAccessResponse.text();
+
+  return json(
+    {
+      error:
+        "ตรวจสอบสิทธิ์เข้าเรียนไม่สำเร็จ",
+      details
+    },
+    500
+  );
+}
+
+const classAccess =
+  await classAccessResponse.json();
+
+if (!classAccess.length) {
+  return json(
+    {
+      error:
+        "สมาชิกไม่มีสิทธิ์เข้าเรียนคลาสนี้"
+    },
+    403
+  );
+}
+const now = new Date().toISOString();
       // เพิ่มประวัติการเข้าเรียน
       const insertResponse = await fetch(
         `${supabaseUrl}/rest/v1/attendance`,
@@ -120,35 +263,9 @@ export default {
 
       const insertedAttendance = await insertResponse.json();
 
-      // อ่านยอดเดิมของสมาชิก
-      const memberResponse = await fetch(
-        `${supabaseUrl}/rest/v1/members` +
-          `?id=eq.${Number(memberId)}` +
-          `&select=id,checkin_count` +
-          `&limit=1`,
-        { headers }
-      );
 
-      if (!memberResponse.ok) {
-        const details = await memberResponse.text();
-
-        return json(
-          {
-            error: "อ่านข้อมูลสมาชิกไม่สำเร็จ",
-            details
-          },
-          500
-        );
-      }
-
-      const members = await memberResponse.json();
-
-      if (!members.length) {
-        return json({ error: "ไม่พบสมาชิก" }, 404);
-      }
-
-      const newCount =
-        Number(members[0].checkin_count || 0) + 1;
+     const newCount =
+  Number(member.checkin_count || 0) + 1;
 
       // อัปเดตยอดสะสม
       const updateResponse = await fetch(
@@ -162,10 +279,16 @@ export default {
             Prefer: "return=representation"
           },
           body: JSON.stringify({
-            last_checkin: now,
-            checkin_count: newCount,
-            updated_at: now
-          })
+  last_checkin: now,
+  checkin_count: newCount,
+  updated_at: now,
+  ...(isSessionBased
+    ? {
+        remaining_sessions:
+          newRemainingSessions
+      }
+    : {})
+})
         }
       );
 
