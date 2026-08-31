@@ -1014,7 +1014,59 @@
 </section>
 
     <p id="status">กำลังเชื่อมต่อกับ LINE...</p>
-<section id="memberMenu" class="member-actions">
+<section
+  id="checkinClassPanel"
+  style="
+    display:none;
+    margin:18px 0;
+    padding:18px;
+    background:#f7f7f7;
+    border-radius:16px;
+    text-align:left;
+  "
+>
+  <h2 style="margin:0 0 8px;">
+    🥋 เลือกคลาสเข้าเรียน
+  </h2>
+
+  <p
+    id="checkinClassStatus"
+    style="
+      margin:0 0 14px;
+      color:#666;
+      font-size:14px;
+    "
+  >
+    กำลังโหลดคลาส...
+  </p>
+
+  <div
+    id="checkinClassList"
+    style="
+      display:grid;
+      gap:10px;
+    "
+  ></div>
+
+  <button
+    id="closeCheckinClassButton"
+    type="button"
+    style="
+      width:100%;
+      margin-top:14px;
+      padding:12px;
+      border:1px solid #ddd;
+      border-radius:12px;
+      background:#fff;
+      color:#111;
+      font-weight:700;
+      cursor:pointer;
+    "
+  >
+    ยกเลิก
+  </button>
+</section>
+    <section id="memberMenu" class="member-actions">
 
   <button
     id="checkinButton"
@@ -1232,6 +1284,25 @@
     const pictureElement = document.getElementById("picture");
     const displayNameElement = document.getElementById("displayName");
     const checkinButton = document.getElementById("checkinButton");
+    const checkinClassPanel =
+  document.getElementById(
+    "checkinClassPanel"
+  );
+
+const checkinClassStatus =
+  document.getElementById(
+    "checkinClassStatus"
+  );
+
+const checkinClassList =
+  document.getElementById(
+    "checkinClassList"
+  );
+
+const closeCheckinClassButton =
+  document.getElementById(
+    "closeCheckinClassButton"
+  );
     const resultElement = document.getElementById("result");
     const memberMenu = document.getElementById("memberMenu");
     const historyButton =
@@ -1361,7 +1432,29 @@ await loadMemberProfile(idToken);
 
 checkinButton.style.display = "flex";
 
-       checkinButton.addEventListener("click", checkIn);
+    checkinButton.addEventListener(
+  "click",
+  async () => {
+    try {
+      historyPanel.style.display = "none";
+      paymentHistoryPanel.style.display = "none";
+      renewPanel.style.display = "none";
+
+      resultElement.style.display = "none";
+
+      await loadCheckinSessions();
+
+    } catch (error) {
+      console.error(error);
+
+      showError(
+        error instanceof Error
+          ? error.message
+          : "โหลดคลาสไม่สำเร็จ"
+      );
+    }
+  }
+);
 
       } catch (error) {
   console.error(error);
@@ -1738,10 +1831,126 @@ if (isSessionBased) {
   statusElement.textContent =
     "พร้อมแล้ว กดเช็กชื่อเข้าเรียนได้เลย";
 }
-    async function checkIn() {
-      checkinButton.disabled = true;
-      checkinButton.textContent = "กำลังเช็กชื่อ...";
+    async function loadCheckinSessions() {
+  const idToken = liff.getIDToken();
 
+  if (!idToken) {
+    throw new Error(
+      "ไม่พบข้อมูลเข้าสู่ระบบ LINE"
+    );
+  }
+
+  checkinClassPanel.style.display = "block";
+
+  checkinClassStatus.className = "";
+  checkinClassStatus.textContent =
+    "กำลังโหลดคลาสวันนี้...";
+
+  checkinClassList.innerHTML = "";
+
+  const response = await fetch(
+    "/api/checkin",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        mode: "sessions",
+        idToken
+      })
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok || !data.success) {
+    throw new Error(
+      data.error ||
+        "โหลดคลาสวันนี้ไม่สำเร็จ"
+    );
+  }
+
+  const sessions =
+    Array.isArray(data.sessions)
+      ? data.sessions
+      : [];
+
+  if (!sessions.length) {
+    checkinClassStatus.textContent =
+      "วันนี้ยังไม่มีคลาสที่คุณมีสิทธิ์เข้าเรียน";
+
+    return;
+  }
+
+  checkinClassStatus.textContent =
+    `เลือกคลาสที่ต้องการเช็กชื่อ (${sessions.length} คลาส)`;
+
+  sessions.forEach((session) => {
+    const className =
+      session.classes?.name ||
+      "ไม่ระบุชื่อคลาส";
+
+    const startTime =
+      String(
+        session.start_time || ""
+      ).slice(0, 5);
+
+    const endTime =
+      String(
+        session.end_time || ""
+      ).slice(0, 5);
+
+    const button =
+      document.createElement("button");
+
+    button.type = "button";
+
+    button.style.width = "100%";
+    button.style.padding = "14px";
+    button.style.border =
+      "1px solid #dddddd";
+    button.style.borderRadius = "12px";
+    button.style.background = "#ffffff";
+    button.style.color = "#111111";
+    button.style.textAlign = "left";
+    button.style.cursor = "pointer";
+
+    const nameElement =
+      document.createElement("strong");
+
+    nameElement.style.display = "block";
+    nameElement.style.fontSize = "16px";
+
+    nameElement.textContent =
+      className;
+
+    const timeElement =
+      document.createElement("span");
+
+    timeElement.style.display = "block";
+    timeElement.style.marginTop = "5px";
+    timeElement.style.color = "#666666";
+    timeElement.style.fontSize = "13px";
+
+    timeElement.textContent =
+      `🕒 ${startTime} - ${endTime} น.`;
+
+    button.appendChild(nameElement);
+    button.appendChild(timeElement);
+
+    button.addEventListener(
+      "click",
+      () => {
+        checkIn(session.id);
+      }
+    );
+
+    checkinClassList.appendChild(button);
+  });
+}
+async function checkIn(sessionId) {
+      checkinButton.disabled = true;
       statusElement.className = "";
       statusElement.textContent = "กำลังตรวจสอบข้อมูลกับ LINE...";
 
@@ -1769,9 +1978,11 @@ if (!decodedToken.exp || decodedToken.exp <= currentTime + 30) {
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-            idToken: idToken
-          })
+         body: JSON.stringify({
+  mode: "checkin",
+  idToken,
+  sessionId
+})
         });
 
         let data;
@@ -1881,7 +2092,11 @@ updateClassPassStatus(
           `เวลา: ${formatThaiDateTime(data.checkedInAt)}`;
 
         resultElement.style.display = "block";
-        checkinButton.style.display = "none";
+    
+checkinClassPanel.style.display = "none";
+checkinClassList.innerHTML = "";
+
+checkinButton.disabled = false;
        
 
       } catch (error) {
@@ -1890,11 +2105,19 @@ updateClassPassStatus(
         showError(
           "เช็กชื่อไม่สำเร็จ\n" + error.message
         );
-
-        checkinButton.textContent = "ลองเช็กชื่ออีกครั้ง";
       }
     }
-historyButton.addEventListener(
+closeCheckinClassButton.addEventListener(
+  "click",
+  () => {
+    checkinClassPanel.style.display = "none";
+    checkinClassList.innerHTML = "";
+
+    checkinClassStatus.textContent =
+      "กำลังโหลดคลาส...";
+  }
+);
+    historyButton.addEventListener(
   "click",
   async () => {
     try {

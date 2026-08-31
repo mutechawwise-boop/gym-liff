@@ -21,6 +21,8 @@ const idToken = body.idToken;
 const mode = String(
   body.mode || "checkin"
 ).trim();
+const requestedSessionId =
+  Number(body.sessionId);
       if (!idToken) {
         return json({ error: "ไม่พบ LINE ID token" }, 400);
       }
@@ -883,18 +885,213 @@ if (paymentMethod === "transfer") {
     transaction: transactions[0]
   });
 }
-      // หา Session ที่เปิดอยู่ของวันนี้
-      const sessionResponse = await fetch(
-        `${supabaseUrl}/rest/v1/class_sessions` +
-          `?session_date=eq.${todayThailand}` +
-          `&status=eq.open` +
-          `&select=id,class_id,session_date,start_time,end_time` +
-          `&order=start_time.asc` +
-          `&limit=1`,
-        {
-          headers: commonHeaders
-        }
-      );
+    // =====================================
+// SESSIONS MODE
+// โหลดคลาสวันนี้ที่สมาชิกมีสิทธิ์
+// =====================================
+
+if (mode === "sessions") {
+
+  // หาสมาชิกจาก LINE
+  const memberResponse = await fetch(
+    `${supabaseUrl}/rest/v1/members` +
+      `?line_user_id=eq.${encodeURIComponent(lineUserId)}` +
+      `&select=id,member_status,membership_start_date,membership_expiry_date` +
+      `&limit=1`,
+    {
+      headers: commonHeaders
+    }
+  );
+
+  if (!memberResponse.ok) {
+    const details =
+      await memberResponse.text();
+
+    return json(
+      {
+        error:
+          "อ่านข้อมูลสมาชิกไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const members =
+    await memberResponse.json();
+
+  if (!members.length) {
+    return json(
+      {
+        error:
+          "ยังไม่พบข้อมูลสมาชิก"
+      },
+      404
+    );
+  }
+
+  const member =
+    members[0];
+
+  if (member.member_status !== "active") {
+    return json(
+      {
+        error:
+          "สมาชิกยังไม่พร้อมใช้งาน"
+      },
+      403
+    );
+  }
+
+  if (
+    member.membership_start_date &&
+    todayThailand <
+      member.membership_start_date
+  ) {
+    return json(
+      {
+        error:
+          "สิทธิ์สมาชิกยังไม่เริ่มใช้งาน"
+      },
+      403
+    );
+  }
+
+  if (
+    member.membership_expiry_date &&
+    todayThailand >
+      member.membership_expiry_date
+  ) {
+    return json(
+      {
+        error:
+          "สมาชิกหมดอายุแล้ว"
+      },
+      403
+    );
+  }
+
+
+  // อ่านคลาสที่สมาชิกมีสิทธิ์
+  const accessResponse = await fetch(
+    `${supabaseUrl}/rest/v1/member_classes` +
+      `?member_id=eq.${member.id}` +
+      `&status=eq.active` +
+      `&select=class_id`,
+    {
+      headers: commonHeaders
+    }
+  );
+
+  if (!accessResponse.ok) {
+    const details =
+      await accessResponse.text();
+
+    return json(
+      {
+        error:
+          "อ่านสิทธิ์คลาสไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const classAccess =
+    await accessResponse.json();
+
+  const classIds =
+    [
+      ...new Set(
+        classAccess
+          .map(
+            (item) =>
+              Number(item.class_id)
+          )
+          .filter(
+            (id) =>
+              Number.isInteger(id) &&
+              id > 0
+          )
+      )
+    ];
+
+  if (!classIds.length) {
+    return json({
+      success: true,
+      mode: "sessions",
+      date: todayThailand,
+      sessions: []
+    });
+  }
+
+
+  // ดึงเฉพาะคลาสวันนี้
+  // ที่เปิดอยู่และสมาชิกมีสิทธิ์
+  const sessionsResponse = await fetch(
+    `${supabaseUrl}/rest/v1/class_sessions` +
+      `?session_date=eq.${todayThailand}` +
+      `&status=eq.open` +
+      `&class_id=in.(${classIds.join(",")})` +
+      `&select=id,class_id,session_date,start_time,end_time,classes(id,name)` +
+      `&order=start_time.asc`,
+    {
+      headers: commonHeaders
+    }
+  );
+
+  if (!sessionsResponse.ok) {
+    const details =
+      await sessionsResponse.text();
+
+    return json(
+      {
+        error:
+          "โหลดคลาสวันนี้ไม่สำเร็จ",
+        details
+      },
+      500
+    );
+  }
+
+  const sessions =
+    await sessionsResponse.json();
+
+  return json({
+    success: true,
+    mode: "sessions",
+    date: todayThailand,
+    sessions
+  });
+}
+// =====================================
+// CHECK-IN MODE
+// ต้องระบุคลาสที่จะเช็กชื่อ
+// =====================================
+
+if (
+  !Number.isInteger(requestedSessionId) ||
+  requestedSessionId <= 0
+) {
+  return json(
+    {
+      error: "กรุณาเลือกคลาสที่จะเช็กชื่อ"
+    },
+    400
+  );
+}
+
+const sessionResponse = await fetch(
+  `${supabaseUrl}/rest/v1/class_sessions` +
+    `?id=eq.${requestedSessionId}` +
+    `&session_date=eq.${todayThailand}` +
+    `&status=eq.open` +
+    `&select=id,class_id,session_date,start_time,end_time` +
+    `&limit=1`,
+  {
+    headers: commonHeaders
+  }
+);
 
       if (!sessionResponse.ok) {
         const details = await sessionResponse.text();
@@ -910,16 +1107,21 @@ if (paymentMethod === "transfer") {
 
       const sessions = await sessionResponse.json();
 
-      if (sessions.length === 0) {
-        return json(
-          {
-            error: "วันนี้ยังไม่ได้เปิดคลาส"
-          },
-          400
-        );
-      }
+    if (sessions.length === 0) {
+  return json(
+    {
+      error:
+        "ไม่พบคลาสที่เลือก หรือคลาสนี้ไม่ได้เปิดอยู่วันนี้"
+    },
+    404
+  );
+}
 
-      const sessionId = sessions[0].id;
+const session =
+  sessions[0];
+
+const sessionId =
+  session.id;
 
       // ค้นหาสมาชิกจาก LINE User ID
       const memberResponse = await fetch(
@@ -1000,7 +1202,51 @@ if (
     403
   );
 }
-      // ตรวจสอบว่าคลาสนี้มีการเช็กชื่อแล้วหรือยัง
+      // =====================================
+// ตรวจสิทธิ์เข้าเรียนของสมาชิก
+// =====================================
+
+const classAccessResponse = await fetch(
+  `${supabaseUrl}/rest/v1/member_classes` +
+    `?member_id=eq.${currentMember.id}` +
+    `&class_id=eq.${Number(session.class_id)}` +
+    `&status=eq.active` +
+    `&select=id` +
+    `&limit=1`,
+  {
+    headers: commonHeaders
+  }
+);
+
+if (!classAccessResponse.ok) {
+  const details =
+    await classAccessResponse.text();
+
+  return json(
+    {
+      error:
+        "ตรวจสอบสิทธิ์เข้าเรียนไม่สำเร็จ",
+      details
+    },
+    500
+  );
+}
+
+const classAccess =
+  await classAccessResponse.json();
+
+if (!classAccess.length) {
+  return json(
+    {
+      error:
+        "คุณไม่มีสิทธิ์เข้าเรียนคลาสนี้",
+      message:
+        "กรุณาเลือกคลาสที่อยู่ในสิทธิ์สมาชิกของคุณ"
+    },
+    403
+  );
+}
+// ตรวจสอบว่าคลาสนี้มีการเช็กชื่อแล้วหรือยัง
       const attendanceResponse = await fetch(
         `${supabaseUrl}/rest/v1/attendance` +
           `?session_id=eq.${sessionId}` +
@@ -1134,17 +1380,11 @@ if (isSessionBased) {
         );
       }
 
-      const lastCheckinThailand = currentMember.last_checkin
-        ? getThailandDateKey(currentMember.last_checkin)
-        : null;
+     const oldCount =
+  Number(currentMember.checkin_count || 0);
 
-      const oldCount = Number(currentMember.checkin_count || 0);
-
-      // ป้องกันการนับซ้ำขณะย้ายจากระบบเก่า
-      const newCount =
-        lastCheckinThailand === todayThailand
-          ? oldCount
-          : oldCount + 1;
+const newCount =
+  oldCount + 1;
 
       // อัปเดตข้อมูลสรุปของสมาชิก
       const updateResponse = await fetch(
@@ -1160,18 +1400,12 @@ if (isSessionBased) {
   last_checkin: now,
   checkin_count: newCount,
   updated_at: now,
-
-  ...(isSessionBased
-    ? {
-        remaining_sessions:
-          newRemainingSessions,
-
-        member_status:
-          newRemainingSessions <= 0
-            ? "inactive"
-            : "active"
-      }
-    : {})
+...(isSessionBased
+  ? {
+      remaining_sessions:
+        newRemainingSessions
+    }
+  : {})
 })
         }
       );
