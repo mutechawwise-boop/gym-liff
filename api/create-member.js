@@ -1042,6 +1042,172 @@ remaining_sessions:
       500
     );
   }
+  // =====================================
+// AUTO CLASS ACCESS
+// สร้างสิทธิ์คลาสตามกลุ่มสมาชิก
+// =====================================
+
+const allowedClassNames =
+  memberGroup === "kids"
+    ? [
+        "Kids BJJ"
+      ]
+    : [
+        "Adult BJJ",
+        "No-Gi",
+        "BJJ Gi Basic"
+      ];
+
+const classFilter =
+  encodeURIComponent(
+    `(${allowedClassNames.join(",")})`
+  );
+
+const classResponse =
+  await fetch(
+    `${supabaseUrl}/rest/v1/classes` +
+     `?name=in.${classFilter}` +
+      `&active=eq.true` +
+      `&select=id,name`,
+    {
+      headers: supabaseHeaders
+    }
+  );
+
+if (!classResponse.ok) {
+  const details =
+    await classResponse.text();
+
+  return json(
+    {
+      error:
+        "สร้างสมาชิกสำเร็จ แต่โหลดสิทธิ์คลาสไม่สำเร็จ",
+      member,
+      details
+    },
+    500
+  );
+}
+
+const allowedClasses =
+  await classResponse.json();
+
+if (!allowedClasses.length) {
+  return json(
+    {
+      error:
+        "ไม่พบคลาสสำหรับกลุ่มสมาชิกที่เลือก",
+      member
+    },
+    500
+  );
+}
+// =====================================
+// CREATE / UPDATE MEMBER CLASS ACCESS
+// =====================================
+
+const existingClassAccessResponse =
+  await fetch(
+    `${supabaseUrl}/rest/v1/member_classes` +
+      `?member_id=eq.${member.id}` +
+      `&select=id,class_id,status`,
+    {
+      headers: supabaseHeaders
+    }
+  );
+
+if (!existingClassAccessResponse.ok) {
+  const details =
+    await existingClassAccessResponse.text();
+
+  return json(
+    {
+      error:
+        "ตรวจสอบสิทธิ์คลาสเดิมไม่สำเร็จ",
+      member,
+      details
+    },
+    500
+  );
+}
+
+const existingClassAccess =
+  await existingClassAccessResponse.json();
+
+for (const classItem of allowedClasses) {
+
+  const existing =
+    existingClassAccess.find(
+      (item) =>
+        Number(item.class_id) ===
+        Number(classItem.id)
+    );
+
+  if (existing) {
+
+    if (existing.status !== "active") {
+
+      const updateAccessResponse =
+        await fetch(
+          `${supabaseUrl}/rest/v1/member_classes` +
+            `?id=eq.${existing.id}`,
+          {
+            method: "PATCH",
+            headers: supabaseHeaders,
+            body: JSON.stringify({
+              status: "active"
+            })
+          }
+        );
+
+      if (!updateAccessResponse.ok) {
+        const details =
+          await updateAccessResponse.text();
+
+        return json(
+          {
+            error:
+              "เปิดสิทธิ์คลาสเดิมไม่สำเร็จ",
+            member,
+            details
+          },
+          500
+        );
+      }
+    }
+
+  } else {
+
+    const createAccessResponse =
+      await fetch(
+        `${supabaseUrl}/rest/v1/member_classes`,
+        {
+          method: "POST",
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            member_id: member.id,
+            class_id: classItem.id,
+            status: "active"
+          })
+        }
+      );
+
+    if (!createAccessResponse.ok) {
+      const details =
+        await createAccessResponse.text();
+
+      return json(
+        {
+          error:
+            "สร้างสิทธิ์เข้าเรียนไม่สำเร็จ",
+          member,
+          details
+        },
+        500
+      );
+    }
+  }
+}
 // บันทึกระดับสายเริ่มต้น + Rank Bar
 const beltHistoryResponse =
   await fetch(
