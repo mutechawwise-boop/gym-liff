@@ -76,8 +76,8 @@ if (!isCoach && !isOwner) {
 ),
 
   supabase.request(
-    `class_sessions?select=id,start_time,end_time,class_id,classes(id,name)&session_date=eq.${today}`
-  ),
+  `class_sessions?select=id,start_time,end_time,class_id,status,classes(id,name)&session_date=eq.${today}&status=eq.open`
+),
 
   supabase.request(
     "attendance?select=id,session_id,member_id"
