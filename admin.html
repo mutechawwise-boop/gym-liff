@@ -185,10 +185,10 @@
     }
 
     .action-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
 
     .form-group { margin-bottom: 16px; }
 
@@ -642,9 +642,7 @@
      <section id="membersSection">
         <h2 style="margin-top: 0;">👥 จัดการสมาชิก</h2>
         <div class="action-grid">
-        <button id="openCreateMemberButton" type="button">
-            ➕ เพิ่มสมาชิกใหม่
-          </button>
+    
           <button id="refreshMembersButton" class="secondary-button" type="button">
             🔄 โหลดข้อมูลสมาชิกใหม่
           </button>
@@ -961,73 +959,6 @@
     </div>
   </section>
 
-  <section id="createMemberModal" class="modal-backdrop">
-    <div class="modal">
-      <h2>➕ เพิ่มสมาชิกใหม่</h2>
-
-      <div class="form-group">
-        <label for="memberNickname">ชื่อเล่น</label>
-        <input id="memberNickname" type="text" placeholder="เช่น Cholmark">
-      </div>
-
-      <div class="form-group">
-        <label for="memberFullName">ชื่อจริง</label>
-        <input id="memberFullName" type="text" placeholder="ชื่อและนามสกุล">
-      </div>
-
-      <div class="form-group">
-        <label for="memberPhone">เบอร์โทร</label>
-        <input id="memberPhone" type="tel" placeholder="เช่น 0812345678">
-      </div>
-
-      <div class="form-group">
-        <label for="memberStatus">สถานะสมาชิก</label>
-        <select id="memberStatus">
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="suspended">Suspended</option>
-        </select>
-      </div>
-<div class="form-group">
-  <label for="membershipStartDate">
-    วันที่เริ่มสมาชิก
-  </label>
-
-  <input
-    id="membershipStartDate"
-    type="date"
-  >
-</div>
-
-<div class="form-group">
-  <label for="membershipExpiryDate">
-    วันหมดอายุสมาชิก
-  </label>
-
-  <input
-    id="membershipExpiryDate"
-    type="date"
-  >
-</div>
-      
-      <div class="form-group">
-        <label>เลือกคลาสที่ลงทะเบียน</label>
-        <div id="createMemberClassList" class="checkbox-list"></div>
-      </div>
-
-      <p id="createMemberError" class="error"></p>
-
-      <div class="modal-actions">
-        <button id="cancelCreateMemberButton" class="secondary-button" type="button">
-          ยกเลิก
-        </button>
-        <button id="saveCreateMemberButton" type="button">
-          เพิ่มสมาชิก
-        </button>
-      </div>
-    </div>
-  </section>
-
 <script type="module">
 import { createAuth } from "./js/auth.js";
 import {
@@ -1046,7 +977,6 @@ import {
       logoutButton: document.getElementById("logoutButton"),
       refreshButton: document.getElementById("refreshButton"),
       refreshMembersButton: document.getElementById("refreshMembersButton"),
-      openCreateMemberButton: document.getElementById("openCreateMemberButton"),
       memberActionMessage: document.getElementById("memberActionMessage"),
       sessionSelect: document.getElementById("sessionSelect"),
       content: document.getElementById("content"),
@@ -1127,17 +1057,6 @@ saveEditSessionButton:
       enrollmentError: document.getElementById("enrollmentError"),
       cancelEnrollmentButton: document.getElementById("cancelEnrollmentButton"),
       saveEnrollmentButton: document.getElementById("saveEnrollmentButton"),
-      createMemberModal: document.getElementById("createMemberModal"),
-      memberNickname: document.getElementById("memberNickname"),
-      memberFullName: document.getElementById("memberFullName"),
-      memberPhone: document.getElementById("memberPhone"),
-      memberStatus: document.getElementById("memberStatus"),
-      membershipStartDate: document.getElementById("membershipStartDate"),
-      membershipExpiryDate: document.getElementById("membershipExpiryDate"),
-      createMemberClassList: document.getElementById("createMemberClassList"),
-      createMemberError: document.getElementById("createMemberError"),
-      cancelCreateMemberButton: document.getElementById("cancelCreateMemberButton"),
-      saveCreateMemberButton: document.getElementById("saveCreateMemberButton")
     };
 
     const state = {
@@ -2536,50 +2455,7 @@ async function saveEnrollmentChanges() {
       "➕ เพิ่มคลาส / Private";
   }
 }
-function openCreateMemberModal() {
 
-  elements.memberNickname.value = "";
-  elements.memberFullName.value = "";
-  elements.memberPhone.value = "";
-  elements.memberStatus.value = "active";
-
-  elements.membershipStartDate.value =
-    thailandDateValue();
-
-  elements.membershipExpiryDate.value =
-    "";
-
-  elements.createMemberError.textContent =
-    "";
-
-  elements.createMemberClassList.innerHTML =
-    "";
-
-  (state.overview?.classes || []).forEach(
-    (classItem) => {
-
-      elements.createMemberClassList.appendChild(
-        createClassCheckbox(
-          classItem,
-          false,
-          "create-member"
-        )
-      );
-
-    }
-  );
-
-  elements.saveCreateMemberButton.disabled =
-    false;
-
-  elements.saveCreateMemberButton.textContent =
-    "เพิ่มสมาชิก";
-
-  elements.createMemberModal
-    .classList.add("open");
-
-  elements.memberNickname.focus();
-}
    function changeScheduleDay(days) {
 
   const currentDate =
@@ -2650,10 +2526,7 @@ elements.nextScheduleDayButton.addEventListener(
   () => changeScheduleDay(1)
 );
     elements.createSessionButton.addEventListener("click", createSession);
-    elements.openCreateMemberButton.addEventListener(
-      "click",
-      openCreateMemberModal
-    );
+  
 elements.cancelEditSessionButton.addEventListener(
   "click",
   closeEditSessionModal
@@ -2674,20 +2547,10 @@ elements.saveEditSessionButton.addEventListener(
       saveEnrollmentChanges
     );
 
-    elements.cancelCreateMemberButton.addEventListener(
-      "click",
-      closeCreateMemberModal
-    );
-    elements.saveCreateMemberButton.addEventListener(
-      "click",
-      createMember
-    );
-
     [
   [elements.editSessionModal, closeEditSessionModal],
   [elements.beltModal, closeBeltModal],
   [elements.enrollmentModal, closeEnrollmentModal],
-  [elements.createMemberModal, closeCreateMemberModal]
 ].forEach(([modal, closeFunction]) => {
       modal.addEventListener("click", (event) => {
         if (event.target === modal) closeFunction();
