@@ -161,7 +161,97 @@
       color: #777;
       font-size: 13px;
     }
+.membership-stat {
+  width: 100%;
+  min-height: 130px;
+  border: 1px solid #e4e4e4;
+  text-align: left;
+  cursor: pointer;
+  transition: .18s ease;
+}
 
+.membership-stat:hover {
+  transform: translateY(-2px);
+  border-color: #aaa;
+  box-shadow: 0 6px 18px rgba(0,0,0,.08);
+}
+
+.membership-stat:focus-visible {
+  outline: 3px solid #111;
+  outline-offset: 2px;
+}
+
+.membership-active {
+  border-left: 5px solid #1c9b4a;
+}
+
+.membership-warning {
+  border-left: 5px solid #e6a700;
+}
+
+.membership-expired {
+  border-left: 5px solid #d32f2f;
+}
+
+.membership-stat.selected {
+  border-color: #111;
+  box-shadow: 0 0 0 2px #111;
+}
+
+.member-drilldown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  background: #fafafa;
+  border: 1px solid #e4e4e4;
+  border-radius: 12px;
+}
+
+.member-drilldown-name {
+  margin: 0;
+  font-weight: 800;
+}
+
+.member-drilldown-detail {
+  margin: 5px 0 0;
+  color: #777;
+  font-size: 13px;
+}
+
+.member-drilldown-status {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.member-status-active {
+  background: #e5f8eb;
+  color: #087b32;
+}
+
+.member-status-warning {
+  background: #fff0db;
+  color: #b54708;
+}
+
+.member-status-expired {
+  background: #fde8e8;
+  color: #b42318;
+}
+
+@media (max-width: 600px) {
+
+  .member-drilldown-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+}
     .empty-state {
       padding: 24px;
       color: #777;
@@ -269,6 +359,164 @@
           <span class="owner-stat-caption">คน</span>
         </article>
       </div>
+    </section>
+        <!-- =========================
+         MEMBERSHIP OVERVIEW
+    ========================== -->
+    <section id="membershipOverview" class="owner-card">
+
+      <h2>👥 สมาชิก</h2>
+
+      <div class="owner-grid">
+
+        <button
+          type="button"
+          class="owner-stat membership-stat"
+          data-member-filter="all"
+        >
+          <span class="owner-stat-label">
+            👥 สมาชิกทั้งหมด
+          </span>
+
+          <strong
+            id="ownerTotalMembers"
+            class="owner-stat-number"
+          >
+            -
+          </strong>
+
+          <span class="owner-stat-caption">
+            คน · กดเพื่อดูรายชื่อ
+          </span>
+        </button>
+
+
+        <button
+          type="button"
+          class="owner-stat membership-stat membership-active"
+          data-member-filter="active"
+        >
+          <span class="owner-stat-label">
+            🟢 สมาชิก Active
+          </span>
+
+          <strong
+            id="ownerActiveMembers"
+            class="owner-stat-number"
+          >
+            -
+          </strong>
+
+          <span class="owner-stat-caption">
+            คน · กดเพื่อดูรายชื่อ
+          </span>
+        </button>
+
+
+        <button
+          type="button"
+          class="owner-stat membership-stat membership-warning"
+          data-member-filter="expiring"
+        >
+          <span class="owner-stat-label">
+            ⚠️ ใกล้หมดอายุ
+          </span>
+
+          <strong
+            id="ownerExpiringMembers"
+            class="owner-stat-number"
+          >
+            -
+          </strong>
+
+          <span class="owner-stat-caption">
+            ≤ 7 วัน · กดเพื่อดูรายชื่อ
+          </span>
+        </button>
+
+
+        <button
+          type="button"
+          class="owner-stat membership-stat membership-expired"
+          data-member-filter="expired"
+        >
+          <span class="owner-stat-label">
+            🔴 หมดอายุแล้ว
+          </span>
+
+          <strong
+            id="ownerExpiredMembers"
+            class="owner-stat-number"
+          >
+            -
+          </strong>
+
+          <span class="owner-stat-caption">
+            คน · กดเพื่อดูรายชื่อ
+          </span>
+        </button>
+
+      </div>
+
+
+      <!-- รายชื่อที่เปิดจากการ์ด -->
+      <div
+        id="memberDrilldown"
+        style="
+          display:none;
+          margin-top:20px;
+        "
+      >
+
+        <div
+          class="owner-section-header"
+          style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:12px;
+          "
+        >
+
+          <div>
+            <h3
+              id="memberDrilldownTitle"
+              style="margin:0;"
+            >
+              รายชื่อสมาชิก
+            </h3>
+
+            <p
+              id="memberDrilldownCaption"
+              style="
+                margin:5px 0 0;
+                color:#777;
+              "
+            ></p>
+          </div>
+
+          <button
+            id="closeMemberDrilldownButton"
+            type="button"
+            style="
+              width:auto;
+              min-height:36px;
+              padding:7px 12px;
+            "
+          >
+            ปิด
+          </button>
+
+        </div>
+
+
+        <div
+          id="memberDrilldownList"
+          style="margin-top:14px;"
+        ></div>
+
+      </div>
+
     </section>
 <section id="memberRegistrations" class="owner-card">
   <div class="owner-section-header">
@@ -491,6 +739,347 @@
     if (!savedAdminKey) {
       window.location.href = "admin.html";
     }
+function calculateMemberDaysRemaining(expiryDate) {
+
+  if (!expiryDate) {
+    return null;
+  }
+
+  const today =
+    new Date(
+      new Intl.DateTimeFormat(
+        "en-CA",
+        {
+          timeZone: "Asia/Bangkok",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit"
+        }
+      ).format(new Date()) +
+      "T00:00:00+07:00"
+    );
+
+  const expiry =
+    new Date(
+      `${expiryDate}T00:00:00+07:00`
+    );
+
+  return Math.round(
+    (
+      expiry.getTime() -
+      today.getTime()
+    ) /
+    (1000 * 60 * 60 * 24)
+  );
+}
+
+
+function getMemberDisplayName(member) {
+
+  return (
+    member.display_name ||
+    member.nickname ||
+    "ไม่ระบุชื่อ"
+  );
+
+}
+
+
+function getMemberStatus(member) {
+
+  const days =
+    calculateMemberDaysRemaining(
+      member.membership_expiry_date
+    );
+
+  if (days === null) {
+
+    return {
+      text: "ไม่ระบุวันหมดอายุ",
+      className: ""
+    };
+
+  }
+
+  if (days < 0) {
+
+    return {
+      text: "หมดอายุแล้ว",
+      className: "member-status-expired"
+    };
+
+  }
+
+  if (days <= 7) {
+
+    return {
+      text: `เหลือ ${days} วัน`,
+      className: "member-status-warning"
+    };
+
+  }
+
+  return {
+    text: "Active",
+    className: "member-status-active"
+  };
+
+}
+
+
+function filterMembersByType(
+  members,
+  type
+) {
+
+  if (type === "all") {
+    return [...members];
+  }
+
+  return members.filter((member) => {
+
+    const days =
+      calculateMemberDaysRemaining(
+        member.membership_expiry_date
+      );
+
+    if (type === "active") {
+
+      return (
+        days !== null &&
+        days >= 0
+      );
+
+    }
+
+    if (type === "expiring") {
+
+      return (
+        days !== null &&
+        days >= 0 &&
+        days <= 7
+      );
+
+    }
+
+    if (type === "expired") {
+
+      return (
+        days !== null &&
+        days < 0
+      );
+
+    }
+
+    return false;
+
+  });
+
+}
+
+
+function renderMemberDrilldown(
+  members,
+  type
+) {
+
+  const list =
+    document.getElementById(
+      "memberDrilldownList"
+    );
+
+  const title =
+    document.getElementById(
+      "memberDrilldownTitle"
+    );
+
+  const caption =
+    document.getElementById(
+      "memberDrilldownCaption"
+    );
+
+  const drilldown =
+    document.getElementById(
+      "memberDrilldown"
+    );
+
+
+  const filtered =
+    filterMembersByType(
+      members,
+      type
+    );
+
+
+  const titles = {
+
+    all:
+      "👥 สมาชิกทั้งหมด",
+
+    active:
+      "🟢 สมาชิก Active",
+
+    expiring:
+      "⚠️ สมาชิกใกล้หมดอายุ",
+
+    expired:
+      "🔴 สมาชิกหมดอายุแล้ว"
+
+  };
+
+
+  title.textContent =
+    titles[type] || "รายชื่อสมาชิก";
+
+
+  caption.textContent =
+    `${filtered.length} คน`;
+
+
+  if (!filtered.length) {
+
+    list.innerHTML = `
+      <div class="empty-state">
+        ไม่มีสมาชิกในรายการนี้
+      </div>
+    `;
+
+  } else {
+
+    const sorted =
+      [...filtered].sort(
+        (a, b) =>
+          getMemberDisplayName(a)
+            .localeCompare(
+              getMemberDisplayName(b),
+              "th"
+            )
+      );
+
+
+    list.innerHTML =
+      sorted
+        .map((member) => {
+
+          const status =
+            getMemberStatus(member);
+
+          const expiry =
+            member.membership_expiry_date
+              ? `หมดอายุ ${member.membership_expiry_date}`
+              : "ไม่ระบุวันหมดอายุ";
+
+
+          return `
+            <div class="member-drilldown-row">
+
+              <div>
+
+                <p class="member-drilldown-name">
+                  ${getMemberDisplayName(member)}
+                </p>
+
+                <p class="member-drilldown-detail">
+                  ${member.nickname
+                    ? `ชื่อเล่น: ${member.nickname} · `
+                    : ""
+                  }
+
+                  ${expiry}
+                </p>
+
+              </div>
+
+
+              <span
+                class="member-drilldown-status ${status.className}"
+              >
+                ${status.text}
+              </span>
+
+            </div>
+          `;
+
+        })
+        .join("");
+
+  }
+
+
+  drilldown.style.display =
+    "block";
+
+
+  drilldown.scrollIntoView({
+    behavior: "smooth",
+    block: "nearest"
+  });
+
+}
+
+
+function setupMemberDrilldown(
+  members
+) {
+
+  const cards =
+    document.querySelectorAll(
+      "[data-member-filter]"
+    );
+
+
+  cards.forEach((card) => {
+
+    card.onclick = () => {
+
+      cards.forEach((item) => {
+
+        item.classList.remove(
+          "selected"
+        );
+
+      });
+
+
+      card.classList.add(
+        "selected"
+      );
+
+
+      renderMemberDrilldown(
+        members,
+        card.dataset.memberFilter
+      );
+
+    };
+
+  });
+
+
+  const closeButton =
+    document.getElementById(
+      "closeMemberDrilldownButton"
+    );
+
+
+  closeButton.onclick = () => {
+
+    document.getElementById(
+      "memberDrilldown"
+    ).style.display = "none";
+
+
+    cards.forEach((item) => {
+
+      item.classList.remove(
+        "selected"
+      );
+
+    });
+
+  };
+
+}
 async function loadOwnerDashboard() {
   const adminKey =
     sessionStorage.getItem("gambitAdminKey");
@@ -521,6 +1110,68 @@ async function loadOwnerDashboard() {
 
   document.getElementById("todayExpiringCount").textContent =
     data.todayExpiringCount ?? 0;
+      /* =========================
+     MEMBERSHIP DRILL-DOWN
+  ========================== */
+
+  const members =
+    Array.isArray(data.members)
+      ? data.members.filter(
+          (member) => !member.is_guest
+        )
+      : [];
+
+  document.getElementById("ownerTotalMembers").textContent =
+    members.length;
+
+  document.getElementById("ownerActiveMembers").textContent =
+    members.filter((member) => {
+
+      if (!member.membership_expiry_date) {
+        return false;
+      }
+
+      return (
+        calculateMemberDaysRemaining(
+          member.membership_expiry_date
+        ) >= 0
+      );
+
+    }).length;
+
+  document.getElementById("ownerExpiringMembers").textContent =
+    members.filter((member) => {
+
+      if (!member.membership_expiry_date) {
+        return false;
+      }
+
+      const days =
+        calculateMemberDaysRemaining(
+          member.membership_expiry_date
+        );
+
+      return days >= 0 && days <= 7;
+
+    }).length;
+
+  document.getElementById("ownerExpiredMembers").textContent =
+    members.filter((member) => {
+
+      if (!member.membership_expiry_date) {
+        return false;
+      }
+
+      return (
+        calculateMemberDaysRemaining(
+          member.membership_expiry_date
+        ) < 0
+      );
+
+    }).length;
+
+
+  setupMemberDrilldown(members);
     document.getElementById(
   "todayRevenue"
 ).textContent =
