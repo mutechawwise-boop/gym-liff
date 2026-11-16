@@ -279,6 +279,22 @@
         text-align: center;
       }
     }
+
+    /* Owner navigation: keep existing sections and API bindings */
+    .owner-container { max-width: 1440px; }
+    .owner-layout { display:grid; grid-template-columns: 220px minmax(0,1fr); gap:20px; align-items:start; }
+    .owner-content { min-width:0; }
+    .owner-content > section[hidden] { display:none !important; }
+    .owner-nav { flex-direction:column; position:sticky; top:16px; overflow:visible; margin:0; gap:4px; }
+    .owner-nav a { flex:none; min-width:0; text-align:left; padding:13px 14px; }
+    .owner-nav a[aria-current="page"] { background:#111; color:#fff; box-shadow:inset 4px 0 #d32f2f; }
+    .owner-nav a:focus-visible { outline:2px solid #d32f2f; outline-offset:2px; }
+    @media(max-width: 760px) {
+      .owner-layout { grid-template-columns:minmax(0,1fr); gap:12px; }
+      .owner-nav { position:static; flex-direction:row; overflow-x:auto; }
+      .owner-nav a { min-width:max-content; text-align:center; }
+      .owner-card { padding:16px; }
+    }
   </style>
 </head>
 
@@ -307,29 +323,19 @@
       </div>
     </header>
 
-   <nav class="owner-nav">
-  <a href="#todayOverview">📅 ภาพรวมวันนี้</a>
-
-  <a href="members.html">
-    👥 สมาชิกทั้งหมด
-  </a>
-
-  <a href="#memberRegistrations">
-    📥 คำขอสมัครสมาชิก
-  </a>
-
-  <a href="#financeOverview">
-    💰 การเงิน
-  </a>
-
-  <a href="#payments">
-    💳 รายการรับเงิน
-  </a>
-
-  <a href="#reports">
-    📄 รายงาน
-  </a>
+<div class="owner-layout">
+<nav class="owner-nav" aria-label="เมนู Owner">
+  <a href="#todayOverview" data-owner-page="overview">ภาพรวมวันนี้</a>
+  <a href="#todayClasses" data-owner-page="classes">คลาสเรียน</a>
+  <a href="#membershipOverview" data-owner-page="members">ภาพรวมสมาชิก</a>
+  <a href="members.html">จัดการสมาชิก</a>
+  <a href="#memberRegistrations" data-owner-page="registrations">คำขอสมัครสมาชิก</a>
+  <a href="#membershipRenewals" data-owner-page="renewals">คำขอต่ออายุ</a>
+  <a href="#financeOverview" data-owner-page="finance">การเงิน</a>
+  <a href="#payments" data-owner-page="payments">รายการรับเงิน</a>
+  <a href="#reports" data-owner-page="reports">รายงาน</a>
 </nav>
+<div class="owner-content">
 
     <section id="todayOverview" class="owner-card">
       <h2>📅 ภาพรวมวันนี้</h2>
@@ -648,7 +654,7 @@
   <p id="approvalMessage"></p>
 </div>
 </section>
-    <section class="owner-card">
+    <section id="todayClasses" class="owner-card">
       <h2>🥋 คลาสวันนี้</h2>
 
       <div id="todayClassList" class="empty-state">
@@ -685,7 +691,7 @@
         </article>
       </div>
     </section>
-</section> <!-- memberRegistrations จบ -->
+
 
 
 <section
@@ -730,9 +736,39 @@
         รายงานรายวัน รายเดือน และ Export จะเพิ่มในขั้นถัดไป
       </div>
     </section>
+</div>
+</div>
   </main>
 
   <script type="module">
+
+    // Local page navigation; no API or approval changes.
+    const ownerPages = {
+      overview: ["todayOverview", "membershipOverview"],
+      classes: ["todayClasses"],
+      members: ["membershipOverview"],
+      registrations: ["memberRegistrations"],
+      renewals: ["membershipRenewals"],
+      finance: ["financeOverview"],
+      payments: ["payments"],
+      reports: ["reports"]
+    };
+    const ownerNavLinks = [...document.querySelectorAll("[data-owner-page]")];
+    const ownerSections = [...document.querySelectorAll(".owner-content > section")];
+    function showOwnerPage() {
+      const link = ownerNavLinks.find(item => item.hash === window.location.hash);
+      const page = link?.dataset.ownerPage || "overview";
+      ownerSections.forEach(section => {
+        section.hidden = !ownerPages[page].includes(section.id);
+      });
+      ownerNavLinks.forEach(item => {
+        if (item.dataset.ownerPage === page) item.setAttribute("aria-current", "page");
+        else item.removeAttribute("aria-current");
+      });
+    }
+    window.addEventListener("hashchange", showOwnerPage);
+    showOwnerPage();
+
     const savedAdminKey =
       sessionStorage.getItem("gambitAdminKey");
 
@@ -1978,12 +2014,9 @@ beltAwardedDate:
 
 document
   .getElementById("closeRegistrationDetailButton")
-  .addEventListener("click", () => {
-
-    registrationDetail.style.display =
-      "none";
-
-  });
+  .onclick = () => {
+    registrationDetail.style.display = "none";
+  };
 }
    document.addEventListener(
   "click",
