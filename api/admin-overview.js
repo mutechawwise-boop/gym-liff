@@ -14,22 +14,28 @@ export default {
     }
 
     try {
-      const adminKey = request.headers.get("x-admin-key");
-      const expectedAdminKey = process.env.ADMIN_KEY;
+       
+const adminKey =
+  request.headers.get("x-admin-key");
 
-      if (!expectedAdminKey) {
-        return json(
-          { error: "ยังไม่ได้ตั้งค่า ADMIN_KEY" },
-          500
-        );
-      }
+const isCoach =
+  Boolean(process.env.ADMIN_KEY) &&
+  adminKey === process.env.ADMIN_KEY;
 
-      if (!adminKey || adminKey !== expectedAdminKey) {
-        return json(
-          { error: "ไม่มีสิทธิ์ใช้งานหน้า Admin" },
-          401
-        );
-      }
+const isOwner =
+  Boolean(process.env.OWNER_KEY) &&
+  adminKey === process.env.OWNER_KEY;
+
+if (!isCoach && !isOwner) {
+  return json(
+    {
+      success: false,
+      error: "ไม่มีสิทธิ์ใช้งานหน้า Admin"
+    },
+    401
+  );
+}
+
 
       const supabaseUrl = process.env.SUPABASE_URL;
       const supabaseSecretKey =
