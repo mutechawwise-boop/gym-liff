@@ -36,26 +36,28 @@ export default {
       // COACH ONLY
       // =========================
 
-      const adminKey =
-        request.headers.get(
-          "x-admin-key"
-        );
+    
+const adminKey =
+  request.headers.get("x-admin-key");
 
+const isCoach =
+  Boolean(process.env.ADMIN_KEY) &&
+  adminKey === process.env.ADMIN_KEY;
 
-      if (
-        !process.env.ADMIN_KEY ||
-        adminKey !==
-          process.env.ADMIN_KEY
-      ) {
+const isOwner =
+  Boolean(process.env.OWNER_KEY) &&
+  adminKey === process.env.OWNER_KEY;
 
-        return json(
-          {
-            error:
-              "ไม่มีสิทธิ์จัดการคลาส"
-          },
-          401
-        );
-      }
+if (!isCoach && !isOwner) {
+  return json(
+    {
+      success: false,
+      error: "ไม่มีสิทธิ์จัดการคลาส"
+    },
+    401
+  );
+}
+
 
 
       const supabaseUrl =
