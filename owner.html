@@ -295,7 +295,17 @@
       .owner-nav a { min-width:max-content; text-align:center; }
       .owner-card { padding:16px; }
     }
-  </style>
+  
+.registration-tabs {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0;}
+.registration-tabs button {background:#fff;color:#222;border:1px solid #ddd;border-radius:10px;padding:12px 6px;cursor:pointer;font-weight:700;}
+.registration-tabs button[aria-pressed="true"] {background:#111;color:#fff;border-color:#111;}
+.registration-tabs strong {display:block;font-size:24px;margin-top:5px;}
+#registrationSearch {width:100%;margin-bottom:14px;}
+#memberRegistrationList:not(.empty-state) {display:grid;gap:10px;}
+#registrationNotice {white-space:pre-wrap;color:#333;}
+#registrationApprovalFields[hidden] {display:none !important;}
+#rejectRegistrationButton {background:#a82020;color:#fff;}
+</style>
 </head>
 
 <body>
@@ -536,6 +546,14 @@
     </span>
   </div>
 
+  <div class="registration-tabs" aria-label="สถานะคำขอ">
+    <button type="button" data-registration-tab="pending" aria-pressed="true">รอตรวจสอบ<strong id="regPendingTotal">-</strong></button>
+    <button type="button" data-registration-tab="approved" aria-pressed="false">อนุมัติแล้ว<strong id="regApprovedTotal">-</strong></button>
+    <button type="button" data-registration-tab="rejected" aria-pressed="false">ปฏิเสธแล้ว<strong id="regRejectedTotal">-</strong></button>
+  </div>
+  <label for="registrationSearch">ค้นหาคำขอ</label>
+  <input id="registrationSearch" type="search" placeholder="ชื่อจริง ชื่อเล่น หรือเบอร์โทร">
+  <p id="registrationNotice" role="status"></p>
   <div id="memberRegistrationList" class="empty-state">
     กำลังโหลดคำขอสมัครสมาชิก...
   </div>
@@ -551,6 +569,7 @@
 
   <hr>
 
+  <div id="registrationApprovalFields">
   <h3>กำหนดสิทธิ์สมาชิก</h3>
 <label for="approvalMemberGroup">
   กลุ่มสมาชิก
@@ -644,6 +663,10 @@
     อนุมัติสมาชิก
   </button>
 
+  <label for="rejectionReason">เหตุผลที่ปฏิเสธ (กรอกเฉพาะเมื่อปฏิเสธ)</label>
+  <textarea id="rejectionReason" rows="3" maxlength="1000"></textarea>
+  <button id="rejectRegistrationButton" type="button">ปฏิเสธคำขอ</button>
+  </div>
   <button
     id="closeRegistrationDetailButton"
     type="button"
@@ -1116,6 +1139,18 @@ function setupMemberDrilldown(
   };
 
 }
+let registrationTab = "pending";
+let registrationBusy = false;
+function escapeRegistration(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function registrationDate(value) {
+  if (!value || !Number.isFinite(Date.parse(value))) return "-";
+  return new Intl.DateTimeFormat("th-TH", {dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Bangkok"}).format(new Date(value));
+}
+function registrationSlip(value) {
+  try { const url = new URL(value); return url.protocol === "https:" ? escapeRegistration(url.href) : ""; } catch { return ""; }
+}
 async function loadOwnerDashboard() {
   const adminKey =
     sessionStorage.getItem("gambitAdminKey");
@@ -1337,71 +1372,33 @@ const registrationList =
 pendingCount.textContent =
   `${data.pendingRegistrationCount ?? 0} รายการ`;
 
-if (!data.pendingRegistrations?.length) {
-  registrationList.className = "empty-state";
-  registrationList.textContent =
-    "ยังไม่มีคำขอสมัครสมาชิกที่รออนุมัติ";
-} else {
-  registrationList.className = "";
-
-  registrationList.innerHTML =
-    data.pendingRegistrations
-      .map((registration) => {
-        const fullName = [
-          registration.first_name,
-          registration.last_name
-        ]
-          .filter(Boolean)
-          .join(" ");
-
-        const plan =
-          registration.membership_plan || "-";
-
-        const paymentMethod =
-          registration.payment_method === "transfer"
-            ? "เงินโอน"
-            : registration.payment_method === "cash"
-              ? "เงินสด"
-              : "-";
-
-        return `
-          <article class="owner-stat">
-            <strong>
-              ${fullName || registration.line_display_name || "ไม่ระบุชื่อ"}
-            </strong>
-
-            <p>
-              ชื่อเล่น:
-              ${registration.nickname || "-"}
-            </p>
-
-            <p>
-              แผนสมาชิก:
-              ${plan}
-            </p>
-
-            <p>
-              วิธีชำระเงิน:
-              ${paymentMethod}
-            </p>
-
-            <p>
-              สถานะ:
-              รออนุมัติ
-            </p>
-
-            <button
-              type="button"
-              class="view-registration-button"
-              data-registration-id="${registration.id}"
-            >
-              ดูรายละเอียด
-            </button>
-          </article>
-        `;
-      })
-      .join("");
+const registrationGroups = {
+  pending: data.pendingRegistrations || [],
+  approved: data.approvedRegistrations || [],
+  rejected: data.rejectedRegistrations || []
+};
+const registrationLabels = {pending:"รอตรวจสอบ",approved:"อนุมัติแล้ว",rejected:"ปฏิเสธแล้ว"};
+for (const [status, id] of Object.entries({pending:"regPendingTotal",approved:"regApprovedTotal",rejected:"regRejectedTotal"})) {
+  document.getElementById(id).textContent = registrationGroups[status].length;
 }
+const registrationSearch = document.getElementById("registrationSearch");
+function renderRegistrationList() {
+  document.getElementById("registrationDetail").style.display = "none";
+  const query = registrationSearch.value.trim().toLowerCase();
+  const rows = registrationGroups[registrationTab].filter(r => [r.first_name,r.last_name,r.nickname,r.phone,r.line_display_name,[r.first_name,r.last_name].filter(Boolean).join(" ")].some(v => String(v || "").toLowerCase().includes(query)));
+  document.querySelectorAll("[data-registration-tab]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.registrationTab === registrationTab)));
+  registrationList.className = rows.length ? "" : "empty-state";
+  registrationList.innerHTML = rows.length ? rows.map(r => `<article class="owner-stat">
+    <strong>${escapeRegistration([r.first_name,r.last_name].filter(Boolean).join(" ") || r.line_display_name || "ไม่ระบุชื่อ")}</strong>
+    <p>ชื่อเล่น: ${escapeRegistration(r.nickname || "-")} · ${escapeRegistration(r.membership_plan || "-")}</p>
+    <p>วันที่สมัคร: ${registrationDate(r.created_at)}</p>
+    <p>สถานะ: ${registrationLabels[registrationTab]}${registrationTab === "pending" ? "" : " · " + registrationDate(registrationTab === "approved" ? r.approved_at : r.rejected_at)}</p>
+    <button type="button" class="view-registration-button" data-registration-id="${escapeRegistration(r.id)}">ดูรายละเอียด</button>
+  </article>`).join("") : "ไม่พบคำขอในรายการนี้";
+}
+document.querySelectorAll("[data-registration-tab]").forEach(b => b.onclick = () => { if (registrationBusy) return; registrationTab = b.dataset.registrationTab; renderRegistrationList(); });
+registrationSearch.oninput = () => { if (!registrationBusy) renderRegistrationList(); };
+renderRegistrationList();
 const pendingRenewalCount =
   document.getElementById("pendingRenewalCount");
 
@@ -1627,17 +1624,14 @@ const approvalMessage =
   document.getElementById("approvalMessage");
 
 
-registrationList
-  .querySelectorAll(".view-registration-button")
-  .forEach((button) => {
-
-    button.addEventListener("click", () => {
-
+registrationList.onclick = (event) => {
+      const button = event.target.closest(".view-registration-button");
+      if (!button || registrationBusy) return;
       const registrationId =
         Number(button.dataset.registrationId);
 
       const registration =
-        data.pendingRegistrations.find(
+        registrationGroups[registrationTab].find(
           (item) =>
             Number(item.id) === registrationId
         );
@@ -1667,67 +1661,75 @@ registrationList
             : "-";
 
 
+      const isPending = registration.registration_status === "pending";
+      document.getElementById("registrationApprovalFields").hidden = !isPending;
+      document.getElementById("rejectionReason").value = "";
       registrationDetailContent.innerHTML = `
         <div class="owner-stat">
+          <p><strong>สถานะ:</strong> ${registrationLabels[registration.registration_status] || "-"}</p>
+          <p><strong>วันที่สมัคร:</strong> ${registrationDate(registration.created_at)}</p>
+          ${isPending ? "" : `<p><strong>วันที่ดำเนินการ:</strong> ${registrationDate(registration.approved_at || registration.rejected_at)}</p>
+          <p><strong>ผู้ดำเนินการ:</strong> ${escapeRegistration(registration.approved_by || registration.rejected_by || "-")}</p>
+          <p><strong>${registration.registration_status === "rejected" ? "เหตุผลที่ปฏิเสธ" : "หมายเหตุ"}:</strong> ${escapeRegistration(registration.registration_status === "rejected" ? registration.rejection_reason || "-" : registration.coach_note || "-")}</p>`}
 
           <p>
             <strong>ชื่อ:</strong>
-            ${fullName || "-"}
+            ${escapeRegistration(fullName || "-")}
           </p>
 
           <p>
             <strong>ชื่อเล่น:</strong>
-            ${registration.nickname || "-"}
+            ${escapeRegistration(registration.nickname || "-")}
           </p>
 
           <p>
             <strong>เบอร์โทร:</strong>
-            ${registration.phone || "-"}
+            ${escapeRegistration(registration.phone || "-")}
           </p>
 
           <p>
             <strong>อีเมล:</strong>
-            ${registration.email || "-"}
+            ${escapeRegistration(registration.email || "-")}
           </p>
 
           <p>
             <strong>วันเกิด:</strong>
-            ${registration.birth_date || "-"}
+            ${escapeRegistration(registration.birth_date || "-")}
           </p>
 
           <p>
             <strong>เพศ:</strong>
-            ${registration.gender || "-"}
+            ${escapeRegistration(registration.gender || "-")}
           </p>
 
           <p>
             <strong>โรคประจำตัว:</strong>
-            ${registration.medical_conditions || "ไม่มี"}
+            ${escapeRegistration(registration.medical_conditions || "ไม่มี")}
           </p>
 
           <p>
             <strong>แพ้อาหาร / แพ้ยา:</strong>
-            ${registration.allergies || "ไม่มี"}
+            ${escapeRegistration(registration.allergies || "ไม่มี")}
           </p>
 
           <p>
             <strong>ผู้ติดต่อฉุกเฉิน:</strong>
-            ${registration.emergency_contact_name || "-"}
+            ${escapeRegistration(registration.emergency_contact_name || "-")}
           </p>
 
           <p>
             <strong>ความสัมพันธ์:</strong>
-            ${registration.emergency_contact_relationship || "-"}
+            ${escapeRegistration(registration.emergency_contact_relationship || "-")}
           </p>
 
           <p>
             <strong>เบอร์ฉุกเฉิน:</strong>
-            ${registration.emergency_contact_phone || "-"}
+            ${escapeRegistration(registration.emergency_contact_phone || "-")}
           </p>
 
           <p>
             <strong>แผนสมาชิก:</strong>
-            ${registration.membership_plan || "-"}
+            ${escapeRegistration(registration.membership_plan || "-")}
           </p>
 
           <p>
@@ -1747,7 +1749,7 @@ ${
 }
 
 ${
-  registration.slip_signed_url
+  registrationSlip(registration.slip_signed_url)
     ? `
       <div style="margin-top:18px;">
         <p>
@@ -1755,12 +1757,12 @@ ${
         </p>
 
         <a
-          href="${registration.slip_signed_url}"
+          href="${registrationSlip(registration.slip_signed_url)}"
           target="_blank"
           rel="noopener noreferrer"
         >
           <img
-            src="${registration.slip_signed_url}"
+            src="${registrationSlip(registration.slip_signed_url)}"
             alt="Payment Slip"
             style="
               display:block;
@@ -1850,9 +1852,7 @@ ${
         block: "start"
       });
 
-    });
-
-  });
+};
 const approveRegistrationButton =
   document.getElementById(
     "approveRegistrationButton"
@@ -1860,6 +1860,7 @@ const approveRegistrationButton =
 
 approveRegistrationButton.onclick =
   async () => {
+    if (registrationBusy || registrationTab !== "pending") return;
     const registrationId =
       Number(
         registrationDetail.dataset.registrationId
@@ -1905,6 +1906,8 @@ if (
       sessionApprovalFields.style.display !==
       "none";
 
+    registrationBusy = true;
+    document.getElementById("rejectRegistrationButton").disabled = true;
     approveRegistrationButton.disabled = true;
     approveRegistrationButton.textContent =
       "กำลังอนุมัติ...";
@@ -1991,6 +1994,9 @@ beltAwardedDate:
       registrationDetail.style.display =
         "none";
 
+      registrationTab = "approved";
+      registrationSearch.value = "";
+      document.getElementById("registrationNotice").textContent = "อนุมัติสมาชิกเรียบร้อยแล้ว";
       await loadOwnerDashboard();
     } catch (error) {
       console.error(
@@ -2004,6 +2010,8 @@ beltAwardedDate:
           : "อนุมัติสมาชิกไม่สำเร็จ";
 
     } finally {
+      registrationBusy = false;
+      document.getElementById("rejectRegistrationButton").disabled = false;
       approveRegistrationButton.disabled =
         false;
 
@@ -2012,10 +2020,35 @@ beltAwardedDate:
     }
    };
 
+const rejectButton = document.getElementById("rejectRegistrationButton");
+rejectButton.onclick = async () => {
+  if (registrationBusy || registrationTab !== "pending") return;
+  const registrationId = Number(registrationDetail.dataset.registrationId);
+  const rejectionReason = document.getElementById("rejectionReason").value.trim();
+  if (!Number.isSafeInteger(registrationId) || registrationId <= 0 || !rejectionReason) {
+    approvalMessage.textContent = "กรุณาระบุเหตุผลที่ปฏิเสธ"; return;
+  }
+  if (!window.confirm("ยืนยันปฏิเสธคำขอนี้? ระบบจะเก็บประวัติไว้")) return;
+  registrationBusy = true;
+  rejectButton.disabled = true;
+  approveRegistrationButton.disabled = true;
+  approvalMessage.textContent = "กำลังดำเนินการ...";
+  try {
+    const response = await fetch("/api/create-member", {method:"POST",headers:{"Content-Type":"application/json","x-admin-key":sessionStorage.getItem("gambitAdminKey")},body:JSON.stringify({mode:"owner_reject_registration",registrationId,rejectionReason})});
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || "ปฏิเสธคำขอไม่สำเร็จ");
+    registrationDetail.style.display = "none";
+    registrationTab = "rejected";
+    registrationSearch.value = "";
+    document.getElementById("registrationNotice").textContent = "ปฏิเสธคำขอเรียบร้อยแล้ว";
+    try { await loadOwnerDashboard(); } catch { document.getElementById("registrationNotice").textContent = "ปฏิเสธสำเร็จ แต่โหลดรายการใหม่ไม่ได้ กรุณารีเฟรชหน้า"; }
+  } catch (error) { approvalMessage.textContent = error.message || "ปฏิเสธคำขอไม่สำเร็จ"; }
+  finally { registrationBusy = false; rejectButton.disabled = false; approveRegistrationButton.disabled = false; }
+};
 document
   .getElementById("closeRegistrationDetailButton")
   .onclick = () => {
-    registrationDetail.style.display = "none";
+    if (!registrationBusy) registrationDetail.style.display = "none";
   };
 }
    document.addEventListener(
