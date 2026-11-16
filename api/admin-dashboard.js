@@ -203,6 +203,8 @@ const membersWithBelts =
       null
   }));
       let pendingRegistrations = [];
+let approvedRegistrations = [];
+let rejectedRegistrations = [];
 
 if (isOwner) {
   const registrationResponse = await supabase.request(
@@ -231,9 +233,16 @@ if (isOwner) {
         "payment_status",
         "registration_status",
         "slip_url",
-        "payment_amount"
+        "payment_amount",
+        "member_id",
+        "approved_at",
+        "approved_by",
+        "coach_note",
+        "rejected_at",
+        "rejected_by",
+        "rejection_reason"
       ].join(",") +
-      "&registration_status=eq.pending" +
+      "&registration_status=in.(pending,approved,rejected)" +
       "&order=created_at.desc"
   );
 
@@ -255,7 +264,7 @@ if (isOwner) {
   const registrationRows =
   await registrationResponse.json();
 
-pendingRegistrations =
+const registrationsWithSlips =
   await Promise.all(
     registrationRows.map(async (registration) => {
       let slipSignedUrl = null;
@@ -275,6 +284,9 @@ pendingRegistrations =
       };
     })
   );
+  pendingRegistrations = registrationsWithSlips.filter(r => r.registration_status === "pending");
+  approvedRegistrations = registrationsWithSlips.filter(r => r.registration_status === "approved").sort((a,b) => (Date.parse(b.approved_at || b.created_at) || 0) - (Date.parse(a.approved_at || a.created_at) || 0));
+  rejectedRegistrations = registrationsWithSlips.filter(r => r.registration_status === "rejected").sort((a,b) => (Date.parse(b.rejected_at || b.created_at) || 0) - (Date.parse(a.rejected_at || a.created_at) || 0));
 }
 
       let activeMembers = 0;
@@ -656,6 +668,10 @@ return json({
          pendingRegistrations.length,
 
        pendingRegistrations,
+       approvedRegistrations,
+       rejectedRegistrations,
+       approvedRegistrationCount: approvedRegistrations.length,
+       rejectedRegistrationCount: rejectedRegistrations.length,
        pendingRenewalCount:
   pendingRenewals.length,
 
