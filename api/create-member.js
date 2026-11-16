@@ -92,7 +92,7 @@ if (mode !== "line_register") {
   const ownerKey =
     process.env.OWNER_KEY;
 
-  if (mode === "owner_approve_registration") {
+  if (["owner_approve_registration", "owner_reject_registration"].includes(mode)) {
     if (
       !ownerKey ||
       !accessKey ||
@@ -597,6 +597,47 @@ slip_uploaded_at: slipUploadedAt
     registration: registrations[0]
   });
 }
+if (mode === "owner_reject_registration") {
+  const registrationId = Number(body.registrationId);
+  const rejectionReason = String(body.rejectionReason || "").trim();
+
+  if (!Number.isSafeInteger(registrationId) || registrationId <= 0) {
+    return json({ error: "Registration ID ไม่ถูกต้อง" }, 400);
+  }
+  if (!rejectionReason || rejectionReason.length > 1000) {
+    return json({ error: "กรุณาระบุเหตุผลที่ปฏิเสธ (ไม่เกิน 1000 ตัวอักษร)" }, 400);
+  }
+
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/member_registration` +
+      `?id=eq.${registrationId}&registration_status=eq.pending&select=id,registration_status,rejected_at,rejected_by,rejection_reason`,
+    {
+      method: "PATCH",
+      headers: {
+        apikey: supabaseSecretKey,
+        Authorization: `Bearer ${supabaseSecretKey}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify({
+        registration_status: "rejected",
+        rejected_at: new Date().toISOString(),
+        rejected_by: "owner",
+        rejection_reason: rejectionReason
+      })
+    }
+  );
+  if (!response.ok) {
+    console.error("Reject registration failed:", await response.text());
+    return json({ error: "ปฏิเสธคำขอไม่สำเร็จ" }, 500);
+  }
+  const rows = await response.json();
+  if (!rows.length) {
+    return json({ error: "ไม่พบคำขอที่รอตรวจสอบ หรือคำขอถูกดำเนินการแล้ว" }, 409);
+  }
+  return json({ success: true, message: "ปฏิเสธคำขอเรียบร้อยแล้ว", registration: rows[0] });
+}
+
 if (mode === "owner_approve_registration") {
   const registrationId =
     Number(body.registrationId);
