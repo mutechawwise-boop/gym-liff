@@ -2046,7 +2046,69 @@ renderSessionOptions();
           body: JSON.stringify({ sessionId, memberId })
         });
 
-        await loadOverview();
+        // Update the local attendance cache after the API confirms success.
+        // Do not reload the entire overview or replace the member list.
+        const attendance = {
+          session_id: sessionId,
+          member_id: memberId,
+          checked_in_at: new Date().toISOString(),
+          checkin_method: "teacher"
+        };
+        if (!Array.isArray(state.overview.attendance)) {
+          state.overview.attendance = [];
+        }
+        const existingIndex = state.overview.attendance.findIndex(record =>
+          Number(record.session_id) === Number(sessionId) &&
+          Number(record.member_id) === Number(memberId)
+        );
+        if (existingIndex >= 0) {
+          state.overview.attendance[existingIndex] = {
+            ...state.overview.attendance[existingIndex], ...attendance
+          };
+        } else {
+          state.overview.attendance.push(attendance);
+        }
+
+        // Change only this member's button into a checked badge.
+        const statusArea = button.closest(".status-area");
+        if (statusArea) {
+          const badge = document.createElement("div");
+          badge.className = "status-badge checked";
+          badge.textContent = `✅ ${formatCheckinTime(attendance.checked_in_at)}`;
+          const method = document.createElement("div");
+          method.className = "method";
+          method.textContent = "ครูเช็กให้";
+          statusArea.replaceChildren(badge, method);
+        }
+
+        // Keep the selected class and all other member rows untouched.
+        if (Number(elements.sessionSelect.value) === Number(sessionId)) {
+          const total = Number(elements.totalCount.textContent) || 0;
+          const checked = (state.overview.attendance || []).filter(record =>
+            Number(record.session_id) === Number(sessionId) &&
+            (state.overview.members || []).some(member =>
+              Number(member.id) === Number(record.member_id) &&
+              isEligibleForCoachCheckin(member) &&
+              (member.member_classes || []).some(enrollment =>
+                Number(enrollment.class_id) === Number(
+                  (state.overview.sessions || []).find(session => Number(session.id) === Number(sessionId))?.classes?.id
+                ) && enrollment.status === "active"
+              )
+            )
+          ).length;
+          elements.checkedCount.textContent = String(Math.min(checked, total));
+          elements.remainingCount.textContent = String(Math.max(total - checked, 0));
+          const filter = document.getElementById("coachCheckinFilter")?.value || "all";
+          if (filter === "pending") {
+            // A newly checked member no longer matches the pending filter.
+            button.closest(".member-row")?.remove();
+            const count = document.getElementById("coachSearchCount");
+            if (count) {
+              const visible = elements.content.querySelectorAll(".member-row").length;
+              count.textContent = `แสดง ${visible} / ${total} คน`;
+            }
+          }
+        }
       } catch (error) {
         window.alert(error.message);
         button.disabled = false;
