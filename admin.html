@@ -567,6 +567,23 @@
 #adminArea #attendance + .summary > * {padding-top:8px;padding-bottom:8px;}
 @media(max-width:650px){#adminArea #content .member-row {grid-template-columns:minmax(0,1fr) 104px 32px;gap:6px;padding:9px 5px;}#adminArea #content .member-name {font-size:13px;}#adminArea #content .gambit-plan-meta {font-size:10px;}#adminArea #content .teacher-checkin-button {font-size:11px;padding:7px 6px;}#adminArea #content .member-more > summary {padding:5px;}}
 
+
+/* Coach review-before-save workflow */
+.coach-flow {display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 16px}
+.coach-step {padding:7px 11px;border-radius:999px;background:#eee;color:#666;font-size:13px;font-weight:700}
+.coach-step.active {background:#171717;color:white}
+.coach-workflow-actions {display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px}
+.coach-workflow-actions button {width:auto;min-width:150px}
+.coach-workflow-note {font-size:13px;color:#666;margin:10px 0}
+.coach-review {padding:16px;background:#f8f8f8;border:1px solid #ddd;border-radius:12px;margin-top:14px}
+.coach-review-row {padding:9px 4px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.coach-review-row:last-child {border-bottom:0}
+.coach-review-row button {width:auto;min-height:30px;padding:5px 10px;background:white;color:#a22;border:1px solid #ddd}
+#adminArea #content .coach-pick {display:flex;gap:6px;align-items:center;justify-content:flex-end;font-weight:700;font-size:12px;cursor:pointer}
+#adminArea #content .coach-pick input {width:19px;min-height:19px;margin:0;accent-color:#111}
+.coach-message {margin:12px 0;font-size:14px;white-space:pre-line}
+.coach-message.error {color:#b42318}.coach-message.success {color:#087b32}
+@media(max-width:650px){.coach-workflow-actions button {width:100%}}
   </style>
 </head>
 
@@ -832,11 +849,25 @@
           <select id="sessionSelect"></select>
         </div>
 
-        <button id="refreshButton" class="refresh-button" type="button">
-          🔄 โหลดข้อมูลใหม่
-        </button>
+        <button id="refreshButton" class="refresh-button" type="button">🔄 โหลดข้อมูลใหม่</button>
       </section>
 
+      <section class="card" id="coachWorkflowCard">
+        <div class="coach-flow" aria-label="ขั้นตอนเช็กชื่อ">
+          <span class="coach-step active" data-coach-step="1">1 เลือกคลาส</span>
+          <span class="coach-step" data-coach-step="2">2 เช็กชื่อ</span>
+          <span class="coach-step" data-coach-step="3">3 ตรวจทาน</span>
+        </div>
+        <p id="coachWorkflowDescription" class="coach-workflow-note">เลือกคลาสด้านบน แล้วกดเริ่มเช็กชื่อ</p>
+        <div id="coachWorkflowActions" class="coach-workflow-actions">
+          <button type="button" id="coachStartButton">เริ่มเช็กชื่อคลาสนี้</button>
+          <button type="button" id="coachReviewButton" style="display:none">ตรวจทานรายชื่อ</button>
+          <button type="button" id="coachBackButton" class="secondary-button" style="display:none">กลับไปแก้ไข</button>
+          <button type="button" id="coachSaveButton" style="display:none">ยืนยันบันทึกเข้า Supabase</button>
+        </div>
+        <div id="coachReviewList" class="coach-review" style="display:none"></div>
+        <p id="coachWorkflowMessage" class="coach-message" role="status" aria-live="polite"></p>
+      </section>
       <section class="summary">
         <div class="summary-box">
           <span id="totalCount" class="summary-number">0</span>
@@ -1128,7 +1159,10 @@ saveEditSessionButton:
         selectedSessionId: null,
 
       selectedBeltMemberId: null,
-      selectedEnrollmentMemberId: null
+      selectedEnrollmentMemberId: null,
+      coachStep: 1,
+      coachDraft: new Set(),
+      coachBusy: false
     };
 async function loadAdminDashboard() {
   const dashboardError = document.getElementById("dashboardError");
@@ -1724,11 +1758,14 @@ function renderSessionOptions() {
       wrap.appendChild(badge);
       const meta = document.createElement("span");
       meta.className = "gambit-plan-meta";
-      if (raw.startsWith("class_pass_") && member.remaining_sessions != null) {
-        meta.textContent = "เหลือ " + member.remaining_sessions + " ครั้ง";
-      } else if (expiry) {
-        meta.textContent = "หมดอายุ " + new Date(expiry + "T12:00:00+07:00").toLocaleDateString("th-TH", {day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Bangkok"});
-      }
+      const isSessionPackage = raw.startsWith("class_pass_") || raw === "drop_in";
+      const remainingText = isSessionPackage && member.remaining_sessions != null
+        ? "เหลือ " + member.remaining_sessions + " ครั้ง"
+        : "";
+      const expiryText = expiry
+        ? "หมดอายุ " + new Date(expiry + "T12:00:00+07:00").toLocaleDateString("th-TH", {day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Bangkok"})
+        : "";
+      meta.textContent = [remainingText, expiryText].filter(Boolean).join(" · ");
       if (meta.textContent) wrap.appendChild(meta);
       return wrap;
     }
@@ -1795,8 +1832,22 @@ function renderSessionOptions() {
         button.type = "button";
         button.className = "teacher-checkin-button";
         button.textContent = "ครูเช็กให้";
-        button.addEventListener("click", () => teacherCheckIn(sessionId, member.id, button));
-        statusArea.appendChild(button);
+        const label = document.createElement("label");
+        label.className = "coach-pick";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = state.coachDraft.has(Number(member.id));
+        checkbox.disabled = state.coachStep !== 2 || state.coachBusy;
+        checkbox.setAttribute("aria-label", "เลือกเช็กชื่อ " + getMemberName(member));
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) state.coachDraft.add(Number(member.id));
+          else state.coachDraft.delete(Number(member.id));
+          updateCoachWorkflow();
+        });
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(checkbox.checked ? "เลือกแล้ว" : "เลือกเข้าเรียน"));
+        checkbox.addEventListener("change", () => { label.lastChild.textContent = checkbox.checked ? "เลือกแล้ว" : "เลือกเข้าเรียน"; });
+        statusArea.appendChild(label);
       }
       row.appendChild(details);
       row.appendChild(statusArea);
@@ -1882,6 +1933,11 @@ function renderSessionOptions() {
       elements.checkedCount.textContent = String(checked);
       elements.remainingCount.textContent = String(remaining);
 
+      // Remove any draft entries that have already been recorded (e.g. via LINE).
+      for (const id of [...state.coachDraft]) {
+        if (attendanceByMember.has(id) || !classMemberIds.has(id)) state.coachDraft.delete(id);
+      }
+      updateCoachWorkflow();
       if (!classMembers.length) {
         elements.content.className = "empty";
         elements.content.textContent =
@@ -1932,7 +1988,127 @@ function renderSessionOptions() {
       });
     }
 
+    function setCoachStep(step, clear = false) {
+      if (state.coachBusy) return;
+      state.coachStep = step;
+      if (clear) state.coachDraft.clear();
+      updateCoachWorkflow();
+      renderSelectedSession();
+    }
+
+    function updateCoachWorkflow(message = "", kind = "") {
+      const step = state.coachStep;
+      document.querySelectorAll("[data-coach-step]").forEach(el => {
+        el.classList.toggle("active", Number(el.dataset.coachStep) === step);
+      });
+      const start = document.getElementById("coachStartButton");
+      const review = document.getElementById("coachReviewButton");
+      const back = document.getElementById("coachBackButton");
+      const save = document.getElementById("coachSaveButton");
+      const list = document.getElementById("coachReviewList");
+      const description = document.getElementById("coachWorkflowDescription");
+      const selectedSession = (state.overview?.sessions || []).find(s => String(s.id) === elements.sessionSelect.value);
+      start.style.display = step === 1 ? "" : "none";
+      start.disabled = !selectedSession || state.coachBusy;
+      review.style.display = step === 2 ? "" : "none";
+      review.disabled = state.coachDraft.size === 0 || state.coachBusy;
+      review.textContent = `ตรวจทาน (${state.coachDraft.size} คน)`;
+      back.style.display = step === 3 ? "" : "none";
+      back.disabled = state.coachBusy;
+      save.style.display = step === 3 ? "" : "none";
+      save.disabled = state.coachDraft.size === 0 || state.coachBusy;
+      save.textContent = state.coachBusy ? "กำลังบันทึก..." : `ยืนยันบันทึก (${state.coachDraft.size} คน)`;
+      description.textContent = step === 1 ? "ขั้นที่ 1 เลือกคลาสด้านบน แล้วกดเริ่มเช็กชื่อ" :
+        step === 2 ? `ขั้นที่ 2 เลือกนักเรียนที่มาเรียนจริง (${state.coachDraft.size} คน) — ยังไม่บันทึกข้อมูล` :
+        "ขั้นที่ 3 ตรวจทานรายชื่อก่อนส่งเข้า Supabase";
+      list.style.display = step === 3 ? "" : "none";
+      if (step === 3) {
+        list.replaceChildren();
+        const heading = document.createElement("strong");
+        heading.textContent = `เตรียมบันทึก ${state.coachDraft.size} คน`;
+        list.appendChild(heading);
+        for (const id of state.coachDraft) {
+          const member = (state.overview?.members || []).find(m => Number(m.id) === id);
+          if (!member) continue;
+          const row = document.createElement("div");
+          row.className = "coach-review-row";
+          const name = document.createElement("span");
+          name.textContent = getMemberName(member);
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.textContent = "เอาออก";
+          remove.disabled = state.coachBusy;
+          remove.addEventListener("click", () => {
+            state.coachDraft.delete(id);
+            if (!state.coachDraft.size) state.coachStep = 2;
+            renderSelectedSession();
+          });
+          row.append(name, remove);
+          list.appendChild(row);
+        }
+      }
+      if (message) {
+        const el = document.getElementById("coachWorkflowMessage");
+        el.textContent = message;
+        el.className = "coach-message " + kind;
+      }
+    }
+
+    async function saveCoachDraft() {
+      if (state.coachBusy || state.coachStep !== 3 || !state.coachDraft.size) return;
+      const sessionId = Number(elements.sessionSelect.value);
+      if (!sessionId || !window.confirm(`ยืนยันบันทึกเช็กชื่อ ${state.coachDraft.size} คนในคลาสนี้?`)) return;
+      state.coachBusy = true;
+      elements.sessionSelect.disabled = true;
+      elements.refreshButton.disabled = true;
+      updateCoachWorkflow("กำลังบันทึกทีละคน กรุณาอย่าปิดหน้านี้", "");
+      const succeeded = [], failed = [];
+      const ids = [...state.coachDraft];
+      for (const memberId of ids) {
+        const member = (state.overview?.members || []).find(m => Number(m.id) === memberId);
+        const name = getMemberName(member || {});
+        try {
+          const result = await requestJson("/api/teacher-checkin", {
+            method: "POST",
+            headers: {"Content-Type":"application/json", "x-admin-key":state.adminKey},
+            body: JSON.stringify({sessionId, memberId})
+          });
+          if (!Array.isArray(state.overview.attendance)) state.overview.attendance = [];
+          const exists = state.overview.attendance.some(a => Number(a.session_id) === sessionId && Number(a.member_id) === memberId);
+          if (!exists) state.overview.attendance.push({
+            session_id:sessionId, member_id:memberId,
+            checked_in_at:result.attendance?.checked_in_at || new Date().toISOString(),
+            checkin_method:result.attendance?.checkin_method || "teacher"
+          });
+          if (!result.alreadyCheckedIn && member) {
+            member.checkin_count = Number(member.checkin_count || 0) + 1;
+            const plan = String(member.membership_plan || "");
+            if (plan.startsWith("class_pass_") || plan === "drop_in") {
+              member.remaining_sessions = Math.max(0, Number(member.remaining_sessions || 0) - 1);
+            }
+          }
+          state.coachDraft.delete(memberId);
+          succeeded.push(name);
+        } catch (error) {
+          failed.push(`${name}: ${error.message}`);
+        }
+      }
+      state.coachBusy = false;
+      elements.sessionSelect.disabled = false;
+      elements.refreshButton.disabled = false;
+      if (failed.length) {
+        state.coachStep = 2;
+        renderSelectedSession();
+        updateCoachWorkflow(`บันทึกสำเร็จ ${succeeded.length} คน / ไม่สำเร็จ ${failed.length} คน\n${failed.join("\n")}\nรายชื่อที่ไม่สำเร็จยังถูกเลือกไว้ สามารถตรวจทานและลองใหม่ได้`, "error");
+      } else {
+        state.coachStep = 1;
+        renderSelectedSession();
+        updateCoachWorkflow(`บันทึกสำเร็จ ${succeeded.length} คนแล้ว หากมีนักเรียนเพิ่ม ให้เลือกคลาสและเริ่มรอบใหม่`, "success");
+      }
+    }
+
     async function loadOverview() {
+      if (state.coachBusy) return;
       elements.content.className = "loading";
       elements.content.textContent = "กำลังโหลดข้อมูล...";
       elements.refreshButton.disabled = true;
@@ -2022,101 +2198,6 @@ renderSessionOptions();
       }
     }
 
-    async function teacherCheckIn(sessionId, memberId, button) {
-      const member = state.overview.members.find(
-        (item) => Number(item.id) === Number(memberId)
-      );
-
-      if (!window.confirm(
-        `ยืนยันเช็กชื่อให้ ${getMemberName(member || {})} ใช่หรือไม่?`
-      )) {
-        return;
-      }
-
-      button.disabled = true;
-      button.textContent = "กำลังบันทึก...";
-
-      try {
-        await requestJson("/api/teacher-checkin", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-key": state.adminKey
-          },
-          body: JSON.stringify({ sessionId, memberId })
-        });
-
-        // Update the local attendance cache after the API confirms success.
-        // Do not reload the entire overview or replace the member list.
-        const attendance = {
-          session_id: sessionId,
-          member_id: memberId,
-          checked_in_at: new Date().toISOString(),
-          checkin_method: "teacher"
-        };
-        if (!Array.isArray(state.overview.attendance)) {
-          state.overview.attendance = [];
-        }
-        const existingIndex = state.overview.attendance.findIndex(record =>
-          Number(record.session_id) === Number(sessionId) &&
-          Number(record.member_id) === Number(memberId)
-        );
-        if (existingIndex >= 0) {
-          state.overview.attendance[existingIndex] = {
-            ...state.overview.attendance[existingIndex], ...attendance
-          };
-        } else {
-          state.overview.attendance.push(attendance);
-        }
-
-        // Change only this member's button into a checked badge.
-        const statusArea = button.closest(".status-area");
-        if (statusArea) {
-          const badge = document.createElement("div");
-          badge.className = "status-badge checked";
-          badge.textContent = `✅ ${formatCheckinTime(attendance.checked_in_at)}`;
-          const method = document.createElement("div");
-          method.className = "method";
-          method.textContent = "ครูเช็กให้";
-          statusArea.replaceChildren(badge, method);
-        }
-
-        // Keep the selected class and all other member rows untouched.
-        if (Number(elements.sessionSelect.value) === Number(sessionId)) {
-          const total = Number(elements.totalCount.textContent) || 0;
-          const checked = (state.overview.attendance || []).filter(record =>
-            Number(record.session_id) === Number(sessionId) &&
-            (state.overview.members || []).some(member =>
-              Number(member.id) === Number(record.member_id) &&
-              isEligibleForCoachCheckin(member) &&
-              (member.member_classes || []).some(enrollment =>
-                Number(enrollment.class_id) === Number(
-                  (state.overview.sessions || []).find(session => Number(session.id) === Number(sessionId))?.classes?.id
-                ) && enrollment.status === "active"
-              )
-            )
-          ).length;
-          elements.checkedCount.textContent = String(Math.min(checked, total));
-          elements.remainingCount.textContent = String(Math.max(total - checked, 0));
-          const filter = document.getElementById("coachCheckinFilter")?.value || "all";
-          if (filter === "pending") {
-            // A newly checked member no longer matches the pending filter.
-            button.closest(".member-row")?.remove();
-            const count = document.getElementById("coachSearchCount");
-            if (count) {
-              const visible = elements.content.querySelectorAll(".member-row").length;
-              count.textContent = `แสดง ${visible} / ${total} คน`;
-            }
-          }
-        }
-      } catch (error) {
-        window.alert(error.message);
-        button.disabled = false;
-        button.textContent = "ครูเช็กให้";
-      }
-    }
-
-    
 function openEditSessionModal(session) {
 
   state.selectedSessionId =
@@ -2737,7 +2818,17 @@ document
     elements.logoutButton.addEventListener("click", auth.logout);
     elements.refreshButton.addEventListener("click", loadOverview);
     elements.refreshMembersButton.addEventListener("click", loadOverview);
-    elements.sessionSelect.addEventListener("change", renderSelectedSession);
+     elements.sessionSelect.addEventListener("change", () => {
+       if (state.coachBusy) return;
+       state.coachStep = 1;
+       state.coachDraft.clear();
+       document.getElementById("coachWorkflowMessage").textContent = "";
+       renderSelectedSession();
+     });
+     document.getElementById("coachStartButton").addEventListener("click", () => setCoachStep(2));
+     document.getElementById("coachReviewButton").addEventListener("click", () => setCoachStep(3));
+     document.getElementById("coachBackButton").addEventListener("click", () => setCoachStep(2));
+     document.getElementById("coachSaveButton").addEventListener("click", saveCoachDraft);
     document.getElementById("coachMemberSearch").addEventListener("input", renderSelectedSession);
     document.getElementById("coachCheckinFilter").addEventListener("change", renderSelectedSession);
    elements.scheduleDate.addEventListener(
