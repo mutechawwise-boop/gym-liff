@@ -305,6 +305,43 @@
 #registrationNotice {white-space:pre-wrap;color:#333;}
 #registrationApprovalFields[hidden] {display:none !important;}
 #rejectRegistrationButton {background:#a82020;color:#fff;}
+
+/* Registration management: compact history + grouped detail */
+.registration-tabs button {min-height:76px;transition:background .15s,border-color .15s;}
+#registrationSearch {min-height:42px;border:1px solid #d6d9de;border-radius:9px;padding:10px 12px;font:inherit;}
+#registrationSearch:focus-visible {outline:2px solid #222;outline-offset:2px;}
+.registration-history-wrap {width:100%;overflow-x:auto;border:1px solid #e4e6e9;border-radius:12px;background:#fff;}
+.registration-history-table {width:100%;border-collapse:collapse;text-align:left;font-size:14px;}
+.registration-history-table th {padding:13px 14px;background:#f7f8f9;color:#5c626b;font-size:12px;white-space:nowrap;}
+.registration-history-table td {padding:14px;border-top:1px solid #eceef0;vertical-align:middle;}
+.registration-history-table tbody tr:hover {background:#fafafa;}
+.registration-history-table .reg-person {font-weight:700;display:block;}
+.registration-history-table .reg-sub {display:block;color:#6c7179;font-size:12px;margin-top:4px;}
+.reg-status {display:inline-block;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;}
+.reg-status-approved {background:#e7f6eb;color:#13753a;}
+.reg-status-rejected {background:#fce8e8;color:#a52323;}
+.reg-status-pending {background:#fff3d8;color:#875600;}
+.view-registration-button {border:1px solid #d1d5db;border-radius:8px;background:#fff;padding:8px 12px;color:#171717;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;}
+.view-registration-button:hover {border-color:#222;background:#f4f4f4;}
+.registration-pending-card {padding:18px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;}
+.registration-pending-card h3 {margin:0 0 10px;font-size:17px;}
+.registration-pending-meta {display:flex;flex-wrap:wrap;gap:8px 18px;color:#5e646b;font-size:13px;margin:10px 0 14px;}
+#registrationDetail {border-top:1px solid #e5e7eb;padding-top:20px;}
+#registrationDetail > hr {display:none;}
+#registrationDetail > h3 {margin:0 0 16px;}
+.reg-detail-heading {display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+.reg-detail-heading h4 {margin:0;font-size:18px;}
+.reg-detail-section {border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:12px;background:#fff;}
+.reg-detail-section h4 {margin:0 0 16px;font-size:15px;}
+.reg-detail-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px;}
+.reg-detail-field {min-width:0;overflow-wrap:anywhere;}
+.reg-detail-label {display:block;font-size:12px;color:#69707a;margin-bottom:5px;}
+.reg-detail-value {display:block;font-size:14px;line-height:1.55;white-space:pre-wrap;}
+.reg-detail-slip {display:block;width:100%;max-width:360px;max-height:460px;object-fit:contain;border:1px solid #e2e2e2;border-radius:10px;margin-top:10px;}
+#registrationApprovalFields {border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-top:16px;}
+#registrationApprovalFields input,#registrationApprovalFields select,#registrationApprovalFields textarea {max-width:100%;}
+#closeRegistrationDetailButton {border:1px solid #ddd;background:#fff;border-radius:8px;padding:9px 18px;margin-top:12px;cursor:pointer;}
+@media(max-width:650px) {.registration-history-table {min-width:650px;} .reg-detail-grid {grid-template-columns:1fr;} .registration-tabs button {font-size:12px;}}
 </style>
 </head>
 
@@ -1388,13 +1425,33 @@ function renderRegistrationList() {
   const rows = registrationGroups[registrationTab].filter(r => [r.first_name,r.last_name,r.nickname,r.phone,r.line_display_name,[r.first_name,r.last_name].filter(Boolean).join(" ")].some(v => String(v || "").toLowerCase().includes(query)));
   document.querySelectorAll("[data-registration-tab]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.registrationTab === registrationTab)));
   registrationList.className = rows.length ? "" : "empty-state";
-  registrationList.innerHTML = rows.length ? rows.map(r => `<article class="owner-stat">
-    <strong>${escapeRegistration([r.first_name,r.last_name].filter(Boolean).join(" ") || r.line_display_name || "ไม่ระบุชื่อ")}</strong>
-    <p>ชื่อเล่น: ${escapeRegistration(r.nickname || "-")} · ${escapeRegistration(r.membership_plan || "-")}</p>
-    <p>วันที่สมัคร: ${registrationDate(r.created_at)}</p>
-    <p>สถานะ: ${registrationLabels[registrationTab]}${registrationTab === "pending" ? "" : " · " + registrationDate(registrationTab === "approved" ? r.approved_at : r.rejected_at)}</p>
-    <button type="button" class="view-registration-button" data-registration-id="${escapeRegistration(r.id)}">ดูรายละเอียด</button>
-  </article>`).join("") : "ไม่พบคำขอในรายการนี้";
+  if (!rows.length) {
+    registrationList.innerHTML = '<div class="empty-state">ไม่พบคำขอในรายการนี้</div>';
+  } else if (registrationTab === "pending") {
+    registrationList.innerHTML = rows.map(r => `
+      <article class="registration-pending-card">
+        <h3>${escapeRegistration([r.first_name,r.last_name].filter(Boolean).join(" ") || r.line_display_name || "ไม่ระบุชื่อ")}</h3>
+        <span class="reg-status reg-status-pending">รอตรวจสอบ</span>
+        <div class="registration-pending-meta">
+          <span>ชื่อเล่น: ${escapeRegistration(r.nickname || "-")}</span>
+          <span>แพ็กเกจ: ${escapeRegistration(r.membership_plan || "-")}</span>
+          <span>วันที่สมัคร: ${registrationDate(r.created_at)}</span>
+        </div>
+        <button type="button" class="view-registration-button" data-registration-id="${escapeRegistration(r.id)}">ตรวจสอบรายละเอียด</button>
+      </article>`).join("");
+  } else {
+    const dateLabel = registrationTab === "approved" ? "วันที่อนุมัติ" : "วันที่ปฏิเสธ";
+    const statusClass = registrationTab === "approved" ? "reg-status-approved" : "reg-status-rejected";
+    registrationList.innerHTML = `<div class="registration-history-wrap"><table class="registration-history-table">
+      <thead><tr><th>ชื่อผู้สมัคร</th><th>แพ็กเกจ</th><th>${dateLabel}</th><th>สถานะ</th><th>รายละเอียด</th></tr></thead>
+      <tbody>${rows.map(r => `<tr>
+        <td><span class="reg-person">${escapeRegistration([r.first_name,r.last_name].filter(Boolean).join(" ") || r.line_display_name || "ไม่ระบุชื่อ")}</span><span class="reg-sub">ชื่อเล่น: ${escapeRegistration(r.nickname || "-")}</span></td>
+        <td>${escapeRegistration(r.membership_plan || "-")}</td>
+        <td>${registrationDate(registrationTab === "approved" ? r.approved_at : r.rejected_at)}</td>
+        <td><span class="reg-status ${statusClass}">${registrationLabels[registrationTab]}</span></td>
+        <td><button type="button" class="view-registration-button" data-registration-id="${escapeRegistration(r.id)}">ดูรายละเอียด</button></td>
+      </tr>`).join("")}</tbody></table></div>`;
+  }
 }
 document.querySelectorAll("[data-registration-tab]").forEach(b => b.onclick = () => { if (registrationBusy) return; registrationTab = b.dataset.registrationTab; renderRegistrationList(); });
 registrationSearch.oninput = () => { if (!registrationBusy) renderRegistrationList(); };
@@ -1664,137 +1721,42 @@ registrationList.onclick = (event) => {
       const isPending = registration.registration_status === "pending";
       document.getElementById("registrationApprovalFields").hidden = !isPending;
       document.getElementById("rejectionReason").value = "";
-      registrationDetailContent.innerHTML = `
-        <div class="owner-stat">
-          <p><strong>สถานะ:</strong> ${registrationLabels[registration.registration_status] || "-"}</p>
-          <p><strong>วันที่สมัคร:</strong> ${registrationDate(registration.created_at)}</p>
-          ${isPending ? "" : `<p><strong>วันที่ดำเนินการ:</strong> ${registrationDate(registration.approved_at || registration.rejected_at)}</p>
-          <p><strong>ผู้ดำเนินการ:</strong> ${escapeRegistration(registration.approved_by || registration.rejected_by || "-")}</p>
-          <p><strong>${registration.registration_status === "rejected" ? "เหตุผลที่ปฏิเสธ" : "หมายเหตุ"}:</strong> ${escapeRegistration(registration.registration_status === "rejected" ? registration.rejection_reason || "-" : registration.coach_note || "-")}</p>`}
-
-          <p>
-            <strong>ชื่อ:</strong>
-            ${escapeRegistration(fullName || "-")}
-          </p>
-
-          <p>
-            <strong>ชื่อเล่น:</strong>
-            ${escapeRegistration(registration.nickname || "-")}
-          </p>
-
-          <p>
-            <strong>เบอร์โทร:</strong>
-            ${escapeRegistration(registration.phone || "-")}
-          </p>
-
-          <p>
-            <strong>อีเมล:</strong>
-            ${escapeRegistration(registration.email || "-")}
-          </p>
-
-          <p>
-            <strong>วันเกิด:</strong>
-            ${escapeRegistration(registration.birth_date || "-")}
-          </p>
-
-          <p>
-            <strong>เพศ:</strong>
-            ${escapeRegistration(registration.gender || "-")}
-          </p>
-
-          <p>
-            <strong>โรคประจำตัว:</strong>
-            ${escapeRegistration(registration.medical_conditions || "ไม่มี")}
-          </p>
-
-          <p>
-            <strong>แพ้อาหาร / แพ้ยา:</strong>
-            ${escapeRegistration(registration.allergies || "ไม่มี")}
-          </p>
-
-          <p>
-            <strong>ผู้ติดต่อฉุกเฉิน:</strong>
-            ${escapeRegistration(registration.emergency_contact_name || "-")}
-          </p>
-
-          <p>
-            <strong>ความสัมพันธ์:</strong>
-            ${escapeRegistration(registration.emergency_contact_relationship || "-")}
-          </p>
-
-          <p>
-            <strong>เบอร์ฉุกเฉิน:</strong>
-            ${escapeRegistration(registration.emergency_contact_phone || "-")}
-          </p>
-
-          <p>
-            <strong>แผนสมาชิก:</strong>
-            ${escapeRegistration(registration.membership_plan || "-")}
-          </p>
-
-          <p>
-  <strong>วิธีชำระเงิน:</strong>
-  ${paymentMethod}
-</p>
-
-${
-  registration.payment_amount
-    ? `
-      <p>
-        <strong>ยอดชำระ:</strong>
-        ${Number(registration.payment_amount).toLocaleString("th-TH")} บาท
-      </p>
-    `
-    : ""
-}
-
-${
-  registrationSlip(registration.slip_signed_url)
-    ? `
-      <div style="margin-top:18px;">
-        <p>
-          <strong>หลักฐานการชำระเงิน:</strong>
-        </p>
-
-        <a
-          href="${registrationSlip(registration.slip_signed_url)}"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img
-            src="${registrationSlip(registration.slip_signed_url)}"
-            alt="Payment Slip"
-            style="
-              display:block;
-              width:100%;
-              max-width:420px;
-              max-height:600px;
-              object-fit:contain;
-              margin-top:10px;
-              border:1px solid #ddd;
-              border-radius:12px;
-              background:#fff;
-              cursor:pointer;
-            "
-          >
-        </a>
-
-        <small>คลิกที่รูปเพื่อเปิดดูขนาดเต็ม</small>
-      </div>
-    `
-    : `
-      <p>
-        <strong>หลักฐานการชำระเงิน:</strong>
-        ไม่มีสลิป
-      </p>
-    `
-}
-
-</div>
-      `;
-
-
-     approvalMemberGroup.value = "";
+             const field = (label, value, fallback = "-") => `<div class="reg-detail-field"><span class="reg-detail-label">${label}</span><span class="reg-detail-value">${escapeRegistration(value === null || value === undefined || value === "" ? fallback : value)}</span></div>`;
+       const section = (title, fields) => `<section class="reg-detail-section"><h4>${title}</h4><div class="reg-detail-grid">${fields.join("")}</div></section>`;
+       const statusText = registrationLabels[registration.registration_status] || "-";
+       const statusClass = registration.registration_status === "approved" ? "reg-status-approved" : registration.registration_status === "rejected" ? "reg-status-rejected" : "reg-status-pending";
+       const actionDate = registration.registration_status === "approved" ? registration.approved_at : registration.rejected_at;
+       const actor = registration.registration_status === "approved" ? registration.approved_by : registration.rejected_by;
+       const actionNote = registration.registration_status === "rejected" ? registration.rejection_reason : registration.coach_note;
+       const slipUrl = registrationSlip(registration.slip_signed_url);
+       const amount = registration.payment_amount != null && registration.payment_amount !== "" && Number.isFinite(Number(registration.payment_amount))
+         ? `${Number(registration.payment_amount).toLocaleString("th-TH")} บาท` : "-";
+       registrationDetailContent.innerHTML = `
+         <div class="reg-detail-heading"><h4>${escapeRegistration(fullName || registration.line_display_name || "ผู้สมัคร")}</h4><span class="reg-status ${statusClass}">${statusText}</span></div>
+         ${section("ข้อมูลคำขอและการดำเนินการ", [
+           field("วันที่สมัคร", registrationDate(registration.created_at)),
+           ...(!isPending ? [field("วันที่ดำเนินการ", registrationDate(actionDate)), field("ผู้ดำเนินการ", actor)] : []),
+           ...(!isPending ? [field(registration.registration_status === "rejected" ? "เหตุผลที่ปฏิเสธ" : "หมายเหตุ", actionNote)] : [])
+         ])}
+         ${section("ข้อมูลผู้สมัคร", [
+           field("ชื่อ–นามสกุล", fullName), field("ชื่อเล่น", registration.nickname),
+           field("เบอร์โทรศัพท์", registration.phone), field("อีเมล", registration.email),
+           field("วันเกิด", registration.birth_date), field("เพศ", registration.gender)
+         ])}
+         ${section("ข้อมูลสุขภาพและผู้ติดต่อฉุกเฉิน · เฉพาะ Owner", [
+           field("โรคประจำตัว", registration.medical_conditions, "ไม่มี"),
+           field("แพ้อาหาร / แพ้ยา", registration.allergies, "ไม่มี"),
+           field("ผู้ติดต่อฉุกเฉิน", registration.emergency_contact_name),
+           field("ความสัมพันธ์", registration.emergency_contact_relationship),
+           field("เบอร์ฉุกเฉิน", registration.emergency_contact_phone)
+         ])}
+         ${section("แพ็กเกจและการชำระเงิน", [
+           field("แพ็กเกจ", registration.membership_plan),
+           field("วิธีชำระเงิน", paymentMethod), field("ยอดชำระ", amount)
+         ])}
+         <section class="reg-detail-section"><h4>หลักฐานการชำระเงิน</h4>
+           ${slipUrl ? `<a href="${slipUrl}" target="_blank" rel="noopener noreferrer"><img class="reg-detail-slip" src="${slipUrl}" alt="หลักฐานการชำระเงิน"></a><p class="reg-detail-label">คลิกภาพเพื่อดูขนาดเต็ม</p>` : `<p class="reg-detail-value">ไม่มีสลิป${registration.payment_method === "cash" ? " (ชำระเงินสด)" : ""}</p>`}
+         </section>`;approvalMemberGroup.value = "";
       approvalBeltLevel.value = "";
       approvalStripeCount.value = "0";
       approvalBeltAwardedDate.value = "";
