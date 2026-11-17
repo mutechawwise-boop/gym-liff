@@ -1,4 +1,4 @@
-import { pushMemberCard } from "./lib/line.js";
+import { pushMemberCard, pushLineMessage } from "./lib/line.js";
 async function verifyLineIdToken(idToken, lineChannelId) {
   if (!idToken) {
     throw new Error("ไม่พบ LINE ID token");
@@ -610,7 +610,7 @@ if (mode === "owner_reject_registration") {
 
   const response = await fetch(
     `${supabaseUrl}/rest/v1/member_registration` +
-      `?id=eq.${registrationId}&registration_status=eq.pending&select=id,registration_status,rejected_at,rejected_by,rejection_reason`,
+      `?id=eq.${registrationId}&registration_status=eq.pending&select=id,line_user_id,registration_status,rejected_at,rejected_by,rejection_reason`,
     {
       method: "PATCH",
       headers: {
@@ -635,7 +635,34 @@ if (mode === "owner_reject_registration") {
   if (!rows.length) {
     return json({ error: "ไม่พบคำขอที่รอตรวจสอบ หรือคำขอถูกดำเนินการแล้ว" }, 409);
   }
-  return json({ success: true, message: "ปฏิเสธคำขอเรียบร้อยแล้ว", registration: rows[0] });
+  // LINE delivery is best-effort: never undo a recorded rejection.
+  const rejectedRegistration = rows[0];
+  let lineNotification = { status: "not_sent" };
+  if (rejectedRegistration.line_user_id) {
+    try {
+      await pushLineMessage(
+        rejectedRegistration.line_user_id,
+        [
+          "Gambit Jiu-Jitsu | แจ้งผลคำขอสมัครสมาชิก",
+          "ขออภัย คำขอสมัครสมาชิกของคุณยังไม่สามารถอนุมัติได้",
+          `เหตุผล: ${rejectionReason}`,
+          "หากต้องการสอบถามหรือส่งข้อมูลเพิ่มเติม สามารถติดต่อผ่าน LINE นี้ได้ค่ะ"
+        ].join("\n")
+      );
+      lineNotification = { status: "sent" };
+    } catch (lineError) {
+      console.error("LINE rejection notification failed:", lineError);
+      lineNotification = { status: "failed" };
+    }
+  } else {
+    lineNotification = { status: "no_line_user_id" };
+  }
+  return json({
+    success: true,
+    message: "ปฏิเสธคำขอเรียบร้อยแล้ว",
+    registration: rejectedRegistration,
+    lineNotification
+  });
 }
 
 if (mode === "owner_approve_registration") {
@@ -1324,23 +1351,27 @@ if (!beltHistoryResponse.ok) {
     );
   }
 // ส่ง Member Card ไป LINE หลังอนุมัติสมาชิกใหม่
-try {
-  await pushMemberCard(
-    registration.line_user_id,
-    member,
-    "✅ สมัครสมาชิกเรียบร้อยแล้ว"
-  );
-} catch (lineError) {
-  console.error(
-    "LINE new member card push failed:",
-    lineError
-  );
+let lineNotification = { status: "not_sent" };
+if (registration.line_user_id) {
+  try {
+    await pushMemberCard(
+      registration.line_user_id,
+      member,
+      "✅ สมัครสมาชิกเรียบร้อยแล้ว"
+    );
+    lineNotification = { status: "sent" };
+  } catch (lineError) {
+    console.error("LINE new member card push failed:", lineError);
+    lineNotification = { status: "failed" };
+  }
+} else {
+  lineNotification = { status: "no_line_user_id" };
 }
   return json({
     success: true,
-    message:
-      "อนุมัติสมาชิกเรียบร้อยแล้ว",
-    member
+    message: "อนุมัติสมาชิกเรียบร้อยแล้ว",
+    member,
+    lineNotification
   });
 }
 const nickname =
