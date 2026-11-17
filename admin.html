@@ -1171,7 +1171,9 @@ async function loadAdminDashboard() {
               : JSON.stringify(data.details)}`
           : "";
 
-        throw new Error((data.error || "เกิดข้อผิดพลาด") + detailText);
+        const error = new Error((data.error || "เกิดข้อผิดพลาด") + detailText);
+        error.status = response.status;
+        throw error;
       }
 
       return data;
@@ -1855,10 +1857,31 @@ renderSessionOptions();
           renderSelectedSession();
         }
       } catch (error) {
-        elements.adminArea.style.display = "none";
-        elements.loginArea.style.display = "block";
-        elements.loginError.textContent = error.message;
-        sessionStorage.removeItem("gambitAdminKey");
+        const authorizationFailed = error.status === 401 || error.status === 403;
+
+        if (authorizationFailed) {
+          // Only an explicit authorization failure should end the Coach session.
+          sessionStorage.removeItem("gambitAdminKey");
+          state.adminKey = "";
+          state.overview = null;
+          elements.adminArea.style.display = "none";
+          elements.loginArea.style.display = "block";
+          elements.loginError.textContent =
+            "สิทธิ์เข้าใช้งานไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่: " + error.message;
+        } else {
+          // A temporary network/server error must not log the Coach out.
+          elements.loginError.textContent = error.message;
+          if (state.overview) {
+            elements.adminArea.style.display = "block";
+            elements.loginArea.style.display = "none";
+            renderSelectedSession();
+          } else {
+            elements.content.className = "empty";
+            elements.content.textContent = "โหลดข้อมูลไม่สำเร็จ กรุณากดโหลดข้อมูลใหม่";
+          }
+          window.console.error("Coach overview refresh failed:", error);
+          window.alert("โหลดข้อมูลล่าสุดไม่สำเร็จ กรุณากดโหลดข้อมูลใหม่\n" + error.message);
+        }
       } finally {
         elements.refreshButton.disabled = false;
         elements.refreshMembersButton.disabled = false;
