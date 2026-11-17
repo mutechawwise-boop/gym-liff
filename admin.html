@@ -587,6 +587,10 @@
   /* Coach check-in: no member list before class selection and start. */
   #coachWorkflowCard .coach-workflow-actions button {min-width:0;}
   #coachWorkflowMessage:not(:empty) {padding:12px;background:#f7f7f7;border-radius:10px;}
+  #adminArea #attendance[hidden], #adminArea #coachWorkflowCard[hidden],
+  #adminArea #legacyAttendanceSummary[hidden], #adminArea #legacyAttendanceMembers[hidden] {display:none !important;}
+  #adminArea [data-open-class]:hover {border-color:#111 !important;box-shadow:0 4px 15px #0000000e;}
+  #adminArea [data-open-class]:focus-visible {outline:3px solid #c93535;outline-offset:2px;}
   </style>
 </head>
 
@@ -846,7 +850,7 @@
     class="error"
   ></p>
 </section>
-      <section id="attendance" class="toolbar card">
+      <section id="attendance" class="toolbar card" hidden>
         <div>
           <label for="sessionSelect">เลือกคลาส</label>
           <select id="sessionSelect"></select>
@@ -855,7 +859,7 @@
         <button id="refreshButton" class="refresh-button" type="button">🔄 โหลดข้อมูลใหม่</button>
       </section>
 
-      <section class="card" id="coachWorkflowCard">
+      <section class="card" id="coachWorkflowCard" hidden>
         <div class="coach-flow" aria-label="ขั้นตอนเช็กชื่อ">
           <span class="coach-step active" data-coach-step="1">1 เลือกคลาส</span>
           <span class="coach-step" data-coach-step="2">2 เช็กชื่อ</span>
@@ -871,7 +875,7 @@
         <div id="coachReviewList" class="coach-review" style="display:none"></div>
         <p id="coachWorkflowMessage" class="coach-message" role="status" aria-live="polite"></p>
       </section>
-      <section class="summary">
+      <section class="summary" id="legacyAttendanceSummary" hidden>
         <div class="summary-box">
           <span id="totalCount" class="summary-number">0</span>
           สมาชิกทั้งหมด
@@ -888,7 +892,7 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card" id="legacyAttendanceMembers" hidden>
         <h2 id="sessionTitle" class="session-title">
           ยังไม่ได้เลือกคลาส
         </h2>
@@ -1417,7 +1421,12 @@ function renderMonthlySchedule() {
 
         return `
           <div
+            data-open-class="${session.id}"
+            role="link"
+            tabindex="0"
+            aria-label="เปิดรายละเอียดคลาส ${session.classes?.name || 'คลาส'}"
             style="
+              cursor:pointer;
               padding:18px;
               margin-bottom:12px;
               border:1px solid #e5e5e5;
@@ -1547,6 +1556,24 @@ function renderMonthlySchedule() {
         `;
           })
       .join("");
+
+  elements.monthlyScheduleList.querySelectorAll("[data-open-class]").forEach(card => {
+     const open = () => {
+       const id = card.dataset.openClass;
+       const item = daySessions.find(s => String(s.id) === id);
+       if (!item || item.status === "cancelled") return;
+       window.location.href = `class-detail.html?session=${encodeURIComponent(id)}&date=${encodeURIComponent(selectedDate)}`;
+     };
+     card.addEventListener("click", e => {
+       if (e.target.closest("button")) return;
+       open();
+     });
+     card.addEventListener("keydown", e => {
+       if ((e.key === "Enter" || e.key === " ") && e.target === card) {
+         e.preventDefault(); open();
+       }
+     });
+   });
 
   elements.monthlyScheduleList
     .querySelectorAll(
