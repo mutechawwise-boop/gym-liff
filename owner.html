@@ -1188,6 +1188,20 @@ function registrationDate(value) {
 function registrationSlip(value) {
   try { const url = new URL(value); return url.protocol === "https:" ? escapeRegistration(url.href) : ""; } catch { return ""; }
 }
+// Display labels only: keep membership plan codes unchanged for API operations.
+function membershipPlanLabel(value) {
+  const code = String(value ?? "").trim();
+  const labels = {
+    adult_monthly: "Adult Monthly (รายเดือน)",
+    kids_monthly: "Kids Monthly (รายเดือน)",
+    class_pass_4: "Class Pass 4 ครั้ง",
+    class_pass_8: "Class Pass 8 ครั้ง",
+    class_pass_12: "Class Pass 12 ครั้ง",
+    drop_in: "Drop-in (รายครั้ง)",
+    private: "Private Class (คลาสส่วนตัว)"
+  };
+  return labels[code] || code || "-";
+}
 async function loadOwnerDashboard() {
   const adminKey =
     sessionStorage.getItem("gambitAdminKey");
@@ -1338,8 +1352,7 @@ if (!data.recentPayments?.length) {
               : "-";
 
         const planText =
-          payment.membershipPlan ||
-          "-";
+          membershipPlanLabel(payment.membershipPlan);
 
         const approvedDate =
           payment.approvedAt
@@ -1434,7 +1447,7 @@ function renderRegistrationList() {
         <span class="reg-status reg-status-pending">รอตรวจสอบ</span>
         <div class="registration-pending-meta">
           <span>ชื่อเล่น: ${escapeRegistration(r.nickname || "-")}</span>
-          <span>แพ็กเกจ: ${escapeRegistration(r.membership_plan || "-")}</span>
+          <span>แพ็กเกจ: ${escapeRegistration(membershipPlanLabel(r.membership_plan))}</span>
           <span>วันที่สมัคร: ${registrationDate(r.created_at)}</span>
         </div>
         <button type="button" class="view-registration-button" data-registration-id="${escapeRegistration(r.id)}">ตรวจสอบรายละเอียด</button>
@@ -1446,7 +1459,7 @@ function renderRegistrationList() {
       <thead><tr><th>ชื่อผู้สมัคร</th><th>แพ็กเกจ</th><th>${dateLabel}</th><th>สถานะ</th><th>รายละเอียด</th></tr></thead>
       <tbody>${rows.map(r => `<tr>
         <td><span class="reg-person">${escapeRegistration([r.first_name,r.last_name].filter(Boolean).join(" ") || r.line_display_name || "ไม่ระบุชื่อ")}</span><span class="reg-sub">ชื่อเล่น: ${escapeRegistration(r.nickname || "-")}</span></td>
-        <td>${escapeRegistration(r.membership_plan || "-")}</td>
+        <td>${escapeRegistration(membershipPlanLabel(r.membership_plan))}</td>
         <td>${registrationDate(registrationTab === "approved" ? r.approved_at : r.rejected_at)}</td>
         <td><span class="reg-status ${statusClass}">${registrationLabels[registrationTab]}</span></td>
         <td><button type="button" class="view-registration-button" data-registration-id="${escapeRegistration(r.id)}">ดูรายละเอียด</button></td>
@@ -1484,7 +1497,7 @@ if (!data.pendingRenewals?.length) {
           "ไม่ระบุชื่อ";
 
         const plan =
-          renewal.membership_plan || "-";
+          membershipPlanLabel(renewal.membership_plan);
 
         const paymentMethod =
           renewal.payment_method === "transfer"
@@ -1751,7 +1764,7 @@ registrationList.onclick = (event) => {
            field("เบอร์ฉุกเฉิน", registration.emergency_contact_phone)
          ])}
          ${section("แพ็กเกจและการชำระเงิน", [
-           field("แพ็กเกจ", registration.membership_plan),
+           field("แพ็กเกจ", membershipPlanLabel(registration.membership_plan)),
            field("วิธีชำระเงิน", paymentMethod), field("ยอดชำระ", amount)
          ])}
          <section class="reg-detail-section"><h4>หลักฐานการชำระเงิน</h4>
