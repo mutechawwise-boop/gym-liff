@@ -541,6 +541,32 @@
 @media(max-width:900px){#adminArea .quick-nav {display:flex;overflow-x:auto;flex-wrap:nowrap;gap:8px;padding-bottom:8px;}#adminArea .quick-nav a {white-space:nowrap;} }
 @media(max-width:650px){#adminArea .member-row {gap:8px;}#adminArea .status-area {min-width:110px;}#adminArea .card {padding:18px;} }
 
+
+/* Gambit Coach Ultra Compact — presentation only */
+#adminArea #content.member-list {display:flex;flex-direction:column;gap:0;margin-top:8px;overflow:visible;}
+#adminArea #content .member-row {display:grid;grid-template-columns:minmax(0,1fr) 132px 38px;gap:12px;align-items:center;padding:10px 12px;background:#fff;border-radius:0;border-bottom:1px solid #e9e9e9;min-height:62px;}
+#adminArea #content .member-row:nth-child(even) {background:#fafafa;}
+#adminArea #content .member-info {min-width:0;display:flex;align-items:center;flex-wrap:wrap;column-gap:8px;row-gap:3px;}
+#adminArea #content .member-name {font-size:14px;margin:0;line-height:1.4;}
+#adminArea #content .belt-badge {margin:0;padding:2px 6px;font-size:11px;gap:4px;}
+#adminArea #content .belt-color {width:11px;height:11px;}
+#adminArea #content .gambit-plan-wrap {display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;flex-basis:100%;}
+#adminArea #content .gambit-plan-badge {margin:0;padding:2px 7px;font-size:11px;}
+#adminArea #content .gambit-plan-meta {margin:0;font-size:11px;}
+#adminArea #content .status-area {min-width:0;text-align:right;}
+#adminArea #content .status-badge {font-size:12px;padding:3px 6px;}
+#adminArea #content .method {font-size:11px;margin-top:2px;}
+#adminArea #content .teacher-checkin-button {font-size:12px;padding:8px 10px;min-height:34px;}
+#adminArea #content .member-more {position:relative;justify-self:end;align-self:center;}
+#adminArea #content .member-more > summary {list-style:none;cursor:pointer;border:1px solid #e4e4e4;border-radius:8px;padding:5px 8px;font-size:18px;line-height:1;user-select:none;}
+#adminArea #content .member-more > summary::-webkit-details-marker {display:none;}
+#adminArea #content .member-more[open] > summary {background:#eee;}
+#adminArea #content .member-actions {position:absolute;right:0;top:calc(100% + 4px);z-index:20;display:flex;flex-direction:column;gap:5px;min-width:155px;margin:0;padding:8px;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 6px 22px #0002;}
+#adminArea #content .member-actions button {width:100%;text-align:left;font-size:12px;min-height:34px;}
+#adminArea #attendance + .summary {margin-top:8px;}
+#adminArea #attendance + .summary > * {padding-top:8px;padding-bottom:8px;}
+@media(max-width:650px){#adminArea #content .member-row {grid-template-columns:minmax(0,1fr) 104px 32px;gap:6px;padding:9px 5px;}#adminArea #content .member-name {font-size:13px;}#adminArea #content .gambit-plan-meta {font-size:10px;}#adminArea #content .teacher-checkin-button {font-size:11px;padding:7px 6px;}#adminArea #content .member-more > summary {padding:5px;}}
+
   </style>
 </head>
 
@@ -1712,51 +1738,56 @@ function renderSessionOptions() {
       row.className = "member-row";
 
       const details = document.createElement("div");
-
+      details.className = "member-info";
       const name = document.createElement("p");
       name.className = "member-name";
       name.textContent = getMemberName(member);
-
       details.appendChild(name);
       details.appendChild(createBeltBadge(member));
-      details.appendChild(createPackageBadge(member));
+      const packageWrap = document.createElement("div");
+      packageWrap.className = "gambit-plan-wrap";
+      packageWrap.appendChild(createPackageBadge(member));
+      details.appendChild(packageWrap);
 
+      // Rarely-used member actions live in a native, keyboard-accessible menu.
+      const more = document.createElement("details");
+      more.className = "member-more";
+      const trigger = document.createElement("summary");
+      trigger.textContent = "⋯";
+      trigger.title = "ตัวเลือกสำหรับ " + getMemberName(member);
+      trigger.setAttribute("aria-label", trigger.title);
+      more.appendChild(trigger);
       const actions = document.createElement("div");
       actions.className = "member-actions";
-
       const changeBeltButton = document.createElement("button");
       changeBeltButton.type = "button";
       changeBeltButton.className = "change-belt-button";
       changeBeltButton.textContent = "🥋 เปลี่ยนสาย";
       changeBeltButton.addEventListener("click", () => {
+        more.open = false;
         openBeltModal(member);
       });
-
       const manageClassButton = document.createElement("button");
       manageClassButton.type = "button";
       manageClassButton.className = "manage-class-button";
       manageClassButton.textContent = "👥 จัดการคลาส";
       manageClassButton.addEventListener("click", () => {
+        more.open = false;
         openEnrollmentModal(member);
       });
-
       actions.appendChild(changeBeltButton);
       actions.appendChild(manageClassButton);
-      details.appendChild(actions);
+      more.appendChild(actions);
 
       const statusArea = document.createElement("div");
       statusArea.className = "status-area";
-
       if (attendance) {
         const badge = document.createElement("div");
         badge.className = "status-badge checked";
-        badge.textContent =
-          `✅ ${formatCheckinTime(attendance.checked_in_at)}`;
-
+        badge.textContent = `✅ ${formatCheckinTime(attendance.checked_in_at)}`;
         const method = document.createElement("div");
         method.className = "method";
         method.textContent = getCheckinMethod(attendance.checkin_method);
-
         statusArea.appendChild(badge);
         statusArea.appendChild(method);
       } else {
@@ -1764,16 +1795,12 @@ function renderSessionOptions() {
         button.type = "button";
         button.className = "teacher-checkin-button";
         button.textContent = "ครูเช็กให้";
-        button.addEventListener("click", () => {
-          teacherCheckIn(sessionId, member.id, button);
-        });
-
+        button.addEventListener("click", () => teacherCheckIn(sessionId, member.id, button));
         statusArea.appendChild(button);
       }
-
       row.appendChild(details);
       row.appendChild(statusArea);
-
+      row.appendChild(more);
       return row;
     }
 
@@ -1870,7 +1897,7 @@ function renderSessionOptions() {
             attendanceByMember.has(Number(second.id));
 
           if (firstChecked !== secondChecked) {
-            return firstChecked ? -1 : 1;
+            return firstChecked ? 1 : -1;
           }
 
           return getMemberName(first).localeCompare(
