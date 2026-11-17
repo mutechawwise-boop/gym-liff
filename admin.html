@@ -584,6 +584,9 @@
 .coach-message {margin:12px 0;font-size:14px;white-space:pre-line}
 .coach-message.error {color:#b42318}.coach-message.success {color:#087b32}
 @media(max-width:650px){.coach-workflow-actions button {width:100%}}
+  /* Coach check-in: no member list before class selection and start. */
+  #coachWorkflowCard .coach-workflow-actions button {min-width:0;}
+  #coachWorkflowMessage:not(:empty) {padding:12px;background:#f7f7f7;border-radius:10px;}
   </style>
 </head>
 
@@ -860,10 +863,10 @@
         </div>
         <p id="coachWorkflowDescription" class="coach-workflow-note">เลือกคลาสด้านบน แล้วกดเริ่มเช็กชื่อ</p>
         <div id="coachWorkflowActions" class="coach-workflow-actions">
-          <button type="button" id="coachStartButton">เริ่มเช็กชื่อคลาสนี้</button>
+          <button type="button" id="coachStartButton">เริ่มเช็กชื่อ</button>
           <button type="button" id="coachReviewButton" style="display:none">ตรวจทานรายชื่อ</button>
           <button type="button" id="coachBackButton" class="secondary-button" style="display:none">กลับไปแก้ไข</button>
-          <button type="button" id="coachSaveButton" style="display:none">ยืนยันบันทึกเข้า Supabase</button>
+          <button type="button" id="coachSaveButton" style="display:none">บันทึกเช็กชื่อ</button>
         </div>
         <div id="coachReviewList" class="coach-review" style="display:none"></div>
         <p id="coachWorkflowMessage" class="coach-message" role="status" aria-live="polite"></p>
@@ -1162,7 +1165,8 @@ saveEditSessionButton:
       selectedEnrollmentMemberId: null,
       coachStep: 1,
       coachDraft: new Set(),
-      coachBusy: false
+      coachBusy: false,
+      coachActiveSessionValue: ""
     };
 async function loadAdminDashboard() {
   const dashboardError = document.getElementById("dashboardError");
@@ -1660,47 +1664,36 @@ function renderMonthlySchedule() {
 }
 
 function renderSessionOptions() {
-      
-      const previousSession = elements.sessionSelect.value;
-      elements.sessionSelect.innerHTML = "";
+  const old = elements.sessionSelect.value;
+  elements.sessionSelect.replaceChildren();
+  const prompt = document.createElement("option");
+  prompt.value = "";
+  prompt.textContent = "— เลือกคลาสก่อนเช็กชื่อ —";
+  elements.sessionSelect.appendChild(prompt);
+  const sessions = state.overview?.sessions || [];
+  sessions.forEach(session => {
+    const option = document.createElement("option");
+    option.value = String(session.id);
+    option.textContent = `${formatTime(session.start_time)} ${session.classes?.name || "ไม่ระบุชื่อคลาส"}`;
+    elements.sessionSelect.appendChild(option);
+  });
+  elements.sessionSelect.value = old && sessions.some(s => String(s.id) === old) ? old : "";
+  if (!elements.sessionSelect.value) { state.coachStep = 1; state.coachDraft.clear(); }
+  state.coachActiveSessionValue = elements.sessionSelect.value;
+  renderSelectedSession();
+}
 
-      const sessions = state.overview?.sessions || [];
-
-      if (!sessions.length) {
-        const option = document.createElement("option");
-        option.value = "";
-        option.textContent = "วันนี้ยังไม่มีคลาสที่เปิดอยู่";
-        elements.sessionSelect.appendChild(option);
-        renderEmptySession();
-        return;
-      }
-
-      sessions.forEach((session) => {
-        const option = document.createElement("option");
-        option.value = String(session.id);
-        option.textContent =
-          `${formatTime(session.start_time)} ` +
-          `${session.classes?.name || "ไม่ระบุชื่อคลาส"}`;
-
-        elements.sessionSelect.appendChild(option);
-      });
-
-      if (previousSession && sessions.some(s => String(s.id) === previousSession)) {
-        elements.sessionSelect.value = previousSession;
-      }
-      renderSelectedSession();
-    }
-
-    function renderEmptySession() {
-      elements.sessionTitle.textContent = "วันนี้ยังไม่มีคลาสที่เปิดอยู่";
-      elements.sessionTime.textContent = "";
-      elements.totalCount.textContent = "0";
-      elements.checkedCount.textContent = "0";
-      elements.remainingCount.textContent = "0";
-      elements.content.className = "empty";
-      elements.content.textContent =
-        "กรุณาสร้างหรือเปิดคลาสก่อนตรวจสอบรายชื่อ";
-    }
+function renderEmptySession() {
+  elements.sessionTitle.textContent = "ยังไม่ได้เลือกคลาส";
+  elements.sessionTime.textContent = "เลือกคลาสและกดเริ่มเช็กชื่อก่อน จึงจะแสดงรายชื่อนักเรียน";
+  elements.totalCount.textContent = "—";
+  elements.checkedCount.textContent = "—";
+  elements.remainingCount.textContent = "—";
+  elements.content.className = "empty";
+  elements.content.textContent = "ขั้นที่ 1 เลือกคลาสด้านบน";
+  document.getElementById("coachSearchCount").textContent = "";
+  updateCoachWorkflow();
+}
 
     function createBeltBadge(member) {
       const detail = document.createElement("p");
@@ -1938,6 +1931,14 @@ function renderSessionOptions() {
         if (attendanceByMember.has(id) || !classMemberIds.has(id)) state.coachDraft.delete(id);
       }
       updateCoachWorkflow();
+      if (state.coachStep !== 2) {
+        elements.content.className = "empty";
+        elements.content.textContent = state.coachStep === 1
+          ? "กด ‘เริ่มเช็กชื่อ’ เพื่อดูรายชื่อผู้มีสิทธิ์เรียนคลาสนี้"
+          : "ตรวจทานรายชื่อที่เลือกไว้ด้านบน แล้วกดบันทึก";
+        document.getElementById("coachSearchCount").textContent = "";
+        return;
+      }
       if (!classMembers.length) {
         elements.content.className = "empty";
         elements.content.textContent =
@@ -2008,7 +2009,11 @@ function renderSessionOptions() {
       const list = document.getElementById("coachReviewList");
       const description = document.getElementById("coachWorkflowDescription");
       const selectedSession = (state.overview?.sessions || []).find(s => String(s.id) === elements.sessionSelect.value);
-      start.style.display = step === 1 ? "" : "none";
+      start.style.display = step === 1 && !!selectedSession ? "" : "none";
+      const tools = document.querySelector(".gambit-search-tools");
+      if (tools) tools.style.display = selectedSession && step === 2 ? "flex" : "none";
+      const counters = document.querySelector("#coachWorkflowCard + .summary");
+      if (counters) counters.style.display = selectedSession ? "grid" : "none";
       start.disabled = !selectedSession || state.coachBusy;
       review.style.display = step === 2 ? "" : "none";
       review.disabled = state.coachDraft.size === 0 || state.coachBusy;
@@ -2017,7 +2022,7 @@ function renderSessionOptions() {
       back.disabled = state.coachBusy;
       save.style.display = step === 3 ? "" : "none";
       save.disabled = state.coachDraft.size === 0 || state.coachBusy;
-      save.textContent = state.coachBusy ? "กำลังบันทึก..." : `ยืนยันบันทึก (${state.coachDraft.size} คน)`;
+      save.textContent = state.coachBusy ? "กำลังบันทึก..." : `บันทึกเช็กชื่อ (${state.coachDraft.size} คน)`;
       description.textContent = step === 1 ? "ขั้นที่ 1 เลือกคลาสด้านบน แล้วกดเริ่มเช็กชื่อ" :
         step === 2 ? `ขั้นที่ 2 เลือกนักเรียนที่มาเรียนจริง (${state.coachDraft.size} คน) — ยังไม่บันทึกข้อมูล` :
         "ขั้นที่ 3 ตรวจทานรายชื่อก่อนส่งเข้า Supabase";
@@ -2102,7 +2107,10 @@ function renderSessionOptions() {
         updateCoachWorkflow(`บันทึกสำเร็จ ${succeeded.length} คน / ไม่สำเร็จ ${failed.length} คน\n${failed.join("\n")}\nรายชื่อที่ไม่สำเร็จยังถูกเลือกไว้ สามารถตรวจทานและลองใหม่ได้`, "error");
       } else {
         state.coachStep = 1;
-        renderSelectedSession();
+        state.coachDraft.clear();
+        elements.sessionSelect.value = "";
+        state.coachActiveSessionValue = "";
+        renderEmptySession();
         updateCoachWorkflow(`บันทึกสำเร็จ ${succeeded.length} คนแล้ว หากมีนักเรียนเพิ่ม ให้เลือกคลาสและเริ่มรอบใหม่`, "success");
       }
     }
@@ -2820,6 +2828,11 @@ document
     elements.refreshMembersButton.addEventListener("click", loadOverview);
      elements.sessionSelect.addEventListener("change", () => {
        if (state.coachBusy) return;
+       if (state.coachDraft.size && !window.confirm("มีรายชื่อที่ยังไม่บันทึก ต้องการยกเลิกที่เลือกไว้หรือไม่?")) {
+         elements.sessionSelect.value = state.coachActiveSessionValue;
+         return;
+       }
+       state.coachActiveSessionValue = elements.sessionSelect.value;
        state.coachStep = 1;
        state.coachDraft.clear();
        document.getElementById("coachWorkflowMessage").textContent = "";
