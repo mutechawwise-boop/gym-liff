@@ -1777,6 +1777,24 @@ function renderSessionOptions() {
       return row;
     }
 
+    // Coach attendance: show only members who are currently eligible to check in.
+    // This is display-only; no member or attendance records are deleted.
+    function isEligibleForCoachCheckin(member) {
+      const status = String(member.member_status || "").trim().toLowerCase();
+      if (status !== "active") return false;
+
+      const expiry = String(member.membership_expiry_date || "").slice(0, 10);
+      if (expiry && /^\d{4}-\d{2}-\d{2}$/.test(expiry) &&
+          expiry < thailandDateValue()) return false;
+
+      const plan = String(member.membership_plan || "").trim().toLowerCase();
+      if (plan.startsWith("class_pass_") && member.remaining_sessions != null &&
+          member.remaining_sessions !== "" && Number(member.remaining_sessions) <= 0) {
+        return false;
+      }
+      return true;
+    }
+
     function renderSelectedSession() {
       const sessionId = Number(elements.sessionSelect.value);
       const sessions = state.overview?.sessions || [];
@@ -1798,7 +1816,7 @@ function renderSessionOptions() {
             ? member.member_classes
             : [];
 
-          return enrollments.some(
+          return isEligibleForCoachCheckin(member) && enrollments.some(
             (enrollment) =>
               Number(enrollment.class_id) === classId &&
               enrollment.status === "active"
@@ -1840,7 +1858,7 @@ function renderSessionOptions() {
       if (!classMembers.length) {
         elements.content.className = "empty";
         elements.content.textContent =
-          "ยังไม่มีสมาชิกที่ลงทะเบียนในคลาสนี้";
+          "ไม่มีสมาชิก Active ที่มีสิทธิ์เช็กชื่อในคลาสนี้";
         return;
       }
 
