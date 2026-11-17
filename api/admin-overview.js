@@ -168,6 +168,9 @@ const monthlySessions =
     `nickname,` +
     `phone,` +
     `member_status,` +
+     `membership_plan,` +
+     `membership_expiry_date,` +
+     `remaining_sessions,` +
     `is_guest,` +
     `member_classes(class_id,status)` +
     `&order=display_name.asc`,
