@@ -514,6 +514,33 @@
     flex-direction: column;
   }
 }
+
+/* Gambit Coach UI v2 — sidebar and compact check-in */
+@media (min-width: 901px) {
+  body:has(#adminArea[style*="block"]) .container {max-width: 1440px;}
+  #adminArea {display:grid !important;grid-template-columns:210px minmax(0,1fr);column-gap:22px;align-items:start;}
+  #adminArea > .header {grid-column:1/-1;}
+  #adminArea > .quick-nav {grid-column:1;grid-row:2 / span 20;position:sticky;top:18px;align-self:start;display:flex;flex-direction:column;gap:5px;margin:0;padding:16px 10px;background:#151515;border-radius:16px;}
+  #adminArea > .quick-nav a {background:transparent;color:#eee;border:0;border-radius:10px;padding:13px 12px;font-size:14px;}
+  #adminArea > .quick-nav a:hover,#adminArea > .quick-nav a:focus {background:#363636;color:#fff;}
+  #adminArea > :not(.header):not(.quick-nav) {grid-column:2;min-width:0;}
+}
+#adminArea .member-row {padding:12px 14px;gap:12px;align-items:center;}
+#adminArea .member-name {margin-bottom:5px;}
+#adminArea .member-actions {margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;}
+#adminArea .member-actions button {font-size:12px;padding:6px 9px;}
+#adminArea .status-area {min-width:125px;}
+.gambit-plan-badge {display:inline-flex;align-items:center;gap:5px;background:#f2f2f2;border:1px solid #dedede;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700;color:#303030;margin-top:5px;margin-right:6px;}
+.gambit-plan-badge.expired {background:#ffeded;border-color:#ffd0d0;color:#b42318;}
+.gambit-plan-badge.warning {background:#fff6df;border-color:#ffe5a5;color:#875900;}
+.gambit-plan-meta {font-size:12px;color:#6b7280;margin-top:5px;}
+.gambit-search-tools {display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0;}
+.gambit-search-tools input {flex:1;min-width:180px;padding:12px 14px;border:1px solid #d7d7d7;border-radius:10px;font-size:15px;}
+.gambit-search-tools select {padding:12px;border:1px solid #d7d7d7;border-radius:10px;background:#fff;}
+.gambit-results {font-size:12px;color:#666;}
+@media(max-width:900px){#adminArea .quick-nav {display:flex;overflow-x:auto;flex-wrap:nowrap;gap:8px;padding-bottom:8px;}#adminArea .quick-nav a {white-space:nowrap;} }
+@media(max-width:650px){#adminArea .member-row {gap:8px;}#adminArea .status-area {min-width:110px;}#adminArea .card {padding:18px;} }
+
   </style>
 </head>
 
@@ -808,6 +835,15 @@
 
         <p id="sessionTime" class="session-time"></p>
 
+        <div class="gambit-search-tools">
+          <input id="coachMemberSearch" type="search" placeholder="🔎 ค้นหาชื่อสมาชิก" aria-label="ค้นหาชื่อสมาชิก">
+          <select id="coachCheckinFilter" aria-label="กรองสถานะเช็กชื่อ">
+            <option value="all">สมาชิกทั้งหมด</option>
+            <option value="pending">ยังไม่เช็กชื่อ</option>
+            <option value="checked">เช็กชื่อแล้ว</option>
+          </select>
+          <span class="gambit-results" id="coachSearchCount"></span>
+        </div>
         <div id="content" class="loading">
           กำลังโหลดข้อมูล...
         </div>
@@ -1565,6 +1601,7 @@ function renderMonthlySchedule() {
 
 function renderSessionOptions() {
       
+      const previousSession = elements.sessionSelect.value;
       elements.sessionSelect.innerHTML = "";
 
       const sessions = state.overview?.sessions || [];
@@ -1588,6 +1625,9 @@ function renderSessionOptions() {
         elements.sessionSelect.appendChild(option);
       });
 
+      if (previousSession && sessions.some(s => String(s.id) === previousSession)) {
+        elements.sessionSelect.value = previousSession;
+      }
       renderSelectedSession();
     }
 
@@ -1635,6 +1675,38 @@ function renderSessionOptions() {
       return detail;
     }
 
+    function createPackageBadge(member) {
+      const wrap = document.createElement("div");
+      const raw = String(member.membership_plan || "").trim();
+      const labels = {
+        adult_monthly: "Adult Monthly", kids_monthly: "Kids Monthly",
+        class_pass_4: "Class Pass 4", class_pass_8: "Class Pass 8",
+        class_pass_12: "Class Pass 12", drop_in: "Drop-in", private: "Private"
+      };
+      const badge = document.createElement("span");
+      badge.className = "gambit-plan-badge";
+      badge.textContent = "🎟 " + (labels[raw] || raw || "ยังไม่ระบุแพ็กเกจ");
+      const expiry = member.membership_expiry_date;
+      if (expiry) {
+        const today = new Date().toLocaleDateString("en-CA", {timeZone:"Asia/Bangkok"});
+        const remaining = Math.round((new Date(expiry + "T12:00:00+07:00") - new Date(today + "T12:00:00+07:00"))/86400000);
+        if (Number.isFinite(remaining)) {
+          if (remaining < 0) badge.classList.add("expired");
+          else if (remaining <= 7) badge.classList.add("warning");
+        }
+      }
+      wrap.appendChild(badge);
+      const meta = document.createElement("span");
+      meta.className = "gambit-plan-meta";
+      if (raw.startsWith("class_pass_") && member.remaining_sessions != null) {
+        meta.textContent = "เหลือ " + member.remaining_sessions + " ครั้ง";
+      } else if (expiry) {
+        meta.textContent = "หมดอายุ " + new Date(expiry + "T12:00:00+07:00").toLocaleDateString("th-TH", {day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Bangkok"});
+      }
+      if (meta.textContent) wrap.appendChild(meta);
+      return wrap;
+    }
+
     function createMemberRow(member, attendance, sessionId) {
       const row = document.createElement("article");
       row.className = "member-row";
@@ -1647,6 +1719,7 @@ function renderSessionOptions() {
 
       details.appendChild(name);
       details.appendChild(createBeltBadge(member));
+      details.appendChild(createPackageBadge(member));
 
       const actions = document.createElement("div");
       actions.className = "member-actions";
@@ -1792,7 +1865,21 @@ function renderSessionOptions() {
       elements.content.className = "member-list";
       elements.content.innerHTML = "";
 
-      sortedMembers.forEach((member) => {
+      const search = (document.getElementById("coachMemberSearch")?.value || "").trim().toLocaleLowerCase();
+      const filter = document.getElementById("coachCheckinFilter")?.value || "all";
+      const visibleMembers = sortedMembers.filter(member => {
+        const isChecked = attendanceByMember.has(Number(member.id));
+        if (filter === "checked" && !isChecked) return false;
+        if (filter === "pending" && isChecked) return false;
+        return !search || getMemberName(member).toLocaleLowerCase().includes(search);
+      });
+      const resultCount = document.getElementById("coachSearchCount");
+      if (resultCount) resultCount.textContent = "แสดง " + visibleMembers.length + " / " + sortedMembers.length + " คน";
+      if (!visibleMembers.length) {
+        elements.content.textContent = "ไม่พบสมาชิกที่ตรงกับการค้นหา";
+        return;
+      }
+      visibleMembers.forEach((member) => {
         const attendance = attendanceByMember.get(Number(member.id));
         elements.content.appendChild(
           createMemberRow(member, attendance, sessionId)
@@ -2544,6 +2631,8 @@ document
     elements.refreshButton.addEventListener("click", loadOverview);
     elements.refreshMembersButton.addEventListener("click", loadOverview);
     elements.sessionSelect.addEventListener("change", renderSelectedSession);
+    document.getElementById("coachMemberSearch").addEventListener("input", renderSelectedSession);
+    document.getElementById("coachCheckinFilter").addEventListener("change", renderSelectedSession);
    elements.scheduleDate.addEventListener(
   "change",
   loadOverview
