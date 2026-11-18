@@ -415,6 +415,12 @@
 .finance-legacy-grid strong {font-size:19px;margin-top:4px;}
 @media(max-width:1050px){.finance-main-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:650px){.finance-main-grid,.finance-legacy-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.finance-compact-page{padding:15px!important;}.finance-compact-heading h2{font-size:20px;}}
+
+.finance-payment-panel{grid-column:1/-1;padding:14px;border:1px solid #ddd;border-radius:10px;background:#fafafa}
+.finance-payment-options{display:flex;gap:18px;flex-wrap:wrap;margin:10px 0}
+.finance-payment-options label{display:flex;flex-direction:row;align-items:center;gap:6px}
+.finance-payment-options input{width:auto;min-height:0}
+.finance-form-actions .finance-print-button{background:#fff;color:#111;border:1px solid #111}
 </style>
 </head>
 
@@ -865,8 +871,15 @@
             <label>คู่ค้า / ผู้เกี่ยวข้อง <input id="financeCounterparty" type="text" maxlength="200" placeholder="ไม่บังคับ"></label>
             <label>กำหนดชำระ <input id="financeDueDate" type="date"></label>
             <label class="finance-span-all">หมายเหตุ <textarea id="financeNotes" maxlength="1000" placeholder="ไม่บังคับ"></textarea></label>
+            <div class="finance-payment-panel"><strong>สถานะ / ช่องทางชำระเงิน</strong>
+              <div class="finance-payment-options">
+                <label><input type="radio" name="financePaymentChoice" value="pending" checked> ยังไม่ชำระ</label>
+                <label><input type="radio" name="financePaymentChoice" value="cash"> เงินสด</label>
+                <label><input type="radio" name="financePaymentChoice" value="transfer"> เงินโอน</label>
+              </div><p class="finance-muted">การเลือกช่องทางยังไม่บันทึกการชำระเงินจริง ต้องเชื่อม API รับชำระก่อน</p>
+            </div>
           </div>
-          <div class="finance-form-actions"><button type="submit" id="financeSaveButton">บันทึกรายการ</button><span id="financeFormMessage" class="finance-form-message" role="status"></span></div>
+          <div class="finance-form-actions"><button type="submit" id="financeSaveButton">บันทึกรายการ</button><button type="button" class="finance-print-button" id="financePrintButton">พิมพ์เอกสารฉบับร่าง</button><span id="financeFormMessage" class="finance-form-message" role="status"></span></div>
         </form>
         <div style="margin-top:26px">
           <h3>รายการบัญชีทั่วไป</h3>
@@ -2485,7 +2498,10 @@ financeUI.form.addEventListener("submit", async event => {
   if (!Number.isFinite(amount) || amount <= 0 || !financeUI.category.value || !description || (dueDate && dueDate < entryDate)) {
     financeUI.message.textContent = "กรุณาตรวจสอบจำนวนเงิน หมวดหมู่ รายละเอียด และวันกำหนดชำระ"; return;
   }
-  if (!window.confirm("ยืนยันบันทึกรายการบัญชีนี้?")) return;
+  if (selectedFinancePayment() !== "pending") {
+     financeUI.message.textContent = "การบันทึกเงินสด/เงินโอนยังต้องเชื่อม API รับชำระก่อน กรุณาเลือกยังไม่ชำระเพื่อบันทึกเฉพาะยอดตั้งรายการ"; return;
+   }
+   if (!window.confirm("ยืนยันบันทึกรายการบัญชีนี้?")) return;
   button.disabled = true; financeUI.message.textContent = "กำลังบันทึก...";
   try {
     const response = await fetch("/api/admin-dashboard?mode=finance", {
@@ -2502,6 +2518,28 @@ financeUI.form.addEventListener("submit", async event => {
   } catch (error) { financeUI.message.textContent = `บันทึกไม่สำเร็จ: ${error.message}`; }
   finally { button.disabled = false; }
 });
+
+// Print a draft only. No receipt is issued until payment is recorded server-side.
+function selectedFinancePayment() {
+  return document.querySelector('input[name="financePaymentChoice"]:checked')?.value || "pending";
+}
+document.getElementById("financePrintButton").addEventListener("click", () => {
+  const amount = Number(document.getElementById("financeAmount").value);
+  const description = document.getElementById("financeDescription").value.trim();
+  if (!description || !Number.isFinite(amount) || amount <= 0) {
+    financeUI.message.textContent = "กรุณากรอกรายละเอียดและจำนวนเงินก่อนพิมพ์"; return;
+  }
+  const escapeText = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+  const title = financeUI.type.value === "income" ? "ใบรับเงินฉบับร่าง" : "ใบสำคัญจ่ายฉบับร่าง";
+  const method = ({pending:"ยังไม่ชำระ",cash:"เงินสด (ยังไม่ยืนยัน)",transfer:"เงินโอน (ยังไม่ยืนยัน)"})[selectedFinancePayment()];
+  const rows = [["วันที่",document.getElementById("financeEntryDate").value],["รายละเอียด",description],["ผู้เกี่ยวข้อง",document.getElementById("financeCounterparty").value || "-"],["จำนวนเงิน",financeMoney(amount)+" บาท"],["ช่องทางที่เลือก",method],["หมายเหตุ",document.getElementById("financeNotes").value || "-"]];
+  const win = window.open("", "_blank");
+  if (!win) { financeUI.message.textContent = "กรุณาอนุญาต Pop-up เพื่อพิมพ์"; return; }
+  win.document.open();
+  win.document.write('<!doctype html><html lang="th"><meta charset="utf-8"><title>'+title+'</title><style>body{font-family:Arial,sans-serif;margin:40px}td{padding:12px;border-bottom:1px solid #ddd}table{width:100%;border-collapse:collapse}.warning{color:#a22;font-weight:bold;margin:20px 0}@media print{button{display:none}}</style><h1>GAMBIT JIUJITSU</h1><h2>'+title+'</h2><p class="warning">ฉบับร่าง — ไม่ใช่หลักฐานการรับหรือจ่ายเงินจริง</p><table>'+rows.map(([label,value])=>'<tr><td>'+escapeText(label)+'</td><td>'+escapeText(value)+'</td></tr>').join('')+'</table><p>เอกสารจากข้อมูลในแบบฟอร์ม ยังไม่ยืนยันการชำระเงิน</p><button onclick="window.print()">พิมพ์ / บันทึก PDF</button></html>');
+  win.document.close(); win.focus();
+});
+
 financeUI.month.value = financeLocalDate().slice(0,7);
 document.getElementById("financeEntryDate").value = financeLocalDate();
 
