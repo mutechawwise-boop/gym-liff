@@ -72,10 +72,96 @@ if (request.method === "POST") {
     }, 403);
   }
 
+  
+const url = new URL(request.url);
+
+if (url.searchParams.get("mode") !== "finance") {
+  return json({ success: false, error: "Unknown mode" }, 404);
+}
+
+const body = await request.json();
+const { entry_type, category_id, description, counterparty_name,
+  total_amount, entry_date, due_date, notes } = body;
+
+if (!["income", "expense"].includes(entry_type)) {
+  return json({ success: false, error: "ประเภทรายการไม่ถูกต้อง" }, 400);
+}
+
+
+const amount = Number(total_amount);
+const categoryId = Number(category_id);
+
+function isValidDate(value) {
+  if (typeof value !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const date = new Date(`${value}T00:00:00Z`);
+
+  return !Number.isNaN(date.getTime()) &&
+    date.toISOString().slice(0, 10) === value;
+}
+
+if (
+  !Number.isFinite(amount) ||
+  amount <= 0 ||
+  !Number.isSafeInteger(Math.round(amount * 100)) ||
+  Math.abs(amount * 100 - Math.round(amount * 100)) > 0.000001 ||
+  !Number.isSafeInteger(categoryId) ||
+  categoryId <= 0 ||
+  typeof description !== "string" ||
+  !description.trim() ||
+  description.length > 500 ||
+  !isValidDate(entry_date) ||
+  (due_date != null && due_date !== "" && !isValidDate(due_date))
+) {
   return json({
     success: false,
-    error: "Finance POST ยังไม่เปิดใช้งาน"
-  }, 501);
+    error: "ข้อมูลรายการไม่ถูกต้อง"
+  }, 400);
+}
+
+
+const categoryResponse = await supabase.request(
+  `finance_categories?id=eq.${categoryId}&type=eq.${entry_type}&is_active=eq.true&select=id`
+);
+
+if (!categoryResponse.ok) {
+  return json({ success: false, error: "ตรวจสอบหมวดหมู่ไม่สำเร็จ" }, 500);
+}
+
+const categories = await categoryResponse.json();
+
+if (categories.length !== 1) {
+  return json({ success: false, error: "หมวดหมู่ไม่ถูกต้อง" }, 400);
+}
+
+const response = await supabase.request("finance_entries", {
+  method: "POST",
+  headers: { Prefer: "return=representation" },
+  body: JSON.stringify({
+    entry_type,
+    category_id: categoryId,
+    description: description.trim(),
+    counterparty_name: counterparty_name || null,
+    total_amount: amount,
+    entry_date,
+    due_date: due_date || null,
+    notes: notes || null,
+    status: "open"
+  })
+});
+
+if (!response.ok) {
+  console.error("Finance insert failed:", await response.text());
+  return json({ success: false, error: "บันทึกรายการไม่สำเร็จ" }, 500);
+}
+
+const rows = await response.json();
+
+return json({ success: true, entry: rows[0] }, 201);
+
 }
 
 const url = new URL(request.url);
