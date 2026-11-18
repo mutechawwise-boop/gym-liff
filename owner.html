@@ -383,6 +383,14 @@
 .finance-filter input {padding:9px;border:1px solid #cfd4da;border-radius:8px;font:inherit;}
 @media(max-width:650px){.finance-form-grid{grid-template-columns:1fr}.finance-summary{grid-template-columns:1fr}}
 
+/* Unified finance dashboard: one summary, no duplicate cards. */
+.finance-breakdown {margin-top:12px;padding:12px 14px;border:1px solid #e5e7eb;border-radius:11px;background:#fafafa;}
+.finance-breakdown summary {cursor:pointer;font-size:13px;font-weight:700;}
+.finance-breakdown-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px;}
+.finance-breakdown-grid div {padding:10px;background:#fff;border:1px solid #eee;border-radius:8px;}
+.finance-breakdown-grid span {display:block;color:#6b7280;font-size:12px;}
+.finance-breakdown-grid strong {display:block;font-size:19px;margin-top:4px;}
+@media(max-width:650px){.finance-breakdown-grid{grid-template-columns:1fr;}}
 /* Compact finance overview: month filter + four primary metrics. */
 .finance-compact-page {padding:22px !important;}
 .finance-compact-heading {display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
@@ -806,36 +814,31 @@
       </div>
       <div class="finance-main-grid" aria-label="ภาพรวมการเงิน">
         <article class="finance-main-stat">
-          <span>รายได้</span><strong id="financeTotalIncome">—</strong><small id="financeIncomeNote">ยอดรายการบัญชีทั่วไป</small>
+          <span>รายรับรวม</span><strong id="financeTotalIncome">—</strong><small id="financeIncomeNote">สมาชิก + รายรับอื่น</small>
         </article>
         <article class="finance-main-stat">
-          <span>รายจ่าย</span><strong id="financeTotalExpense">—</strong><small>ยอดตั้งรายการบัญชีทั่วไป</small>
+          <span>รายจ่ายรวม</span><strong id="financeTotalExpense">—</strong><small>ยอดตั้งรายการรายจ่ายทั่วไป</small>
         </article>
         <article class="finance-main-stat">
-          <span>เงินสดคงเหลือ</span><strong id="financeCashBalance">—</strong><small>รอกำหนดยอดยกมาและบันทึกเงินรับ–จ่ายจริง</small>
+          <span>เงินสดคงเหลือ</span><strong id="financeCashBalance">—</strong><small>รอกำหนดยอดยกมาและการเคลื่อนไหวเงินจริง</small>
         </article>
         <article class="finance-main-stat">
-          <span>เงินในบัญชีคงเหลือ</span><strong id="financeBankBalance">—</strong><small>รอกำหนดยอดยกมาและบันทึกเงินรับ–จ่ายจริง</small>
+          <span>เงินในบัญชีคงเหลือ</span><strong id="financeBankBalance">—</strong><small>รอกำหนดยอดยกมาและการเคลื่อนไหวเงินจริง</small>
         </article>
       </div>
-      <p class="finance-muted finance-balance-warning">ยอดรายได้/รายจ่ายด้านบนเป็นยอดตั้งรายการ ไม่ใช่เงินที่รับหรือจ่ายแล้ว ยอดคงเหลือจะแสดงได้เมื่อระบบรองรับยอดยกมา ช่องทางชำระ และการเคลื่อนไหวเงินจริง</p>
-      <details class="finance-legacy-details">
-        <summary>ดูรายรับสมาชิกเดิม (วันนี้ / เดือนปัจจุบัน)</summary>
-        <div class="finance-legacy-grid">
-          <div><span>รายรับวันนี้</span><strong id="todayRevenue">-</strong></div>
-          <div><span>รายรับเดือนนี้</span><strong id="monthlyRevenue">-</strong></div>
-          <div><span>เงินสดวันนี้</span><strong id="todayCashRevenue">-</strong></div>
-          <div><span>เงินโอนวันนี้</span><strong id="todayTransferRevenue">-</strong></div>
+      <p class="finance-muted finance-balance-warning" id="financeSummaryNotice">รายรับสมาชิกเป็นยอดรับชำระแล้ว ส่วนรายการบัญชีทั่วไปเป็นยอดตั้งรายการ ยังไม่ใช่รายรับ–รายจ่ายที่ชำระจริงทั้งหมด จึงยังไม่ใช่กำไรหรือกระแสเงินสด</p>
+      <details class="finance-breakdown">
+        <summary>ดูที่มาของรายรับและรายจ่าย</summary>
+        <div class="finance-breakdown-grid">
+          <div><span>รายรับสมาชิก (เดือนที่เลือก)</span><strong id="financeMemberIncome">—</strong></div>
+          <div><span>รายรับอื่น (ยอดตั้งรายการ)</span><strong id="financeOtherIncome">0.00</strong></div>
+          <div><span>รายจ่ายทั่วไป (ยอดตั้งรายการ)</span><strong id="financeOtherExpense">0.00</strong></div>
         </div>
       </details>
+      <div hidden aria-hidden="true"><span id="todayRevenue"></span><span id="monthlyRevenue"></span><span id="todayCashRevenue"></span><span id="todayTransferRevenue"></span></div>
       <div class="finance-ledger" id="financeLedger">
         <h3>📒 บัญชีรายรับ–รายจ่ายทั่วไป</h3>
         <p class="finance-muted">รายการส่วนนี้แยกจากรายรับค่าสมาชิกด้านบน ไม่รวมยอดซ้ำ และยอดรายการที่ยังไม่ได้รับ/จ่ายจริงจะไม่ถือเป็นกระแสเงินสด</p>
-        <div class="finance-summary" aria-label="สรุปยอดรายการบัญชีทั่วไป">
-          <div class="owner-stat"><span class="owner-stat-label">รายการรายรับเดือนที่เลือก</span><strong id="financeMonthIncome">-</strong><small>บาท · ยอดตั้งรายการ</small></div>
-          <div class="owner-stat"><span class="owner-stat-label">รายการรายจ่ายเดือนที่เลือก</span><strong id="financeMonthExpense">-</strong><small>บาท · ยอดตั้งรายการ</small></div>
-          <div class="owner-stat"><span class="owner-stat-label">ผลต่างรายการ</span><strong id="financeMonthNet">-</strong><small>บาท · ไม่ใช่เงินสดคงเหลือ</small></div>
-        </div>
         <form id="financeEntryForm">
           <h3>เพิ่มรายการใหม่</h3>
           <div class="finance-form-grid">
@@ -1430,6 +1433,9 @@ document.getElementById(
   Number(
     data.finance?.monthRevenue || 0
   ).toLocaleString("th-TH");
+  financeMemberMonthRevenue = data.finance && Number.isFinite(Number(data.finance.monthRevenue))
+    ? Number(data.finance.monthRevenue) : null;
+  if (typeof renderFinanceEntries === "function") renderFinanceEntries();
 
 document.getElementById(
   "todayCashRevenue"
@@ -2367,6 +2373,7 @@ const financeUI = {
   loadMessage: document.getElementById("financeLoadMessage")
 };
 let financeData = {categories: [], entries: [], payments: []};
+let financeMemberMonthRevenue = null;
 const financeMoney = amount => Number(amount || 0).toLocaleString("th-TH", {minimumFractionDigits:2, maximumFractionDigits:2});
 function financeLocalDate() {
   const parts = new Intl.DateTimeFormat("en-US", {timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
@@ -2385,12 +2392,19 @@ function renderFinanceEntries() {
     .sort((a,b) => String(b.entry_date).localeCompare(String(a.entry_date)) || Number(b.id)-Number(a.id));
   const income = entries.filter(e => e.entry_type === "income").reduce((sum,e) => sum + Number(e.total_amount || 0),0);
   const expense = entries.filter(e => e.entry_type === "expense").reduce((sum,e) => sum + Number(e.total_amount || 0),0);
-  document.getElementById("financeMonthIncome").textContent = financeMoney(income);
-  document.getElementById("financeMonthExpense").textContent = financeMoney(expense);
-  document.getElementById("financeMonthNet").textContent = financeMoney(income-expense);
-  document.getElementById("financeTotalIncome").textContent = financeMoney(income);
+  // The existing Owner API provides member revenue only for the current month.
+  // Never present a partial historical month as the gym's total revenue.
+  const currentMonth = financeLocalDate().slice(0,7);
+  const memberKnown = month === currentMonth && financeMemberMonthRevenue !== null;
+  document.getElementById("financeMemberIncome").textContent = memberKnown ? financeMoney(financeMemberMonthRevenue) : "—";
+  document.getElementById("financeOtherIncome").textContent = financeMoney(income);
+  document.getElementById("financeOtherExpense").textContent = financeMoney(expense);
+  document.getElementById("financeTotalIncome").textContent = memberKnown ? financeMoney(financeMemberMonthRevenue + income) : "—";
   document.getElementById("financeTotalExpense").textContent = financeMoney(expense);
-  document.getElementById("financeIncomeNote").textContent = "บัญชีทั่วไป · ไม่รวมรายรับสมาชิก";
+  document.getElementById("financeIncomeNote").textContent = memberKnown ? "สมาชิกรับแล้ว + รายรับอื่นที่ตั้งรายการ" : "ยังไม่มีข้อมูลรายรับสมาชิกของเดือนนี้";
+  document.getElementById("financeSummaryNotice").textContent = memberKnown
+    ? "รายรับรวมเป็นยอดผสม: ค่าสมาชิกที่รับชำระแล้ว + รายรับอื่นที่ตั้งรายการ ส่วนรายจ่ายเป็นยอดตั้งรายการ ยังไม่ใช่กำไรหรือเงินคงเหลือจริง"
+    : "เดือนที่เลือกยังไม่มีข้อมูลรายรับสมาชิกย้อนหลัง จึงไม่แสดงยอดรายรับรวมที่อาจไม่ครบ ส่วนรายจ่ายเป็นยอดตั้งรายการ ไม่ใช่เงินที่จ่ายจริง";
   // Do not fabricate cash/bank balances: the API has no opening balances or
   // payment-channel cashflow ledger yet. These remain intentionally unknown.
 
