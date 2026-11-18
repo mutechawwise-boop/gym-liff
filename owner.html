@@ -390,6 +390,10 @@
 .finance-breakdown-grid div {padding:10px;background:#fff;border:1px solid #eee;border-radius:8px;}
 .finance-breakdown-grid span {display:block;color:#6b7280;font-size:12px;}
 .finance-breakdown-grid strong {display:block;font-size:19px;margin-top:4px;}
+.finance-breakdown-two {grid-template-columns:repeat(2,minmax(0,1fr));}
+.finance-breakdown-section {margin-top:14px;}
+.finance-breakdown-section h4 {margin:0 0 8px;font-size:15px;}
+.finance-breakdown-section h4 small {font-size:12px;color:#6b7280;font-weight:400;}
 @media(max-width:650px){.finance-breakdown-grid{grid-template-columns:1fr;}}
 /* Compact finance overview: month filter + four primary metrics. */
 .finance-compact-page {padding:22px !important;}
@@ -827,13 +831,24 @@
         </article>
       </div>
       <p class="finance-muted finance-balance-warning" id="financeSummaryNotice">รายรับสมาชิกเป็นยอดรับชำระแล้ว ส่วนรายการบัญชีทั่วไปเป็นยอดตั้งรายการ ยังไม่ใช่รายรับ–รายจ่ายที่ชำระจริงทั้งหมด จึงยังไม่ใช่กำไรหรือกระแสเงินสด</p>
-      <details class="finance-breakdown">
+      <details class="finance-breakdown" open>
         <summary>ดูที่มาของรายรับและรายจ่าย</summary>
-        <div class="finance-breakdown-grid">
-          <div><span>รายรับสมาชิก (เดือนที่เลือก)</span><strong id="financeMemberIncome">—</strong></div>
-          <div><span>รายรับอื่น (ยอดตั้งรายการ)</span><strong id="financeOtherIncome">0.00</strong></div>
-          <div><span>รายจ่ายทั่วไป (ยอดตั้งรายการ)</span><strong id="financeOtherExpense">0.00</strong></div>
+        <div class="finance-breakdown-section">
+          <h4>รายรับสมาชิก <small>แยกตามช่องทางรับเงิน</small></h4>
+          <div class="finance-breakdown-grid finance-breakdown-two">
+            <div><span>เงินโอนจากสมาชิก</span><strong id="financeMemberTransfer">—</strong></div>
+            <div><span>เงินสดจากสมาชิก</span><strong id="financeMemberCash">—</strong></div>
+          </div>
+          <p class="finance-muted" id="financeMemberMethodNote"></p>
         </div>
+        <div class="finance-breakdown-section">
+          <h4>บัญชีทั่วไป <small>แยกจากค่าสมาชิก</small></h4>
+          <div class="finance-breakdown-grid finance-breakdown-two">
+            <div><span>รายรับอื่น (ยอดตั้งรายการ)</span><strong id="financeOtherIncome">0.00</strong></div>
+            <div><span>รายจ่ายอื่น (ยอดตั้งรายการ)</span><strong id="financeOtherExpense">0.00</strong></div>
+          </div>
+        </div>
+        <span id="financeMemberIncome" hidden>—</span>
       </details>
       <div hidden aria-hidden="true"><span id="todayRevenue"></span><span id="monthlyRevenue"></span><span id="todayCashRevenue"></span><span id="todayTransferRevenue"></span></div>
       <div class="finance-ledger" id="financeLedger">
@@ -1433,6 +1448,7 @@ document.getElementById(
   Number(
     data.finance?.monthRevenue || 0
   ).toLocaleString("th-TH");
+  financeMemberPaymentHistory = Array.isArray(data.paymentHistory) ? data.paymentHistory : [];
   financeMemberMonthRevenue = data.finance && Number.isFinite(Number(data.finance.monthRevenue))
     ? Number(data.finance.monthRevenue) : null;
   if (typeof renderFinanceEntries === "function") renderFinanceEntries();
@@ -2374,6 +2390,7 @@ const financeUI = {
 };
 let financeData = {categories: [], entries: [], payments: []};
 let financeMemberMonthRevenue = null;
+let financeMemberPaymentHistory = [];
 const financeMoney = amount => Number(amount || 0).toLocaleString("th-TH", {minimumFractionDigits:2, maximumFractionDigits:2});
 function financeLocalDate() {
   const parts = new Intl.DateTimeFormat("en-US", {timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
@@ -2397,6 +2414,26 @@ function renderFinanceEntries() {
   const currentMonth = financeLocalDate().slice(0,7);
   const memberKnown = month === currentMonth && financeMemberMonthRevenue !== null;
   document.getElementById("financeMemberIncome").textContent = memberKnown ? financeMoney(financeMemberMonthRevenue) : "—";
+  // Group membership payments by Bangkok approval month. Only show a complete
+  // split when the history reconciles to the trusted current-month total.
+  const memberMonthPayments = financeMemberPaymentHistory.filter(payment => {
+    if (!payment.approvedAt) return false;
+    const parts = new Intl.DateTimeFormat("en-US", {timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date(payment.approvedAt));
+    const get = type => parts.find(part => part.type === type)?.value;
+    return `${get("year")}-${get("month")}` === month;
+  });
+  const methodTotal = method => memberMonthPayments.filter(p => p.paymentMethod === method)
+    .reduce((sum,p) => sum + Number(p.amount || 0),0);
+  const cash = methodTotal("cash");
+  const transfer = methodTotal("transfer");
+  const historyTotal = memberMonthPayments.reduce((sum,p) => sum + Number(p.amount || 0),0);
+  const splitKnown = memberKnown && Math.abs(historyTotal - financeMemberMonthRevenue) < 0.005 &&
+    Math.abs(cash + transfer - historyTotal) < 0.005;
+  document.getElementById("financeMemberCash").textContent = splitKnown ? financeMoney(cash) : "—";
+  document.getElementById("financeMemberTransfer").textContent = splitKnown ? financeMoney(transfer) : "—";
+  document.getElementById("financeMemberMethodNote").textContent = splitKnown
+    ? `รวมรายรับสมาชิก ${financeMoney(financeMemberMonthRevenue)} บาท (รับชำระแล้ว)`
+    : "ยังแยกเงินสด/เงินโอนของเดือนนี้ไม่ได้ครบถ้วน กรุณาตรวจสอบประวัติรับชำระและช่องทางรับเงิน";
   document.getElementById("financeOtherIncome").textContent = financeMoney(income);
   document.getElementById("financeOtherExpense").textContent = financeMoney(expense);
   document.getElementById("financeTotalIncome").textContent = memberKnown ? financeMoney(financeMemberMonthRevenue + income) : "—";
