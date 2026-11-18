@@ -2130,10 +2130,10 @@ function renderEmptySession() {
         const member = (state.overview?.members || []).find(m => Number(m.id) === memberId);
         const name = getMemberName(member || {});
         try {
-          const result = await requestJson("/api/teacher-checkin", {
+          const result = await requestJson("/api/checkin", {
             method: "POST",
             headers: {"Content-Type":"application/json", "x-admin-key":state.adminKey},
-            body: JSON.stringify({sessionId, memberId})
+            body: JSON.stringify({mode:"teacher_checkin", sessionId, memberId})
           });
           if (!Array.isArray(state.overview.attendance)) state.overview.attendance = [];
           const exists = state.overview.attendance.some(a => Number(a.session_id) === sessionId && Number(a.member_id) === memberId);
