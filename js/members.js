@@ -1643,4 +1643,44 @@ function renderBeltHistory(memberId) {
       })
       .join("");
 }
+
+const viewMemberHistoryButton = document.getElementById("viewMemberHistoryButton");
+const ownerDeleteArea = document.getElementById("ownerDeleteArea");
+const deleteMemberButton = document.getElementById("deleteMemberButton");
+const deleteMemberMessage = document.getElementById("deleteMemberMessage");
+viewMemberHistoryButton.addEventListener("click", () => {
+  if (!selectedMemberId) return;
+  window.location.href = `member-history.html?memberId=${encodeURIComponent(selectedMemberId)}`;
+});
+const originalOpenMemberDetail = openMemberDetail;
+openMemberDetail = function(member) {
+  originalOpenMemberDetail(member);
+  ownerDeleteArea.style.display = sessionStorage.getItem("gambitRole") === "owner" ? "block" : "none";
+  deleteMemberMessage.textContent = "";
+};
+deleteMemberButton.addEventListener("click", async () => {
+  if (sessionStorage.getItem("gambitRole") !== "owner" || !selectedMemberId) return;
+  const member = members.find(item => Number(item.id) === selectedMemberId);
+  if (!member) return;
+  const code = getMemberCode(member);
+  const name = member.nickname || member.display_name || code;
+  if (!window.confirm(`ลบสมาชิก ${name} (${code}) ถาวร?\nการดำเนินการนี้ย้อนกลับไม่ได้`)) return;
+  const typed = window.prompt(`เพื่อยืนยัน พิมพ์รหัสสมาชิก ${code} ให้ตรงทุกตัว`);
+  if (typed !== code) { deleteMemberMessage.textContent = "ยกเลิก: รหัสยืนยันไม่ตรง"; return; }
+  deleteMemberButton.disabled = true;
+  deleteMemberMessage.textContent = "กำลังตรวจสอบข้อมูลที่เชื่อมโยง...";
+  try {
+    const response = await fetch("/api/delete-member", {
+      method: "POST",
+      headers: {"Content-Type":"application/json", "x-admin-key":sessionStorage.getItem("gambitAdminKey") || ""},
+      body: JSON.stringify({memberId: selectedMemberId, confirmCode: code})
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || "ลบสมาชิกไม่สำเร็จ");
+    closeMemberDetail();
+    await loadMembers();
+  } catch(error) {
+    deleteMemberMessage.textContent = error.message || "ลบสมาชิกไม่สำเร็จ";
+  } finally { deleteMemberButton.disabled = false; }
+});
 loadMembers();
