@@ -342,6 +342,21 @@
 #registrationApprovalFields input,#registrationApprovalFields select,#registrationApprovalFields textarea {max-width:100%;}
 #closeRegistrationDetailButton {border:1px solid #ddd;background:#fff;border-radius:8px;padding:9px 18px;margin-top:12px;cursor:pointer;}
 @media(max-width:650px) {.registration-history-table {min-width:650px;} .reg-detail-grid {grid-template-columns:1fr;} .registration-tabs button {font-size:12px;}}
+
+/* Owner Dashboard A: reorganized home, no API or workflow changes. */
+.owner-quick-intro {color:#68707a;font-size:14px;margin:-4px 0 18px;}
+.owner-quick-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+.owner-quick-link {display:flex;align-items:center;gap:12px;padding:17px 14px;border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;color:#181818;text-decoration:none;min-width:0;}
+.owner-quick-link:hover,.owner-quick-link:focus-visible {background:#f2f2f2;border-color:#aaa;outline-offset:2px;}
+.owner-quick-link > span:nth-child(2) {flex:1;min-width:0;}
+.owner-quick-link strong,.owner-quick-link small {display:block;}
+.owner-quick-link strong {font-size:14px;line-height:1.4;}
+.owner-quick-link small {color:#6b7280;font-size:12px;margin-top:4px;line-height:1.5;}
+.owner-quick-link > span:last-child {font-size:24px;color:#666;}
+.owner-quick-icon {font-size:23px;}
+#todayClasses #todayClassList > article {transition:border-color .15s,box-shadow .15s;}
+#todayClasses #todayClassList > article:hover {border-color:#aaa!important;box-shadow:0 3px 12px #0000000d;}
+@media(max-width:850px) {.owner-quick-grid {grid-template-columns:1fr;}}
 </style>
 </head>
 
@@ -411,6 +426,30 @@
           <strong id="todayExpiringCount" class="owner-stat-number">-</strong>
           <span class="owner-stat-caption">คน</span>
         </article>
+      </div>
+    </section>
+
+    <section id="todayClasses" class="owner-card">
+      <h2>🥋 คลาสวันนี้</h2>
+
+      <div id="todayClassList" class="empty-state">
+        ยังไม่ได้เชื่อมข้อมูลคลาส
+      </div>
+    </section>
+
+    <section id="ownerQuickActions" class="owner-card" aria-labelledby="ownerQuickActionsTitle">
+      <h2 id="ownerQuickActionsTitle">📌 งานที่ต้องติดตาม</h2>
+      <p class="owner-quick-intro">กดเพื่อเปิดรายการในเมนูเดิม โดยไม่ต้องเลื่อนหาส่วนที่ต้องจัดการ</p>
+      <div class="owner-quick-grid">
+        <a href="#memberRegistrations" class="owner-quick-link">
+          <span class="owner-quick-icon">📝</span><span><strong>คำขอสมัครสมาชิก</strong><small>ตรวจสอบและอนุมัติสมาชิกใหม่</small></span><span aria-hidden="true">›</span>
+        </a>
+        <a href="#membershipRenewals" class="owner-quick-link">
+          <span class="owner-quick-icon">🔄</span><span><strong>คำขอต่ออายุ</strong><small>ตรวจสอบรายการต่ออายุที่รอดำเนินการ</small></span><span aria-hidden="true">›</span>
+        </a>
+        <a href="#payments" class="owner-quick-link">
+          <span class="owner-quick-icon">💳</span><span><strong>รายการรับเงิน</strong><small>ดูประวัติการรับเงินล่าสุด</small></span><span aria-hidden="true">›</span>
+        </a>
       </div>
     </section>
         <!-- =========================
@@ -714,14 +753,6 @@
   <p id="approvalMessage"></p>
 </div>
 </section>
-    <section id="todayClasses" class="owner-card">
-      <h2>🥋 คลาสวันนี้</h2>
-
-      <div id="todayClassList" class="empty-state">
-        ยังไม่ได้เชื่อมข้อมูลคลาส
-      </div>
-    </section>
-
     <section id="financeOverview" class="owner-card">
       <h2>💰 Dashboard การเงิน</h2>
 
@@ -804,7 +835,7 @@
 
     // Local page navigation; no API or approval changes.
     const ownerPages = {
-      overview: ["todayOverview", "membershipOverview"],
+      overview: ["todayOverview", "todayClasses", "ownerQuickActions", "membershipOverview"],
       classes: ["todayClasses"],
       members: ["membershipOverview"],
       registrations: ["memberRegistrations"],
@@ -1188,20 +1219,6 @@ function registrationDate(value) {
 function registrationSlip(value) {
   try { const url = new URL(value); return url.protocol === "https:" ? escapeRegistration(url.href) : ""; } catch { return ""; }
 }
-// Display labels only: keep membership plan codes unchanged for API operations.
-function membershipPlanLabel(value) {
-  const code = String(value ?? "").trim();
-  const labels = {
-    adult_monthly: "Adult Monthly (รายเดือน)",
-    kids_monthly: "Kids Monthly (รายเดือน)",
-    class_pass_4: "Class Pass 4 ครั้ง",
-    class_pass_8: "Class Pass 8 ครั้ง",
-    class_pass_12: "Class Pass 12 ครั้ง",
-    drop_in: "Drop-in (รายครั้ง)",
-    private: "Private Class (คลาสส่วนตัว)"
-  };
-  return labels[code] || code || "-";
-}
 async function loadOwnerDashboard() {
   const adminKey =
     sessionStorage.getItem("gambitAdminKey");
@@ -1352,7 +1369,8 @@ if (!data.recentPayments?.length) {
               : "-";
 
         const planText =
-          membershipPlanLabel(payment.membershipPlan);
+          payment.membershipPlan ||
+          "-";
 
         const approvedDate =
           payment.approvedAt
@@ -1447,7 +1465,7 @@ function renderRegistrationList() {
         <span class="reg-status reg-status-pending">รอตรวจสอบ</span>
         <div class="registration-pending-meta">
           <span>ชื่อเล่น: ${escapeRegistration(r.nickname || "-")}</span>
-          <span>แพ็กเกจ: ${escapeRegistration(membershipPlanLabel(r.membership_plan))}</span>
+          <span>แพ็กเกจ: ${escapeRegistration(r.membership_plan || "-")}</span>
           <span>วันที่สมัคร: ${registrationDate(r.created_at)}</span>
         </div>
         <button type="button" class="view-registration-button" data-registration-id="${escapeRegistration(r.id)}">ตรวจสอบรายละเอียด</button>
@@ -1459,7 +1477,7 @@ function renderRegistrationList() {
       <thead><tr><th>ชื่อผู้สมัคร</th><th>แพ็กเกจ</th><th>${dateLabel}</th><th>สถานะ</th><th>รายละเอียด</th></tr></thead>
       <tbody>${rows.map(r => `<tr>
         <td><span class="reg-person">${escapeRegistration([r.first_name,r.last_name].filter(Boolean).join(" ") || r.line_display_name || "ไม่ระบุชื่อ")}</span><span class="reg-sub">ชื่อเล่น: ${escapeRegistration(r.nickname || "-")}</span></td>
-        <td>${escapeRegistration(membershipPlanLabel(r.membership_plan))}</td>
+        <td>${escapeRegistration(r.membership_plan || "-")}</td>
         <td>${registrationDate(registrationTab === "approved" ? r.approved_at : r.rejected_at)}</td>
         <td><span class="reg-status ${statusClass}">${registrationLabels[registrationTab]}</span></td>
         <td><button type="button" class="view-registration-button" data-registration-id="${escapeRegistration(r.id)}">ดูรายละเอียด</button></td>
@@ -1497,7 +1515,7 @@ if (!data.pendingRenewals?.length) {
           "ไม่ระบุชื่อ";
 
         const plan =
-          membershipPlanLabel(renewal.membership_plan);
+          renewal.membership_plan || "-";
 
         const paymentMethod =
           renewal.payment_method === "transfer"
@@ -1764,7 +1782,7 @@ registrationList.onclick = (event) => {
            field("เบอร์ฉุกเฉิน", registration.emergency_contact_phone)
          ])}
          ${section("แพ็กเกจและการชำระเงิน", [
-           field("แพ็กเกจ", membershipPlanLabel(registration.membership_plan)),
+           field("แพ็กเกจ", registration.membership_plan),
            field("วิธีชำระเงิน", paymentMethod), field("ยอดชำระ", amount)
          ])}
          <section class="reg-detail-section"><h4>หลักฐานการชำระเงิน</h4>
@@ -2157,11 +2175,84 @@ document.getElementById("ownerDateText").textContent =
         sessionStorage.removeItem("gambitRole");
         window.location.href = "admin.html";
       });
+      // Read-only class attendance view; existing Owner functions remain unchanged.
+      async function loadOwnerClassAttendance() {
+        const list = document.getElementById("todayClassList");
+        const key = sessionStorage.getItem("gambitAdminKey");
+        if (!key) return;
+        const today = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit"
+        }).format(new Date());
+        try {
+          const response = await fetch(`/api/admin-overview?date=${encodeURIComponent(today)}`, {
+            headers: {"x-admin-key": key}, cache: "no-store"
+          });
+          const data = await response.json();
+          if (!response.ok || data.success === false) throw new Error(data.error || "โหลดข้อมูลคลาสไม่สำเร็จ");
+          const sessions = (Array.isArray(data.sessions) ? data.sessions : [])
+            .filter(s => s.session_date === today && s.status !== "cancelled")
+            .sort((a,b) => String(a.start_time).localeCompare(String(b.start_time)));
+          const attendance = Array.isArray(data.attendance) ? data.attendance : [];
+          const members = new Map((Array.isArray(data.members) ? data.members : []).map(m => [String(m.id),m]));
+          const heading = document.createElement("p");
+          heading.style.color = "#666";
+          heading.textContent = `วันนี้ ${sessions.length} คลาส · เช็กชื่อแล้ว ${sessions.reduce((n,s) => n + new Set(attendance.filter(a => String(a.session_id) === String(s.id)).map(a => String(a.member_id))).size,0)} คน`;
+          list.replaceChildren(heading);
+          if (!sessions.length) {
+            const empty = document.createElement("p");
+            empty.textContent = "วันนี้ยังไม่มีคลาสที่เปิด";
+            list.appendChild(empty);
+            return;
+          }
+          sessions.forEach(session => {
+            const records = [...new Map(attendance.filter(a => String(a.session_id) === String(session.id))
+              .map(a => [String(a.member_id),a])).values()];
+            const card = document.createElement("article");
+            card.className = "owner-stat";
+            card.style.cssText = "margin:12px 0;padding:18px;border:1px solid #ddd;border-radius:14px;background:#fafafa";
+            const title = document.createElement("strong");
+            title.textContent = session.classes?.name || "ไม่ระบุชื่อคลาส";
+            const meta = document.createElement("p");
+            meta.textContent = `${String(session.start_time || "").slice(0,5)}–${String(session.end_time || "").slice(0,5)} น. · เช็กชื่อแล้ว ${records.length} คน`;
+            card.append(title,meta);
+            if (records.length) {
+              const ul = document.createElement("ul");
+              ul.style.cssText = "padding-left:22px;line-height:1.9";
+              records.sort((a,b) => String(a.checked_in_at || "").localeCompare(String(b.checked_in_at || ""))).forEach(a => {
+                const member = members.get(String(a.member_id));
+                const name = member?.nickname || member?.full_name || member?.display_name || `สมาชิก #${a.member_id}`;
+                const time = a.checked_in_at ? new Intl.DateTimeFormat("th-TH",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Bangkok"}).format(new Date(a.checked_in_at)) : "-";
+                const method = a.checkin_method === "teacher" ? "โค้ชเช็กให้" : a.checkin_method === "manual" ? "เพิ่มย้อนหลัง" : "เช็กผ่าน LINE";
+                const li = document.createElement("li");
+                li.textContent = `${name} · ${time} น. · ${method}`;
+                ul.appendChild(li);
+              });
+              card.appendChild(ul);
+            } else {
+              const none = document.createElement("p");
+              none.textContent = "ยังไม่มีผู้เช็กชื่อ";
+              none.style.color = "#777";
+              card.appendChild(none);
+            }
+            const link = document.createElement("a");
+            link.href = `class-detail.html?session=${encodeURIComponent(session.id)}&date=${encodeURIComponent(today)}`;
+            link.textContent = "ดู Class Detail →";
+            link.style.cssText = "display:inline-block;margin-top:8px;color:#111;font-weight:700";
+            card.appendChild(link);
+            list.appendChild(card);
+          });
+        } catch (error) {
+          const notice = document.createElement("p");
+          notice.style.color = "#b42318";
+          notice.textContent = "ไม่สามารถโหลดรายชื่อเช็กชื่อเพิ่มเติมได้: " + error.message;
+          list.appendChild(notice);
+        }
+      }
       loadOwnerDashboard().catch((error) => {
   console.error(error);
   document.getElementById("todayClassList").textContent =
     error.message;
-});
+}).finally(loadOwnerClassAttendance);
   </script>
 </body>
 </html>
