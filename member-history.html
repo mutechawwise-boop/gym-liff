@@ -1,18 +1,76 @@
-<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ประวัติสมาชิก | GAMBIT JIUJITSU</title><style>
-*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f4f5f7;color:#181818;margin:0}.page{max-width:850px;margin:auto;padding:24px 16px}.card{background:white;border-radius:16px;padding:22px;margin:16px 0;box-shadow:0 4px 18px #0001}button{border:0;border-radius:10px;padding:11px 16px;cursor:pointer;font-weight:700}.back{background:#111;color:white}.tabs{display:flex;gap:10px}.tabs button{background:#eee}.tabs button.active{background:#111;color:white}.entry{padding:16px 0;border-bottom:1px solid #eee}.muted{color:#666;font-size:13px;line-height:1.8}.belt{height:20px;width:125px;border:1px solid #999;border-radius:4px;display:inline-flex;overflow:hidden;vertical-align:middle;margin-right:8px}.belt .body{flex:1}.belt .bar{width:30px;background:#111;display:flex;align-items:center;justify-content:space-evenly}.belt .stripe{height:13px;width:3px;background:#777}.belt .stripe.on{background:white}.hidden{display:none}#status{color:#b42318}
-</style></head><body><main class="page"><button class="back" id="back">← กลับหน้าสมาชิก</button><h1>ประวัติสมาชิก</h1><p id="memberLabel">กำลังโหลด...</p><div class="card"><div class="tabs"><button id="paymentsTab" class="active">💳 สมัคร / ต่ออายุ / ชำระเงิน</button><button id="beltsTab">🥋 ประวัติสีสาย</button></div><p id="status"></p><section id="payments"></section><section id="belts" class="hidden"></section></div></main><script>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ประวัติสมาชิก | GAMBIT JIUJITSU</title>
+<style>
+:root{font-family:Arial,'Noto Sans Thai',sans-serif;color:#202124;background:#f5f6f8}*{box-sizing:border-box}body{margin:0}.page{max-width:980px;margin:auto;padding:30px 18px 70px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}.eyebrow{font-size:12px;letter-spacing:.1em;color:#737781;font-weight:700}.title{margin:9px 0 5px;font-size:30px}.muted{color:#6b7280;font-size:13px;line-height:1.65}.back{border:0;border-radius:10px;background:#202124;color:white;padding:12px 17px;cursor:pointer;font-weight:700}.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:25px 0}.stat,.panel{background:#fff;border:1px solid #e7e8ec;border-radius:16px}.stat{padding:19px}.stat-label{font-size:13px;color:#737781}.stat-value{font-size:24px;font-weight:750;margin-top:9px;overflow-wrap:anywhere}.panel{padding:23px}.tabs{display:flex;gap:8px;border-bottom:1px solid #e7e8ec;padding-bottom:14px;flex-wrap:wrap}.tabs button{border:0;background:#f0f1f3;border-radius:10px;padding:11px 15px;font-size:14px;font-weight:700;cursor:pointer;color:#454952}.tabs button.active{background:#202124;color:white}.section-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:24px 0 7px}.section-heading h2{font-size:19px;margin:0}.count{font-size:12px;color:#6b7280;background:#f1f2f4;padding:6px 9px;border-radius:20px}.entry{padding:18px 0;border-bottom:1px solid #ebedf0}.entry:last-child{border-bottom:0}.entry-title{font-size:15px;font-weight:750;margin-bottom:6px}.entry-details{font-size:13px;line-height:1.9;color:#606774}.empty{padding:35px 10px;text-align:center;color:#737781}.hidden{display:none!important}.belt{height:25px;width:135px;border:1px solid #a1a1aa;border-radius:4px;display:inline-flex;overflow:hidden;vertical-align:middle;margin-right:10px;flex-shrink:0}.belt .body{flex:1}.belt .bar{width:32px;background:#151515;display:flex;align-items:center;justify-content:space-evenly}.belt .stripe{height:16px;width:3px;background:#777}.belt .stripe.on{background:#fff}.belt-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px}.payment-amount{font-weight:750;font-size:17px;margin:8px 0}.status{color:#b42318;font-size:14px;margin-top:12px}.footnote{font-size:12px;color:#7b818b;margin-top:17px;line-height:1.6}@media(max-width:650px){.page{padding:20px 12px}.summary{gap:8px}.stat{padding:13px}.stat-value{font-size:18px}.stat-label{font-size:11px}.panel{padding:15px}.tabs button{flex:1;min-width:130px}.title{font-size:25px}}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="top"><div><div class="eyebrow">GAMBIT JIUJITSU · MEMBER HISTORY</div><h1 class="title">ประวัติสมาชิก</h1><p class="muted" id="memberLabel">กำลังโหลดข้อมูลสมาชิก...</p></div><button class="back" id="back">← กลับหน้าสมาชิก</button></header>
+  <div class="summary" aria-label="สรุปประวัติ">
+    <div class="stat"><div class="stat-label">สมัคร / ต่ออายุ</div><div class="stat-value" id="enrollmentCount">—</div></div>
+    <div class="stat"><div class="stat-label">ยอดเงินที่บันทึก</div><div class="stat-value" id="paymentTotal">—</div></div>
+    <div class="stat"><div class="stat-label">ระดับสายปัจจุบัน</div><div class="stat-value" id="currentBelt">—</div><div class="muted" id="currentStripe"></div></div>
+  </div>
+  <div class="panel">
+    <nav class="tabs" aria-label="หมวดประวัติ">
+      <button id="membershipTab" class="active" type="button" aria-selected="true">📚 ประวัติสมาชิก</button>
+      <button id="paymentsTab" type="button" aria-selected="false">💳 การชำระเงิน</button>
+      <button id="beltsTab" type="button" aria-selected="false">🥋 ประวัติสาย</button>
+    </nav>
+    <p id="status" class="status" role="alert"></p>
+    <section id="membership"><div class="section-heading"><h2>การสมัครและต่ออายุ</h2><span class="count" id="membershipCount">—</span></div><div id="membershipEntries"></div></section>
+    <section id="payments" class="hidden"><div class="section-heading"><h2>ประวัติการชำระเงิน</h2><span class="count" id="paymentsCount">—</span></div><div id="paymentEntries"></div><p class="footnote">แสดงรายการและยอดเงินจากประวัติที่ระบบบันทึกไว้ ไม่ใช่รายงานธุรกรรมจากธนาคาร</p></section>
+    <section id="belts" class="hidden"><div class="section-heading"><h2>ประวัติระดับสายและ Rank Bar</h2><span class="count" id="beltsCount">—</span></div><div id="beltEntries"></div></section>
+  </div>
+</main>
+<script>
+'use strict';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const memberId=Number(new URLSearchParams(location.search).get('memberId'));
-$('back').onclick=()=>location.href='members.html';
-function tab(type){$('payments').classList.toggle('hidden',type!=='payments');$('belts').classList.toggle('hidden',type!=='belts');$('paymentsTab').classList.toggle('active',type==='payments');$('beltsTab').classList.toggle('active',type==='belts');}
-$('paymentsTab').onclick=()=>tab('payments');$('beltsTab').onclick=()=>tab('belts');
-function date(s){if(!s)return '-';const d=new Date(s.length===10?s+'T00:00:00+07:00':s);return isNaN(d)?'-':d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});}
+$('back').onclick=()=>{location.href='members.html';};
+const tabIds=['membership','payments','belts'];
+function tab(type){for(const id of tabIds){const active=id===type;$(id).classList.toggle('hidden',!active);$(id+'Tab').classList.toggle('active',active);$(id+'Tab').setAttribute('aria-selected',String(active));}}
+for(const id of tabIds)$(id+'Tab').onclick=()=>tab(id);
+function date(s){if(!s)return '-';const raw=String(s);const d=new Date(raw.length===10?raw+'T00:00:00+07:00':raw);return Number.isNaN(d.getTime())?'-':d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});}
+function number(s){const n=Number(s);return Number.isFinite(n)?n:null;}
+function money(s){const n=number(s);return n===null?'-':n.toLocaleString('th-TH',{minimumFractionDigits:0,maximumFractionDigits:2})+' บาท';}
 const plans={drop_in:'Drop-in 1 ครั้ง',adult_monthly:'Adult Monthly',kids_monthly:'Kids Monthly',class_pass_4:'Class Pass 4 ครั้ง',class_pass_8:'Class Pass 8 ครั้ง',class_pass_12:'Class Pass 12 ครั้ง',private:'Private'};
-function beltVisual(code,count){const colors={white:'#fff',blue:'#2563eb',purple:'#7e22ce',brown:'#78350f',black:'#111',gray:'#808080',yellow:'#facc15',orange:'#f97316',green:'#22c55e'};const key=String(code||'white');const parts=key.split('_');const base=colors[parts[0]]||'#ddd';const second=parts[1]&&colors[parts[1]];const bg=second?`linear-gradient(to bottom,${base} 0 28%,${second} 28% 72%,${base} 72% 100%)`:base;const n=Math.max(0,Math.min(4,Number(count)||0));return `<span class="belt" aria-label="${esc(key)} ${n} ขีด"><span class="body" style="background:${bg}"></span><span class="bar">${Array.from({length:4},(_,i)=>`<i class="stripe ${i<n?'on':''}"></i>`).join('')}</span></span>`;}
-async function load(){const key=sessionStorage.getItem('gambitAdminKey');const role=sessionStorage.getItem('gambitRole');if(!key||!['owner','coach'].includes(role)||!Number.isInteger(memberId)||memberId<=0){$('status').textContent='ไม่มีสิทธิ์เข้าถึง หรือรหัสสมาชิกไม่ถูกต้อง';return;}
-try{const res=await fetch('/api/admin-dashboard',{headers:{'x-admin-key':key}});const data=await res.json();if(!res.ok||!data.success)throw new Error(data.error||'โหลดไม่สำเร็จ');const member=(data.members||[]).find(m=>Number(m.id)===memberId);if(!member)throw new Error('ไม่พบสมาชิก');$('memberLabel').textContent=`${member.nickname||member.display_name||'สมาชิก'} · GJ-${String(member.id).padStart(4,'0')}`;
-const payments=(data.paymentHistory||[]).filter(x=>Number(x.memberId)===memberId);$('payments').innerHTML=payments.length?payments.map(x=>`<article class="entry"><strong>${esc(x.type==='registration'?'สมัครสมาชิกครั้งแรก':'ต่ออายุสมาชิก')} · ${esc(plans[x.membershipPlan]||x.membershipPlan||'-')}</strong><div class="muted">${Number(x.amount||0).toLocaleString('th-TH')} บาท · ${esc(x.paymentMethod==='cash'?'เงินสด':x.paymentMethod==='transfer'?'เงินโอน':'-')}<br>${date(x.approvedAt)}</div></article>`).join(''):'<p class="muted">ยังไม่มีประวัติการชำระเงิน</p>';
-const belts=(data.beltHistory||[]).filter(x=>Number(x.member_id)===memberId);$('belts').innerHTML=belts.length?belts.map(x=>{const b=x.belt_levels||{};return `<article class="entry">${beltVisual(b.code,x.stripe_count)}<strong>${esc(b.name_th||b.code||'ไม่ระบุสาย')}</strong><div class="muted">Rank Bar ${Math.max(0,Math.min(4,Number(x.stripe_count)||0))} ขีด · ${date(x.awarded_date)}<br>${x.awarded_by?'ผู้มอบสาย: '+esc(x.awarded_by)+'<br>':''}${x.note?'หมายเหตุ: '+esc(x.note):''}</div></article>`}).join(''):'<p class="muted">ยังไม่มีประวัติระดับสาย</p>';
-}catch(e){$('status').textContent=e.message||'เกิดข้อผิดพลาด';}}
-load();</script></body></html>
+function plan(s){return plans[s]||s||'-';}
+function method(s){return ({cash:'เงินสด',transfer:'เงินโอน'})[s]||s||'ไม่ระบุ';}
+function eventType(s){return s==='registration'?'สมัครสมาชิกครั้งแรก':s==='renewal'?'ต่ออายุสมาชิก':'รายการสมาชิก';}
+function beltVisual(code,count){const colors={white:'#fff',blue:'#2563eb',purple:'#7e22ce',brown:'#78350f',black:'#111',gray:'#808080',yellow:'#facc15',orange:'#f97316',green:'#22c55e'};const key=String(code||'white');const parts=key.split('_');const base=colors[parts[0]]||'#ddd';const second=parts[1]&&colors[parts[1]];const bg=second?`linear-gradient(to bottom,${base} 0 28%,${second} 28% 72%,${base} 72% 100%)`:base;const n=Math.max(0,Math.min(4,Number(count)||0));return `<span class="belt" role="img" aria-label="${esc(key)} ${n} ขีด"><span class="body" style="background:${bg}"></span><span class="bar">${Array.from({length:4},(_,i)=>`<i class="stripe ${i<n?'on':''}"></i>`).join('')}</span></span>`;}
+function empty(s){return `<p class="empty">${esc(s)}</p>`;}
+function sortByDate(rows,field){return [...rows].sort((a,b)=>String(b[field]||'').localeCompare(String(a[field]||'')));}
+async function load(){
+ const key=sessionStorage.getItem('gambitAdminKey');const role=sessionStorage.getItem('gambitRole');
+ if(!key||!['owner','coach'].includes(role)||!Number.isSafeInteger(memberId)||memberId<=0){$('status').textContent='ไม่มีสิทธิ์เข้าถึง หรือรหัสสมาชิกไม่ถูกต้อง';$('memberLabel').textContent='ไม่สามารถโหลดข้อมูลได้';return;}
+ try{
+  const res=await fetch('/api/admin-dashboard',{headers:{'x-admin-key':key},cache:'no-store'});
+  const data=await res.json();if(!res.ok||!data.success)throw new Error(data.error||'โหลดข้อมูลไม่สำเร็จ');
+  const member=(data.members||[]).find(m=>Number(m.id)===memberId);if(!member)throw new Error('ไม่พบสมาชิก');
+  $('memberLabel').textContent=`${member.nickname||member.display_name||'สมาชิก'} · GJ-${String(member.id).padStart(4,'0')}`;
+  const records=sortByDate((data.paymentHistory||[]).filter(x=>Number(x.memberId)===memberId),'approvedAt');
+  const belts=sortByDate((data.beltHistory||[]).filter(x=>Number(x.member_id)===memberId),'awarded_date');
+  $('enrollmentCount').textContent=records.length.toLocaleString('th-TH')+' รายการ';
+  $('membershipCount').textContent=records.length+' รายการ';
+  $('membershipEntries').innerHTML=records.length?records.map(x=>`<article class="entry"><div class="entry-title">${esc(eventType(x.type))}</div><div class="entry-details">แพ็กเกจ: ${esc(plan(x.membershipPlan))}<br>วันที่บันทึกรายการ: ${date(x.approvedAt)}</div></article>`).join(''):empty('ยังไม่มีประวัติสมัครหรือต่ออายุที่บันทึกไว้');
+  const paymentRecords=records.filter(x=>x.amount!==null&&x.amount!==undefined&&x.amount!==''&&number(x.amount)!==null);
+  const total=paymentRecords.reduce((sum,x)=>sum+Number(x.amount),0);
+  $('paymentTotal').textContent=paymentRecords.length?money(total):'—';
+  $('paymentsCount').textContent=paymentRecords.length+' รายการ';
+  $('paymentEntries').innerHTML=paymentRecords.length?paymentRecords.map(x=>`<article class="entry"><div class="entry-title">${esc(eventType(x.type))} · ${esc(plan(x.membershipPlan))}</div><div class="payment-amount">${money(x.amount)}</div><div class="entry-details">วิธีชำระ: ${esc(method(x.paymentMethod))}<br>วันที่บันทึก: ${date(x.approvedAt)}</div></article>`).join(''):empty('ยังไม่มีข้อมูลยอดชำระที่บันทึกไว้');
+  $('beltsCount').textContent=belts.length+' รายการ';
+  $('beltEntries').innerHTML=belts.length?belts.map(x=>{const b=x.belt_levels||{};const n=Math.max(0,Math.min(4,Number(x.stripe_count)||0));return `<article class="entry"><div class="belt-row">${beltVisual(b.code,n)}<strong>${esc(b.name_th||b.code||'ไม่ระบุสาย')}</strong></div><div class="entry-details">Rank Bar: ${n} ขีด<br>วันที่ได้รับ: ${date(x.awarded_date)}${x.awarded_by?'<br>ผู้มอบสาย: '+esc(x.awarded_by):''}${x.note?'<br>หมายเหตุ: '+esc(x.note):''}</div></article>`;}).join(''):empty('ยังไม่มีประวัติการเลื่อนสาย');
+  const latest=belts[0];if(latest){const b=latest.belt_levels||{};$('currentBelt').textContent=b.name_th||b.code||'—';$('currentStripe').textContent='Rank Bar '+Math.max(0,Math.min(4,Number(latest.stripe_count)||0))+' ขีด';}
+ }catch(e){$('status').textContent=e.message||'เกิดข้อผิดพลาด';$('memberLabel').textContent='โหลดข้อมูลไม่สำเร็จ';}
+}
+load();
+</script>
+</body>
+</html>
