@@ -461,13 +461,13 @@ if (isOwner) {
     supabase.request(
   "membership_transactions" +
     "?payment_status=eq.paid" +
-    "&select=id,member_id,amount,payment_method,approved_at,membership_plan,members(display_name,nickname)"
+    "&select=id,member_id,amount,payment_method,approved_at,membership_plan,slip_url,members(display_name,nickname)"
 ),
     // รายรับจากการสมัครสมาชิกใหม่
    supabase.request(
   "member_registration" +
   "?registration_status=eq.approved" +
-  "&select=id,member_id,payment_amount,payment_method,approved_at,membership_plan,line_display_name,nickname,first_name,last_name"
+  "&select=id,member_id,payment_amount,payment_method,approved_at,membership_plan,slip_url,line_display_name,nickname,first_name,last_name"
 )
   ]);
 
@@ -551,10 +551,25 @@ const allTransactions = [
   }))
 ];
 
+  // Signed links are generated only for owner-authorized payment history.
+  // Never return raw storage paths to the browser.
+  const transactionsWithSlips = await Promise.all(allTransactions.map(async (item) => {
+    let slipSignedUrl = null;
+    if (item.slipPath) {
+      try {
+        slipSignedUrl = await supabase.createSignedUrl("payment-slips", item.slipPath, 3600);
+      } catch (error) {
+        console.error("Could not sign payment slip", item.id, error);
+      }
+    }
+    const { slipPath, ...safeItem } = item;
+    return { ...safeItem, slipSignedUrl };
+  }));
+
   const currentMonth =
     today.slice(0, 7);
 
-  finance = allTransactions.reduce(
+  finance = transactionsWithSlips.reduce(
     (summary, transaction) => {
       if (
         !transaction.amount ||
