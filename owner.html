@@ -436,6 +436,9 @@
 .finance-pay-dialog footer button{padding:10px 16px;border-radius:8px;border:1px solid #ccc;cursor:pointer;font-weight:700}
 .finance-pay-dialog footer button[type=submit]{background:#111;color:#fff;border-color:#111}
 .finance-pay-dialog footer button:disabled{opacity:.5}
+
+/* Owner report workspace */
+.report-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0}.report-controls label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}.report-controls input,.report-controls button{padding:9px 12px;border:1px solid #d6d9de;border-radius:9px;font:inherit;background:white;cursor:pointer}.report-tabs{display:flex;gap:7px;flex-wrap:wrap;border-bottom:1px solid #ddd;padding-bottom:10px;margin:16px 0}.report-tab{border:1px solid #ddd;border-radius:9px;padding:10px 13px;background:#f6f7f8;color:#111;font:inherit;font-weight:700;cursor:pointer}.report-tab[aria-selected="true"]{background:#111;color:white}.report-panel[hidden]{display:none!important}.report-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:16px 0}.report-stats article{border:1px solid #e5e7eb;border-radius:11px;padding:13px;background:#fafafa}.report-stats span{font-size:12px;color:#555;display:block}.report-stats strong{font-size:22px;display:block;margin-top:8px;overflow-wrap:anywhere}
 </style>
 </head>
 
@@ -951,10 +954,32 @@
 
     <section id="reports" class="owner-card">
       <h2>📄 รายงาน</h2>
-
-      <div class="empty-state">
-        รายงานรายวัน รายเดือน และ Export จะเพิ่มในขั้นถัดไป
+      <p class="finance-muted">สรุปข้อมูลจากระบบจริง · เลือกเดือนเพื่อดูรายการบัญชีและการรับชำระ (เดือนย้อนหลังที่ข้อมูลสมาชิกไม่ครบจะแสดงว่าไม่ทราบ)</p>
+      <div class="report-controls"><label>เดือนรายงาน <input type="month" id="reportMonth"></label><button type="button" id="reportRefresh">รีเฟรชข้อมูล</button></div>
+      <div class="report-tabs" role="tablist" aria-label="ประเภทรายงาน">
+        <button type="button" class="report-tab" data-report-tab="finance" aria-selected="true">การเงิน</button>
+        <button type="button" class="report-tab" data-report-tab="members" aria-selected="false">สมาชิก</button>
+        <button type="button" class="report-tab" data-report-tab="classes" aria-selected="false">คลาสเรียน</button>
+        <button type="button" class="report-tab" data-report-tab="export" aria-selected="false">ส่งออกรายงาน</button>
       </div>
+      <div id="reportFinance" class="report-panel">
+        <div class="report-stats">
+          <article><span>รายรับสมาชิกที่ยืนยันได้</span><strong id="reportMemberRevenue">—</strong></article>
+          <article><span>รายรับอื่นที่ตั้งรายการ</span><strong id="reportOtherIncome">0.00</strong></article>
+          <article><span>รายจ่ายที่ตั้งรายการ</span><strong id="reportExpense">0.00</strong></article>
+          <article><span>รับเงินจริงจากบัญชีทั่วไป</span><strong id="reportActualIncome">0.00</strong></article>
+          <article><span>จ่ายเงินจริงจากบัญชีทั่วไป</span><strong id="reportActualExpense">0.00</strong></article>
+        </div>
+        <p id="reportFinanceNote" class="finance-muted"></p>
+        <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>วันที่ตั้งรายการ</th><th>ประเภท</th><th>รายละเอียด</th><th>ยอดตั้งรายการ</th><th>ชำระสะสม</th><th>คงค้าง</th></tr></thead><tbody id="reportFinanceRows"></tbody></table></div>
+      </div>
+      <div id="reportMembers" class="report-panel" hidden>
+        <div class="report-stats"><article><span>สมาชิกทั้งหมด (ข้อมูลปัจจุบัน)</span><strong id="reportMembersTotal">—</strong></article><article><span>Active (ข้อมูลปัจจุบัน)</span><strong id="reportMembersActive">—</strong></article><article><span>หมดอายุ (ข้อมูลปัจจุบัน)</span><strong id="reportMembersExpired">—</strong></article></div>
+        <p class="finance-muted">จำนวนสมาชิกเป็นสถานะปัจจุบัน ไม่ใช่ยอดย้อนหลัง ณ สิ้นเดือนที่เลือก</p>
+        <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>ชื่อสมาชิก</th><th>แพ็กเกจ</th><th>วันหมดอายุ</th><th>สถานะ</th></tr></thead><tbody id="reportMemberRows"></tbody></table></div>
+      </div>
+      <div id="reportClasses" class="report-panel" hidden><p class="finance-muted">รายงานการเข้าเรียนรายเดือนต้องใช้ข้อมูลคลาสย้อนหลังจาก API เพิ่มเติม ขณะนี้ยังไม่แสดงตัวเลขที่ไม่สามารถตรวจสอบได้</p></div>
+      <div id="reportExport" class="report-panel" hidden><p class="finance-muted">ดาวน์โหลด CSV จากข้อมูลที่ระบบโหลดได้จริง (รองรับการเปิดใน Excel)</p><div class="report-controls"><button type="button" id="reportExportFinance">ส่งออกบัญชีทั่วไป CSV</button><button type="button" id="reportExportMembers">ส่งออกรายชื่อสมาชิก CSV</button></div><p id="reportExportMessage" class="finance-muted"></p></div>
     </section>
 </div>
 </div>
@@ -1498,6 +1523,8 @@ document.getElementById(
   Number(
     data.finance?.monthRevenue || 0
   ).toLocaleString("th-TH");
+  reportOwnerSnapshot = data;
+  if (typeof renderOwnerReports === "function") renderOwnerReports();
   financeMemberPaymentHistory = Array.isArray(data.paymentHistory) ? data.paymentHistory : [];
   financeMemberMonthRevenue = data.finance && Number.isFinite(Number(data.finance.monthRevenue))
     ? Number(data.finance.monthRevenue) : null;
@@ -2615,7 +2642,7 @@ async function loadFinanceEntries() {
     const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.error || `HTTP ${response.status}`);
     financeData = {categories:Array.isArray(data.categories)?data.categories:[], entries:Array.isArray(data.entries)?data.entries:[], payments:Array.isArray(data.payments)?data.payments:[], installments:Array.isArray(data.installments)?data.installments:[]};
-    renderFinanceCategories(); renderFinanceEntries();
+    renderFinanceCategories(); renderFinanceEntries(); renderOwnerReports();
     financeUI.loadMessage.textContent = `โหลดสำเร็จ · รายการทั้งหมด ${financeData.entries.length} รายการ`;
   } catch (error) {
     financeUI.loadMessage.textContent = `โหลดบัญชีไม่สำเร็จ: ${error.message}`;
@@ -2706,6 +2733,47 @@ document.getElementById("financePrintButton").addEventListener("click", () => {
 
 financeUI.month.value = financeLocalDate().slice(0,7);
 document.getElementById("financeEntryDate").value = financeLocalDate();
+
+
+// Read-only reports. Membership revenue is only complete for the current month.
+let reportOwnerSnapshot = null;
+const reportMonthInput = document.getElementById('reportMonth');
+reportMonthInput.value = financeLocalDate().slice(0,7);
+function reportAmount(v){return Number(v||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function reportCell(row,value){const cell=row.insertCell();cell.textContent=String(value??'-');return cell;}
+function renderOwnerReports(){
+  const month=reportMonthInput.value;
+  const entries=financeData.entries.filter(e=>String(e.entry_date||'').slice(0,7)===month).sort((a,b)=>String(b.entry_date).localeCompare(String(a.entry_date)));
+  const paid=new Map();for(const p of financeData.payments){const key=String(p.entry_id);paid.set(key,(paid.get(key)||0)+Number(p.amount||0));}
+  const total=type=>entries.filter(e=>e.entry_type===type).reduce((sum,e)=>sum+Number(e.total_amount||0),0);
+  document.getElementById('reportOtherIncome').textContent=reportAmount(total('income'));
+  document.getElementById('reportExpense').textContent=reportAmount(total('expense'));
+  const byId=new Map(financeData.entries.map(e=>[String(e.id),e]));let received=0,spent=0;
+  for(const p of financeData.payments){if(String(p.payment_date||'').slice(0,7)!==month)continue;const e=byId.get(String(p.entry_id));if(e?.entry_type==='income')received+=Number(p.amount||0);if(e?.entry_type==='expense')spent+=Number(p.amount||0);}
+  document.getElementById('reportActualIncome').textContent=reportAmount(received);
+  document.getElementById('reportActualExpense').textContent=reportAmount(spent);
+  const current=financeLocalDate().slice(0,7);
+  const known=month===current&&financeMemberMonthRevenue!==null;
+  document.getElementById('reportMemberRevenue').textContent=known?reportAmount(financeMemberMonthRevenue):'—';
+  document.getElementById('reportFinanceNote').textContent=known?'รายรับสมาชิกเป็นยอดรับชำระแล้ว; รายรับ/รายจ่ายอื่นเป็นยอดตั้งรายการ จึงไม่ควรนำมาหักลบเป็นกำไรสุทธิ':'ข้อมูลรายรับสมาชิกย้อนหลังของเดือนนี้ยังไม่ยืนยันครบ จึงไม่แสดงยอดรวมรายรับทั้งกิจการ';
+  const body=document.getElementById('reportFinanceRows');body.replaceChildren();
+  if(!entries.length){const r=body.insertRow();const c=r.insertCell();c.colSpan=6;c.textContent='ไม่มีรายการบัญชีทั่วไปในเดือนนี้';}
+  for(const e of entries){const r=body.insertRow(),sum=Number(e.total_amount||0),done=paid.get(String(e.id))||0;[e.entry_date,e.entry_type==='income'?'รายรับ':'รายจ่าย',e.description,reportAmount(sum),reportAmount(done),reportAmount(Math.max(0,sum-done))].forEach(v=>reportCell(r,v));}
+  const members=Array.isArray(reportOwnerSnapshot?.members)?reportOwnerSnapshot.members.filter(m=>!m.is_guest):[];
+  const now=financeLocalDate();const active=members.filter(m=>m.membership_expiry_date&&String(m.membership_expiry_date).slice(0,10)>=now).length;
+  document.getElementById('reportMembersTotal').textContent=reportOwnerSnapshot?members.length:'—';
+  document.getElementById('reportMembersActive').textContent=reportOwnerSnapshot?active:'—';
+  document.getElementById('reportMembersExpired').textContent=reportOwnerSnapshot?members.filter(m=>m.membership_expiry_date&&String(m.membership_expiry_date).slice(0,10)<now).length:'—';
+  const mbody=document.getElementById('reportMemberRows');mbody.replaceChildren();
+  if(!members.length){const r=mbody.insertRow();const c=r.insertCell();c.colSpan=4;c.textContent='ยังไม่มีข้อมูลสมาชิก';}
+  for(const m of members){const expiry=String(m.membership_expiry_date||'').slice(0,10);const name=m.full_name||m.name||[m.first_name,m.last_name].filter(Boolean).join(' ')||`สมาชิก #${m.id}`;const r=mbody.insertRow();[name,m.membership_plan||m.plan_name||'-',expiry||'-',!expiry?'ไม่ระบุ':expiry>=now?'Active':'หมดอายุ'].forEach(v=>reportCell(r,v));}
+}
+reportMonthInput.addEventListener('change',renderOwnerReports);
+document.getElementById('reportRefresh').addEventListener('click',async()=>{await loadOwnerDashboard();await loadFinanceEntries();renderOwnerReports();});
+for(const tab of document.querySelectorAll('[data-report-tab]'))tab.addEventListener('click',()=>{const selected=tab.dataset.reportTab;for(const b of document.querySelectorAll('[data-report-tab]'))b.setAttribute('aria-selected',String(b===tab));for(const [key,id] of Object.entries({finance:'reportFinance',members:'reportMembers',classes:'reportClasses',export:'reportExport'}))document.getElementById(id).hidden=key!==selected;});
+function exportReportCsv(filename,rows){const quote=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const csv='\uFEFF'+rows.map(row=>row.map(quote).join(',')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+document.getElementById('reportExportFinance').addEventListener('click',()=>{const month=reportMonthInput.value;const rows=[['เลขรายการ','วันที่ตั้งรายการ','ประเภท','รายละเอียด','คู่ค้า','ยอดตั้งรายการ','ยอดชำระสะสม','คงค้าง','สถานะ']];for(const e of financeData.entries.filter(e=>String(e.entry_date||'').slice(0,7)===month)){const paid=financeData.payments.filter(p=>String(p.entry_id)===String(e.id)).reduce((s,p)=>s+Number(p.amount||0),0);rows.push([e.id,e.entry_date,e.entry_type,e.description,e.counterparty_name,Number(e.total_amount||0),paid,Math.max(0,Number(e.total_amount||0)-paid),e.status]);}exportReportCsv('gambit-finance-'+month+'.csv',rows);document.getElementById('reportExportMessage').textContent='ส่งออกบัญชีทั่วไปเรียบร้อย (เฉพาะรายการที่ตั้งในเดือนที่เลือก)';});
+document.getElementById('reportExportMembers').addEventListener('click',()=>{if(!reportOwnerSnapshot){document.getElementById('reportExportMessage').textContent='ยังโหลดข้อมูลสมาชิกไม่สำเร็จ';return;}const rows=[['รหัสสมาชิก','ชื่อ','แพ็กเกจ','วันหมดอายุ']];for(const m of (reportOwnerSnapshot.members||[]).filter(m=>!m.is_guest))rows.push([m.id,m.full_name||m.name||[m.first_name,m.last_name].filter(Boolean).join(' '),m.membership_plan||m.plan_name||'',m.membership_expiry_date||'']);exportReportCsv('gambit-members-current.csv',rows);document.getElementById('reportExportMessage').textContent='ส่งออกรายชื่อสมาชิกสถานะปัจจุบันเรียบร้อย';});
 
 async function startOwnerDashboard() {
   document.querySelector(".owner-container").style.display = "none";
