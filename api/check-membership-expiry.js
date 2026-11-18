@@ -579,6 +579,24 @@ async function checkCurrentMemberships(
 
 export default {
   async fetch(request) {
+    
+    if (request.method !== "GET") {
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    const cronSecret = process.env.CRON_SECRET;
+    const authorization = request.headers.get("authorization");
+
+    if (!cronSecret || authorization !== `Bearer ${cronSecret}`) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+  
     const json =
       (data, status = 200) =>
         new Response(
