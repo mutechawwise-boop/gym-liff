@@ -525,7 +525,8 @@ const allTransactions = [
     paymentMethod:
       item.payment_method || "",
     approvedAt:
-      item.approved_at || null
+      item.approved_at || null,
+    slipPath: item.slip_url || null
   })),
 
   ...registrationTransactions.map((item) => ({
@@ -547,7 +548,8 @@ const allTransactions = [
     paymentMethod:
       item.payment_method || "",
     approvedAt:
-      item.approved_at || null
+      item.approved_at || null,
+    slipPath: item.slip_url || null
   }))
 ];
 
@@ -636,7 +638,7 @@ const allTransactions = [
     }
   );
  recentPayments =
-allTransactions
+transactionsWithSlips
  .filter(
  (transaction) =>
  transaction.approvedAt
@@ -647,7 +649,7 @@ allTransactions
  )
 .slice(0, 10);
 paymentHistory =
-  allTransactions
+  transactionsWithSlips
     .filter(
       (transaction) =>
         transaction.approvedAt &&
