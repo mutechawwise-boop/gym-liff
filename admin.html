@@ -589,6 +589,11 @@
   #coachWorkflowMessage:not(:empty) {padding:12px;background:#f7f7f7;border-radius:10px;}
   #adminArea #attendance[hidden], #adminArea #coachWorkflowCard[hidden],
   #adminArea #legacyAttendanceSummary[hidden], #adminArea #legacyAttendanceMembers[hidden] {display:none !important;}
+  .today-attendance-summary {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 16px;}
+  .today-attendance-summary .summary-card {box-shadow:none;background:#f8f9fa;}
+  .today-attendance-summary .summary-number {font-size:25px;}
+  .class-attendance-count {display:inline-block;padding:7px 11px;border-radius:10px;background:#eaf7ef;color:#087b32;font-size:14px;font-weight:800;}
+  @media(max-width:600px){.today-attendance-summary{grid-template-columns:repeat(2,minmax(0,1fr));}}
   #adminArea [data-open-class]:hover {border-color:#111 !important;box-shadow:0 4px 15px #0000000e;}
   #adminArea [data-open-class]:focus-visible {outline:3px solid #c93535;outline-offset:2px;}
   </style>
@@ -657,7 +662,7 @@
     🥋 เปิดคลาส
   </a>
 
-  <a href="#attendance">
+  <a href="#monthlyScheduleSection">
     ✅ เช็กชื่อ
   </a>
 </nav>
@@ -1375,6 +1380,17 @@ function renderMonthlySchedule() {
   elements.monthlyScheduleError.textContent =
     "";
 
+  // Count distinct checked-in members per session, never counting cancelled classes.
+  const attendance = Array.isArray(state.overview?.attendance) ? state.overview.attendance : [];
+  const activeSessions = daySessions.filter(session => session.status !== "cancelled");
+  const countsBySession = new Map(activeSessions.map(session => [String(session.id), new Set()]));
+  attendance.forEach(record => {
+    const memberIds = countsBySession.get(String(record.session_id));
+    if (memberIds && record.member_id != null) memberIds.add(String(record.member_id));
+  });
+  document.getElementById("selectedDayClassCount").textContent = String(activeSessions.length);
+  document.getElementById("selectedDayCheckinCount").textContent = String([...countsBySession.values()].reduce((sum, ids) => sum + ids.size, 0));
+
 
   if (!daySessions.length) {
 
@@ -1506,6 +1522,7 @@ function renderMonthlySchedule() {
     gap:8px;
   "
 >
+  ${cancelled ? "" : `<span class="class-attendance-count">✅ ${countsBySession.get(String(session.id))?.size ?? 0} คนเช็กชื่อแล้ว</span>`}
   <strong>
     ${
       cancelled
