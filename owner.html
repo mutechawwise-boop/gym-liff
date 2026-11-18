@@ -357,6 +357,31 @@
 #todayClasses #todayClassList > article {transition:border-color .15s,box-shadow .15s;}
 #todayClasses #todayClassList > article:hover {border-color:#aaa!important;box-shadow:0 3px 12px #0000000d;}
 @media(max-width:850px) {.owner-quick-grid {grid-template-columns:1fr;}}
+
+/* Owner-only finance ledger; membership revenue remains separate. */
+.finance-ledger {margin-top:24px;border-top:1px solid #e5e7eb;padding-top:22px;}
+.finance-ledger h3 {margin:0 0 8px;}
+.finance-muted {font-size:13px;color:#666;line-height:1.6;}
+.finance-form-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px;}
+.finance-form-grid label {display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;}
+.finance-form-grid input,.finance-form-grid select,.finance-form-grid textarea {width:100%;min-height:40px;padding:9px 10px;border:1px solid #cfd4da;border-radius:9px;font:inherit;background:#fff;color:#111;}
+.finance-form-grid textarea {min-height:68px;resize:vertical;}
+.finance-span-all {grid-column:1/-1;}
+.finance-form-actions {display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;}
+.finance-form-actions button {width:auto;padding:11px 18px;background:#111;color:#fff;border:0;border-radius:9px;font:inherit;font-weight:700;cursor:pointer;}
+.finance-form-actions button:disabled {opacity:.5;cursor:wait;}
+.finance-form-message {font-size:13px;white-space:pre-wrap;}
+.finance-summary {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0;}
+.finance-summary .owner-stat {padding:14px;}
+.finance-summary strong {display:block;font-size:22px;margin-top:8px;overflow-wrap:anywhere;}
+.finance-table-wrap {overflow-x:auto;border:1px solid #e5e7eb;border-radius:10px;margin-top:12px;}
+.finance-table {width:100%;border-collapse:collapse;min-width:680px;font-size:13px;}
+.finance-table th,.finance-table td {text-align:left;padding:11px;border-bottom:1px solid #eee;vertical-align:top;}
+.finance-table th {background:#f6f7f8;white-space:nowrap;}
+.finance-table tr:last-child td {border-bottom:0;}
+.finance-filter {display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px;}
+.finance-filter input {padding:9px;border:1px solid #cfd4da;border-radius:8px;font:inherit;}
+@media(max-width:650px){.finance-form-grid{grid-template-columns:1fr}.finance-summary{grid-template-columns:1fr}}
 </style>
 </head>
 
@@ -780,6 +805,35 @@
           <strong id="todayTransferRevenue" class="owner-stat-number">-</strong>
           <span class="owner-stat-caption">บาท</span>
         </article>
+      </div>
+      <div class="finance-ledger" id="financeLedger">
+        <h3>📒 บัญชีรายรับ–รายจ่ายทั่วไป</h3>
+        <p class="finance-muted">รายการส่วนนี้แยกจากรายรับค่าสมาชิกด้านบน ไม่รวมยอดซ้ำ และยอดรายการที่ยังไม่ได้รับ/จ่ายจริงจะไม่ถือเป็นกระแสเงินสด</p>
+        <div class="finance-summary" aria-label="สรุปยอดรายการบัญชีทั่วไป">
+          <div class="owner-stat"><span class="owner-stat-label">รายการรายรับเดือนที่เลือก</span><strong id="financeMonthIncome">-</strong><small>บาท · ยอดตั้งรายการ</small></div>
+          <div class="owner-stat"><span class="owner-stat-label">รายการรายจ่ายเดือนที่เลือก</span><strong id="financeMonthExpense">-</strong><small>บาท · ยอดตั้งรายการ</small></div>
+          <div class="owner-stat"><span class="owner-stat-label">ผลต่างรายการ</span><strong id="financeMonthNet">-</strong><small>บาท · ไม่ใช่เงินสดคงเหลือ</small></div>
+        </div>
+        <form id="financeEntryForm">
+          <h3>เพิ่มรายการใหม่</h3>
+          <div class="finance-form-grid">
+            <label>ประเภทรายการ <select id="financeEntryType" required><option value="income">รายรับ</option><option value="expense">รายจ่าย</option></select></label>
+            <label>หมวดหมู่ <select id="financeCategory" required><option value="">กำลังโหลดหมวดหมู่...</option></select></label>
+            <label class="finance-span-all">รายละเอียด <input id="financeDescription" type="text" maxlength="250" required placeholder="เช่น ซื้ออุปกรณ์ซ้อม"></label>
+            <label>จำนวนเงิน (บาท) <input id="financeAmount" type="number" min="0.01" step="0.01" required></label>
+            <label>วันที่ตั้งรายการ <input id="financeEntryDate" type="date" required></label>
+            <label>คู่ค้า / ผู้เกี่ยวข้อง <input id="financeCounterparty" type="text" maxlength="200" placeholder="ไม่บังคับ"></label>
+            <label>กำหนดชำระ <input id="financeDueDate" type="date"></label>
+            <label class="finance-span-all">หมายเหตุ <textarea id="financeNotes" maxlength="1000" placeholder="ไม่บังคับ"></textarea></label>
+          </div>
+          <div class="finance-form-actions"><button type="submit" id="financeSaveButton">บันทึกรายการ</button><span id="financeFormMessage" class="finance-form-message" role="status"></span></div>
+        </form>
+        <div style="margin-top:26px">
+          <h3>รายการบัญชีทั่วไป</h3>
+          <div class="finance-filter"><label for="financeMonthFilter">เดือนที่แสดง</label><input type="month" id="financeMonthFilter"><button type="button" id="financeRefreshButton">รีเฟรช</button></div>
+          <p id="financeLoadMessage" class="finance-muted" role="status">กำลังโหลดข้อมูล...</p>
+          <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>วันที่</th><th>ประเภท / หมวด</th><th>รายละเอียด</th><th>คู่ค้า</th><th>จำนวนเงิน</th><th>สถานะ</th></tr></thead><tbody id="financeEntriesBody"><tr><td colspan="6">กำลังโหลด...</td></tr></tbody></table></div>
+        </div>
       </div>
     </section>
 
@@ -2279,6 +2333,99 @@ document.getElementById("ownerDateText").textContent =
         }
       }
     
+
+// Finance entries: uses the existing Owner-protected admin-dashboard endpoint.
+const financeUI = {
+  type: document.getElementById("financeEntryType"),
+  category: document.getElementById("financeCategory"),
+  form: document.getElementById("financeEntryForm"),
+  message: document.getElementById("financeFormMessage"),
+  month: document.getElementById("financeMonthFilter"),
+  tbody: document.getElementById("financeEntriesBody"),
+  loadMessage: document.getElementById("financeLoadMessage")
+};
+let financeData = {categories: [], entries: [], payments: []};
+const financeMoney = amount => Number(amount || 0).toLocaleString("th-TH", {minimumFractionDigits:2, maximumFractionDigits:2});
+function financeLocalDate() {
+  const parts = new Intl.DateTimeFormat("en-US", {timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+  const get = type => parts.find(p => p.type === type)?.value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+function renderFinanceCategories() {
+  const type = financeUI.type.value;
+  const options = financeData.categories.filter(c => c.type === type && c.is_active !== false);
+  financeUI.category.replaceChildren(new Option("-- เลือกหมวดหมู่ --", ""));
+  for (const c of options) financeUI.category.add(new Option(c.name, String(c.id)));
+}
+function renderFinanceEntries() {
+  const month = financeUI.month.value;
+  const entries = financeData.entries.filter(e => String(e.entry_date || "").slice(0,7) === month)
+    .sort((a,b) => String(b.entry_date).localeCompare(String(a.entry_date)) || Number(b.id)-Number(a.id));
+  const income = entries.filter(e => e.entry_type === "income").reduce((sum,e) => sum + Number(e.total_amount || 0),0);
+  const expense = entries.filter(e => e.entry_type === "expense").reduce((sum,e) => sum + Number(e.total_amount || 0),0);
+  document.getElementById("financeMonthIncome").textContent = financeMoney(income);
+  document.getElementById("financeMonthExpense").textContent = financeMoney(expense);
+  document.getElementById("financeMonthNet").textContent = financeMoney(income-expense);
+  financeUI.tbody.replaceChildren();
+  if (!entries.length) {
+    const row = financeUI.tbody.insertRow(); const cell = row.insertCell();
+    cell.colSpan = 6; cell.textContent = "ไม่มีรายการในเดือนนี้"; return;
+  }
+  const categories = new Map(financeData.categories.map(c => [String(c.id),c.name]));
+  for (const e of entries) {
+    const row = financeUI.tbody.insertRow();
+    const cells = [e.entry_date || "-", `${e.entry_type === "income" ? "รายรับ" : "รายจ่าย"} / ${categories.get(String(e.category_id)) || "-"}`, e.description || "-", e.counterparty_name || "-", financeMoney(e.total_amount), e.status || "-"];
+    for (const value of cells) row.insertCell().textContent = value;
+  }
+}
+async function loadFinanceEntries() {
+  financeUI.loadMessage.textContent = "กำลังโหลดรายการบัญชี...";
+  try {
+    const response = await fetch("/api/admin-dashboard?mode=finance", {headers:{"x-admin-key":sessionStorage.getItem("gambitAdminKey") || ""},cache:"no-store"});
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || `HTTP ${response.status}`);
+    financeData = {categories:Array.isArray(data.categories)?data.categories:[], entries:Array.isArray(data.entries)?data.entries:[], payments:Array.isArray(data.payments)?data.payments:[]};
+    renderFinanceCategories(); renderFinanceEntries();
+    financeUI.loadMessage.textContent = `โหลดสำเร็จ · รายการทั้งหมด ${financeData.entries.length} รายการ`;
+  } catch (error) {
+    financeUI.loadMessage.textContent = `โหลดบัญชีไม่สำเร็จ: ${error.message}`;
+    financeUI.tbody.replaceChildren();
+    const cell = financeUI.tbody.insertRow().insertCell(); cell.colSpan = 6; cell.textContent = "ไม่สามารถโหลดรายการได้";
+  }
+}
+financeUI.type.addEventListener("change", renderFinanceCategories);
+financeUI.month.addEventListener("change", renderFinanceEntries);
+document.getElementById("financeRefreshButton").addEventListener("click", loadFinanceEntries);
+financeUI.form.addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = document.getElementById("financeSaveButton");
+  const amount = Number(document.getElementById("financeAmount").value);
+  const description = document.getElementById("financeDescription").value.trim();
+  const entryDate = document.getElementById("financeEntryDate").value;
+  const dueDate = document.getElementById("financeDueDate").value;
+  if (!Number.isFinite(amount) || amount <= 0 || !financeUI.category.value || !description || (dueDate && dueDate < entryDate)) {
+    financeUI.message.textContent = "กรุณาตรวจสอบจำนวนเงิน หมวดหมู่ รายละเอียด และวันกำหนดชำระ"; return;
+  }
+  if (!window.confirm("ยืนยันบันทึกรายการบัญชีนี้?")) return;
+  button.disabled = true; financeUI.message.textContent = "กำลังบันทึก...";
+  try {
+    const response = await fetch("/api/admin-dashboard?mode=finance", {
+      method:"POST", headers:{"x-admin-key":sessionStorage.getItem("gambitAdminKey") || "","Content-Type":"application/json"},
+      body:JSON.stringify({entry_type:financeUI.type.value,category_id:Number(financeUI.category.value),description,counterparty_name:document.getElementById("financeCounterparty").value.trim() || null,total_amount:amount,entry_date:entryDate,due_date:dueDate || null,notes:document.getElementById("financeNotes").value.trim() || null})
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || `HTTP ${response.status}`);
+    financeUI.message.textContent = `บันทึกสำเร็จ · เลขรายการ ${data.entry?.id ?? "-"}`;
+    financeUI.form.reset(); financeUI.type.value = "income"; renderFinanceCategories();
+    document.getElementById("financeEntryDate").value = financeLocalDate();
+    financeUI.month.value = entryDate.slice(0,7);
+    await loadFinanceEntries();
+  } catch (error) { financeUI.message.textContent = `บันทึกไม่สำเร็จ: ${error.message}`; }
+  finally { button.disabled = false; }
+});
+financeUI.month.value = financeLocalDate().slice(0,7);
+document.getElementById("financeEntryDate").value = financeLocalDate();
+
 async function startOwnerDashboard() {
   document.querySelector(".owner-container").style.display = "none";
 
@@ -2296,6 +2443,7 @@ async function startOwnerDashboard() {
       error.message;
   } finally {
     await loadOwnerClassAttendance();
+    await loadFinanceEntries();
   }
 }
 
