@@ -1500,6 +1500,8 @@ function formatDateTime(value) {
 
 
 function renderPaymentHistory(memberId) {
+  // History is displayed on member-history.html in the new layout.
+  if (!memberPaymentHistory) return;
 
   const rows =
     paymentHistory.filter(
@@ -1564,6 +1566,8 @@ function renderPaymentHistory(memberId) {
 
 
 function renderBeltHistory(memberId) {
+  // History is displayed on member-history.html in the new layout.
+  if (!memberBeltHistory) return;
 
   const rows =
     beltHistory.filter(
@@ -1648,17 +1652,17 @@ const viewMemberHistoryButton = document.getElementById("viewMemberHistoryButton
 const ownerDeleteArea = document.getElementById("ownerDeleteArea");
 const deleteMemberButton = document.getElementById("deleteMemberButton");
 const deleteMemberMessage = document.getElementById("deleteMemberMessage");
-viewMemberHistoryButton.addEventListener("click", () => {
+viewMemberHistoryButton?.addEventListener("click", () => {
   if (!selectedMemberId) return;
   window.location.href = `member-history.html?memberId=${encodeURIComponent(selectedMemberId)}`;
 });
 const originalOpenMemberDetail = openMemberDetail;
 openMemberDetail = function(member) {
   originalOpenMemberDetail(member);
-  ownerDeleteArea.style.display = sessionStorage.getItem("gambitRole") === "owner" ? "block" : "none";
-  deleteMemberMessage.textContent = "";
+  if (ownerDeleteArea) ownerDeleteArea.style.display = sessionStorage.getItem("gambitRole") === "owner" ? "block" : "none";
+  if (deleteMemberMessage) deleteMemberMessage.textContent = "";
 };
-deleteMemberButton.addEventListener("click", async () => {
+deleteMemberButton?.addEventListener("click", async () => {
   if (sessionStorage.getItem("gambitRole") !== "owner" || !selectedMemberId) return;
   const member = members.find(item => Number(item.id) === selectedMemberId);
   if (!member) return;
