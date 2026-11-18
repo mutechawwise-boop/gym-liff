@@ -421,6 +421,8 @@
 .finance-payment-options label{display:flex;flex-direction:row;align-items:center;gap:6px}
 .finance-payment-options input{width:auto;min-height:0}
 .finance-form-actions .finance-print-button{background:#fff;color:#111;border:1px solid #111}
+.finance-history-print{width:auto;white-space:nowrap;padding:7px 11px;border:1px solid #111;border-radius:8px;background:#fff;color:#111;font:inherit;font-weight:700;cursor:pointer}
+.finance-history-print:hover{background:#f0f0f0}
 </style>
 </head>
 
@@ -850,8 +852,15 @@
         <div class="finance-breakdown-section">
           <h4>บัญชีทั่วไป <small>แยกจากค่าสมาชิก</small></h4>
           <div class="finance-breakdown-grid finance-breakdown-two">
-            <div><span>รายรับอื่น (ยอดตั้งรายการ)</span><strong id="financeOtherIncome">0.00</strong></div>
-            <div><span>รายจ่ายอื่น (ยอดตั้งรายการ)</span><strong id="financeOtherExpense">0.00</strong></div>
+            <div><span>รายรับ — เงินโอน (รับจริง)</span><strong id="financeOtherIncomeTransfer">—</strong></div>
+            <div><span>รายรับ — เงินสด (รับจริง)</span><strong id="financeOtherIncomeCash">—</strong></div>
+            <div><span>รายจ่าย — เงินโอน (จ่ายจริง)</span><strong id="financeOtherExpenseTransfer">—</strong></div>
+            <div><span>รายจ่าย — เงินสด (จ่ายจริง)</span><strong id="financeOtherExpenseCash">—</strong></div>
+          </div>
+          <p class="finance-muted" id="financeOtherPaymentNote">คำนวณจากรายการรับ–จ่ายที่บันทึกชำระจริงตามวันที่ชำระ</p>
+          <div class="finance-breakdown-grid finance-breakdown-two">
+            <div><span>ลูกหนี้ค้างรับ (ทุกรายการ)</span><strong id="financeReceivables">—</strong></div>
+            <div><span>เจ้าหนี้ค้างจ่าย (ทุกรายการ)</span><strong id="financePayables">—</strong></div>
           </div>
         </div>
         <span id="financeMemberIncome" hidden>—</span>
@@ -885,7 +894,7 @@
           <h3>รายการบัญชีทั่วไป</h3>
           <div class="finance-filter"><button type="button" id="financeRefreshButton">รีเฟรชรายการ</button></div>
           <p id="financeLoadMessage" class="finance-muted" role="status">กำลังโหลดข้อมูล...</p>
-          <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>วันที่</th><th>ประเภท / หมวด</th><th>รายละเอียด</th><th>คู่ค้า</th><th>จำนวนเงิน</th><th>สถานะ</th></tr></thead><tbody id="financeEntriesBody"><tr><td colspan="6">กำลังโหลด...</td></tr></tbody></table></div>
+          <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>วันที่</th><th>ประเภท / หมวด</th><th>รายละเอียด</th><th>คู่ค้า</th><th>จำนวนเงิน</th><th>สถานะ</th><th>เอกสาร</th></tr></thead><tbody id="financeEntriesBody"><tr><td colspan="7">กำลังโหลด...</td></tr></tbody></table></div>
         </div>
       </div>
     </section>
@@ -2401,7 +2410,7 @@ const financeUI = {
   tbody: document.getElementById("financeEntriesBody"),
   loadMessage: document.getElementById("financeLoadMessage")
 };
-let financeData = {categories: [], entries: [], payments: []};
+let financeData = {categories: [], entries: [], payments: [], installments: []};
 let financeMemberMonthRevenue = null;
 let financeMemberPaymentHistory = [];
 const financeMoney = amount => Number(amount || 0).toLocaleString("th-TH", {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -2447,8 +2456,37 @@ function renderFinanceEntries() {
   document.getElementById("financeMemberMethodNote").textContent = splitKnown
     ? `รวมรายรับสมาชิก ${financeMoney(financeMemberMonthRevenue)} บาท (รับชำระแล้ว)`
     : "ยังแยกเงินสด/เงินโอนของเดือนนี้ไม่ได้ครบถ้วน กรุณาตรวจสอบประวัติรับชำระและช่องทางรับเงิน";
-  document.getElementById("financeOtherIncome").textContent = financeMoney(income);
-  document.getElementById("financeOtherExpense").textContent = financeMoney(expense);
+  // General-ledger payment breakdown uses actual payment dates, not entry dates.
+  // Unknown methods are never silently classified as cash or transfer.
+  const entryById = new Map(financeData.entries.map(e => [String(e.id), e]));
+  const paymentRows = financeData.payments.filter(p => String(p.payment_date || "").slice(0,7) === month);
+  const totals = {income:{cash:0,transfer:0},expense:{cash:0,transfer:0}};
+  let unclassified = 0;
+  for (const payment of paymentRows) {
+    const entry = entryById.get(String(payment.entry_id));
+    const amount = Number(payment.amount);
+    if (!entry || !["income","expense"].includes(entry.entry_type) || !Number.isFinite(amount) || amount <= 0) continue;
+    const method = String(payment.payment_method || "").toLowerCase();
+    if (method === "cash" || method === "transfer") totals[entry.entry_type][method] += amount;
+    else unclassified += amount;
+  }
+  document.getElementById("financeOtherIncomeTransfer").textContent = financeMoney(totals.income.transfer);
+  document.getElementById("financeOtherIncomeCash").textContent = financeMoney(totals.income.cash);
+  document.getElementById("financeOtherExpenseTransfer").textContent = financeMoney(totals.expense.transfer);
+  document.getElementById("financeOtherExpenseCash").textContent = financeMoney(totals.expense.cash);
+  document.getElementById("financeOtherPaymentNote").textContent = unclassified > 0
+    ? `ยอดชำระที่ยังไม่ทราบช่องทาง ${financeMoney(unclassified)} บาท (ไม่รวมใน 4 ช่อง)`
+    : "แสดงเฉพาะยอดรับ–จ่ายจริงตามวันที่ชำระ ไม่รวมยอดที่ยังไม่ชำระ";
+  const paidByEntry = new Map();
+  for (const payment of financeData.payments) {
+    const key = String(payment.entry_id);
+    const amount = Number(payment.amount);
+    if (Number.isFinite(amount) && amount > 0) paidByEntry.set(key,(paidByEntry.get(key)||0)+amount);
+  }
+  const remaining = type => financeData.entries.filter(e => e.entry_type === type).reduce((sum,e) =>
+    sum + Math.max(0, Number(e.total_amount || 0) - (paidByEntry.get(String(e.id)) || 0)), 0);
+  document.getElementById("financeReceivables").textContent = financeMoney(remaining("income"));
+  document.getElementById("financePayables").textContent = financeMoney(remaining("expense"));
   document.getElementById("financeTotalIncome").textContent = memberKnown ? financeMoney(financeMemberMonthRevenue + income) : "—";
   document.getElementById("financeTotalExpense").textContent = financeMoney(expense);
   document.getElementById("financeIncomeNote").textContent = memberKnown ? "สมาชิกรับแล้ว + รายรับอื่นที่ตั้งรายการ" : "ยังไม่มีข้อมูลรายรับสมาชิกของเดือนนี้";
@@ -2461,13 +2499,21 @@ function renderFinanceEntries() {
   financeUI.tbody.replaceChildren();
   if (!entries.length) {
     const row = financeUI.tbody.insertRow(); const cell = row.insertCell();
-    cell.colSpan = 6; cell.textContent = "ไม่มีรายการในเดือนนี้"; return;
+    cell.colSpan = 7; cell.textContent = "ไม่มีรายการในเดือนนี้"; return;
   }
   const categories = new Map(financeData.categories.map(c => [String(c.id),c.name]));
   for (const e of entries) {
     const row = financeUI.tbody.insertRow();
     const cells = [e.entry_date || "-", `${e.entry_type === "income" ? "รายรับ" : "รายจ่าย"} / ${categories.get(String(e.category_id)) || "-"}`, e.description || "-", e.counterparty_name || "-", financeMoney(e.total_amount), e.status || "-"];
     for (const value of cells) row.insertCell().textContent = value;
+    const actionCell = row.insertCell();
+    const printButton = document.createElement("button");
+    printButton.type = "button";
+    printButton.className = "finance-history-print";
+    printButton.textContent = "ออกเอกสาร";
+    printButton.setAttribute("aria-label", `ออกเอกสารรายการ ${e.id}`);
+    printButton.addEventListener("click", () => printHistoricalFinanceEntry(e));
+    actionCell.appendChild(printButton);
   }
 }
 async function loadFinanceEntries() {
@@ -2476,13 +2522,13 @@ async function loadFinanceEntries() {
     const response = await fetch("/api/admin-dashboard?mode=finance", {headers:{"x-admin-key":sessionStorage.getItem("gambitAdminKey") || ""},cache:"no-store"});
     const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.error || `HTTP ${response.status}`);
-    financeData = {categories:Array.isArray(data.categories)?data.categories:[], entries:Array.isArray(data.entries)?data.entries:[], payments:Array.isArray(data.payments)?data.payments:[]};
+    financeData = {categories:Array.isArray(data.categories)?data.categories:[], entries:Array.isArray(data.entries)?data.entries:[], payments:Array.isArray(data.payments)?data.payments:[], installments:Array.isArray(data.installments)?data.installments:[]};
     renderFinanceCategories(); renderFinanceEntries();
     financeUI.loadMessage.textContent = `โหลดสำเร็จ · รายการทั้งหมด ${financeData.entries.length} รายการ`;
   } catch (error) {
     financeUI.loadMessage.textContent = `โหลดบัญชีไม่สำเร็จ: ${error.message}`;
     financeUI.tbody.replaceChildren();
-    const cell = financeUI.tbody.insertRow().insertCell(); cell.colSpan = 6; cell.textContent = "ไม่สามารถโหลดรายการได้";
+    const cell = financeUI.tbody.insertRow().insertCell(); cell.colSpan = 7; cell.textContent = "ไม่สามารถโหลดรายการได้";
   }
 }
 financeUI.type.addEventListener("change", renderFinanceCategories);
@@ -2518,6 +2564,34 @@ financeUI.form.addEventListener("submit", async event => {
   } catch (error) { financeUI.message.textContent = `บันทึกไม่สำเร็จ: ${error.message}`; }
   finally { button.disabled = false; }
 });
+
+// Reprint a stored entry. A payment-confirmed document is issued only when
+// the payment ledger fully reconciles to the entry amount.
+function printHistoricalFinanceEntry(entry) {
+  const escapeText = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+  const payments = financeData.payments.filter(p => String(p.entry_id) === String(entry.id));
+  const paid = payments.reduce((sum,p) => sum + Math.max(0,Number(p.amount)||0),0);
+  const total = Number(entry.total_amount || 0);
+  const fullyPaid = total > 0 && paid >= total - 0.005 && paid <= total + 0.005;
+  const kind = entry.entry_type === "income" ? "ใบรับเงิน" : "ใบสำคัญจ่าย";
+  const title = fullyPaid ? kind : kind + "ฉบับร่าง";
+  const categories = new Map(financeData.categories.map(c => [String(c.id),c.name]));
+  const methodName = method => ({cash:"เงินสด",transfer:"เงินโอน"})[String(method || "").toLowerCase()] || "ไม่ระบุ";
+  const rows = [
+    ["เลขรายการ",entry.id],["วันที่ตั้งรายการ",entry.entry_date || "-"],
+    ["ประเภท / หมวด",`${entry.entry_type === "income" ? "รายรับ" : "รายจ่าย"} / ${categories.get(String(entry.category_id)) || "-"}`],
+    ["รายละเอียด",entry.description || "-"],["คู่ค้า / ผู้เกี่ยวข้อง",entry.counterparty_name || "-"],
+    ["จำนวนเงินตามรายการ",financeMoney(total)+" บาท"],["ยอดชำระที่บันทึกแล้ว",financeMoney(paid)+" บาท"],
+    ["ยอดคงค้าง",financeMoney(Math.max(0,total-paid))+" บาท"],
+    ["กำหนดชำระ",entry.due_date || "-"],["หมายเหตุ",entry.notes || "-"]
+  ];
+  const paymentTable = payments.length ? `<h3>ประวัติรับ–จ่ายจริง</h3><table><thead><tr><th>วันที่ชำระ</th><th>ช่องทาง</th><th>จำนวนเงิน</th><th>เลขอ้างอิง</th></tr></thead><tbody>${payments.map(p => `<tr><td>${escapeText(p.payment_date || "-")}</td><td>${escapeText(methodName(p.payment_method))}</td><td>${escapeText(financeMoney(p.amount))}</td><td>${escapeText(p.reference_number || "-")}</td></tr>`).join("")}</tbody></table>` : "";
+  const win = window.open("", "_blank");
+  if (!win) { financeUI.loadMessage.textContent = "กรุณาอนุญาต Pop-up เพื่อออกเอกสาร"; return; }
+  win.document.open();
+  win.document.write(`<!doctype html><html lang="th"><head><meta charset="utf-8"><title>${escapeText(title)} #${escapeText(entry.id)}</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#111}h1{margin-bottom:4px}h2{margin-top:8px}table{width:100%;border-collapse:collapse;margin:14px 0 25px}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top}.warning{color:#a22;font-weight:bold;padding:12px;background:#fff1f1}.muted{color:#555}@media print{button{display:none}}</style></head><body><h1>GAMBIT JIUJITSU</h1><h2>${escapeText(title)}</h2><p class="muted">เลขรายการ #${escapeText(entry.id)}</p>${fullyPaid ? '<p>ชำระครบตามข้อมูลที่บันทึกในระบบ</p>' : '<p class="warning">ฉบับร่าง — ยังชำระไม่ครบหรือยังไม่บันทึกการชำระ ไม่ใช่หลักฐานการรับหรือจ่ายเงินครบจำนวน</p>'}<table>${rows.map(([label,value])=>`<tr><th>${escapeText(label)}</th><td>${escapeText(value)}</td></tr>`).join("")}</table>${paymentTable}<p class="muted">เอกสารออกจากข้อมูลรายการบัญชีที่บันทึกไว้ในระบบ</p><button onclick="window.print()">พิมพ์ / บันทึก PDF</button></body></html>`);
+  win.document.close(); win.focus();
+}
 
 // Print a draft only. No receipt is issued until payment is recorded server-side.
 function selectedFinancePayment() {
