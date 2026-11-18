@@ -1634,68 +1634,46 @@ const beltChessIcon =
 if (belt) {
 
   const beltEnglishNames = {
-    white: "WHITE BELT",
-    blue: "BLUE BELT",
-    purple: "PURPLE BELT",
-    brown: "BROWN BELT",
-    black: "BLACK BELT"
+    white: "WHITE BELT", blue: "BLUE BELT", purple: "PURPLE BELT",
+    brown: "BROWN BELT", black: "BLACK BELT",
+    gray_white: "GRAY / WHITE BELT", gray: "GRAY BELT",
+    gray_black: "GRAY / BLACK BELT",
+    yellow_white: "YELLOW / WHITE BELT", yellow: "YELLOW BELT",
+    yellow_black: "YELLOW / BLACK BELT",
+    orange_white: "ORANGE / WHITE BELT", orange: "ORANGE BELT",
+    orange_black: "ORANGE / BLACK BELT",
+    green_white: "GREEN / WHITE BELT", green: "GREEN BELT",
+    green_black: "GREEN / BLACK BELT"
   };
 
   const beltColors = {
-    white: "#F5F5F5",
-    blue: "#2563EB",
-    purple: "#7E22CE",
-    brown: "#92400E",
-    black: "#777777"
+    white: "#F5F5F5", blue: "#2563EB", purple: "#7E22CE",
+    brown: "#92400E", black: "#A3A3A3",
+    gray_white: "#A3A3A3", gray: "#9CA3AF", gray_black: "#737373",
+    yellow_white: "#FACC15", yellow: "#FACC15", yellow_black: "#EAB308",
+    orange_white: "#FB923C", orange: "#F97316", orange_black: "#EA580C",
+    green_white: "#4ADE80", green: "#22C55E", green_black: "#16A34A"
   };
 
-  const beltCode =
-    String(belt.code || "")
-      .toLowerCase();
+  const beltCode = String(belt.code || "").toLowerCase();
+  const beltColor = beltColors[beltCode] || belt.color || "#FFFFFF";
 
-  const beltColor =
-    beltColors[beltCode] ||
-    belt.color ||
-    "#FFFFFF";
+  beltNameElement.textContent = belt.name || "-";
+  beltEnglishElement.textContent = beltEnglishNames[beltCode] || "";
+  beltNameElement.style.color = beltColor;
+  beltChessIcon.style.color = beltColor;
 
-  beltNameElement.textContent =
-    belt.name || "-";
-
-  beltEnglishElement.textContent =
-    beltEnglishNames[beltCode] || "";
-
-  beltNameElement.style.color =
-    beltColor;
-
-  beltChessIcon.style.color =
-    beltColor;
-
-
-  // Rank Bar 0–4 ขีด
-  const stripeCount =
-    Math.max(
-      0,
-      Math.min(
-        4,
-        Number(belt.stripeCount || 0)
-      )
-    );
-
-  const rankIcons =
-    Array.from(
-      { length: 4 },
-      (_, index) =>
-        index < stripeCount
-          ? "♜"
-          : "♖"
-    ).join(" ");
-
-  beltRankBarElement.textContent =
-    rankIcons;
-
-  beltRankBarElement.style.color =
-    beltColor;
-
+  // Rank Bar: หมากรุกที่ได้รับเป็นสีสาย ส่วนที่ยังไม่ได้รับเป็นสีเทา
+  const stripeCount = Math.max(0, Math.min(4, Number(belt.stripeCount) || 0));
+  beltRankBarElement.replaceChildren();
+  for (let index = 0; index < 4; index++) {
+    const chess = document.createElement("span");
+    chess.textContent = index < stripeCount ? "♜" : "♖";
+    chess.style.color = index < stripeCount ? beltColor : "#777777";
+    chess.style.display = "inline-block";
+    chess.style.marginRight = index < 3 ? "5px" : "0";
+    beltRankBarElement.appendChild(chess);
+  }
 
   // วันที่ได้รับสาย
   beltAwardedDateElement.textContent =
