@@ -423,6 +423,19 @@
 .finance-form-actions .finance-print-button{background:#fff;color:#111;border:1px solid #111}
 .finance-history-print{width:auto;white-space:nowrap;padding:7px 11px;border:1px solid #111;border-radius:8px;background:#fff;color:#111;font:inherit;font-weight:700;cursor:pointer}
 .finance-history-print:hover{background:#f0f0f0}
+
+.finance-pay-button{padding:7px 11px;border:0;border-radius:8px;background:#111;color:#fff;font-weight:700;cursor:pointer;white-space:nowrap}
+.finance-pay-button:disabled{background:#aaa;cursor:not-allowed}
+.finance-pay-modal{position:fixed;inset:0;z-index:9999;background:#0009;display:flex;align-items:center;justify-content:center;padding:15px}
+.finance-pay-modal[hidden]{display:none}
+.finance-pay-dialog{width:100%;max-width:480px;max-height:90vh;overflow:auto;padding:22px;background:#fff;border-radius:16px;box-shadow:0 15px 55px #0004}
+.finance-pay-dialog h3{margin:0 0 10px}
+.finance-pay-dialog label{display:block;font-size:13px;font-weight:700;margin-top:12px}
+.finance-pay-dialog input,.finance-pay-dialog select,.finance-pay-dialog textarea{width:100%;padding:10px;border:1px solid #ccd0d5;border-radius:8px;font:inherit;margin-top:5px}
+.finance-pay-dialog footer{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+.finance-pay-dialog footer button{padding:10px 16px;border-radius:8px;border:1px solid #ccc;cursor:pointer;font-weight:700}
+.finance-pay-dialog footer button[type=submit]{background:#111;color:#fff;border-color:#111}
+.finance-pay-dialog footer button:disabled{opacity:.5}
 </style>
 </head>
 
@@ -829,7 +842,7 @@
           <span>รายรับรวม</span><strong id="financeTotalIncome">—</strong><small id="financeIncomeNote">สมาชิก + รายรับอื่น</small>
         </article>
         <article class="finance-main-stat">
-          <span>รายจ่ายรวม</span><strong id="financeTotalExpense">—</strong><small>ยอดตั้งรายการรายจ่ายทั่วไป</small>
+          <span>รายจ่ายรวม</span><strong id="financeTotalExpense">—</strong><small>ยอดตั้งรายการรายจ่ายทั่วไป (ดูยอดจ่ายจริงด้านล่าง)</small>
         </article>
         <article class="finance-main-stat">
           <span>เงินสดคงเหลือ</span><strong id="financeCashBalance">—</strong><small>รอกำหนดยอดยกมาและการเคลื่อนไหวเงินจริง</small>
@@ -885,7 +898,7 @@
                 <label><input type="radio" name="financePaymentChoice" value="pending" checked> ยังไม่ชำระ</label>
                 <label><input type="radio" name="financePaymentChoice" value="cash"> เงินสด</label>
                 <label><input type="radio" name="financePaymentChoice" value="transfer"> เงินโอน</label>
-              </div><p class="finance-muted">การเลือกช่องทางยังไม่บันทึกการชำระเงินจริง ต้องเชื่อม API รับชำระก่อน</p>
+              </div><p class="finance-muted">เลือกเงินสดหรือเงินโอนเพื่อบันทึกการชำระจริงพร้อมกับสร้างรายการ (สามารถเลือกยังไม่ชำระได้)</p>
             </div>
           </div>
           <div class="finance-form-actions"><button type="submit" id="financeSaveButton">บันทึกรายการ</button><button type="button" class="finance-print-button" id="financePrintButton">พิมพ์เอกสารฉบับร่าง</button><span id="financeFormMessage" class="finance-form-message" role="status"></span></div>
@@ -894,7 +907,7 @@
           <h3>รายการบัญชีทั่วไป</h3>
           <div class="finance-filter"><button type="button" id="financeRefreshButton">รีเฟรชรายการ</button></div>
           <p id="financeLoadMessage" class="finance-muted" role="status">กำลังโหลดข้อมูล...</p>
-          <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>วันที่</th><th>ประเภท / หมวด</th><th>รายละเอียด</th><th>คู่ค้า</th><th>จำนวนเงิน</th><th>สถานะ</th><th>เอกสาร</th></tr></thead><tbody id="financeEntriesBody"><tr><td colspan="7">กำลังโหลด...</td></tr></tbody></table></div>
+          <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>วันที่</th><th>ประเภท / หมวด</th><th>รายละเอียด</th><th>คู่ค้า</th><th>จำนวนเงิน</th><th>สถานะ</th><th>ชำระเงิน</th><th>เอกสาร</th></tr></thead><tbody id="financeEntriesBody"><tr><td colspan="7">กำลังโหลด...</td></tr></tbody></table></div>
         </div>
       </div>
     </section>
@@ -947,6 +960,21 @@
 </div>
   </main>
 
+  <div class="finance-pay-modal" id="financePayModal" hidden>
+    <div class="finance-pay-dialog" role="dialog" aria-modal="true" aria-labelledby="financePayTitle">
+      <h3 id="financePayTitle">บันทึกการชำระเงินจริง</h3>
+      <p id="financePayInfo" class="finance-muted"></p>
+      <form id="financePayForm">
+        <label>จำนวนเงินที่ชำระ (บาท)<input id="financePayAmount" type="number" min="0.01" step="0.01" required></label>
+        <label>วันที่รับ / จ่ายเงินจริง<input id="financePayDate" type="date" required></label>
+        <label>ช่องทางชำระ<select id="financePayMethod" required><option value="transfer">เงินโอน</option><option value="cash">เงินสด</option></select></label>
+        <label>เลขอ้างอิง / เลขโอน (ถ้ามี)<input id="financePayReference" maxlength="200"></label>
+        <label>หมายเหตุ (ถ้ามี)<textarea id="financePayNotes" rows="2" maxlength="2000"></textarea></label>
+        <p class="finance-form-message" id="financePayMessage" role="status"></p>
+        <footer><button type="button" id="financePayCancel">ยกเลิก</button><button type="submit" id="financePaySubmit">ยืนยันรับ / จ่ายเงินจริง</button></footer>
+      </form>
+    </div>
+  </div>
   <script type="module">
 
     // Local page navigation; no API or approval changes.
@@ -2425,6 +2453,62 @@ function renderFinanceCategories() {
   financeUI.category.replaceChildren(new Option("-- เลือกหมวดหมู่ --", ""));
   for (const c of options) financeUI.category.add(new Option(c.name, String(c.id)));
 }
+function financePaidAmount(entryId) {
+  return financeData.payments.filter(p => String(p.entry_id) === String(entryId))
+    .reduce((sum,p) => sum + Math.max(0,Number(p.amount)||0),0);
+}
+function financeStatus(entry) {
+  const total=Number(entry.total_amount)||0, paid=financePaidAmount(entry.id);
+  if (total > 0 && paid >= total - 0.005) return "ชำระแล้ว";
+  if (paid > 0) return "ชำระบางส่วน";
+  return "ยังไม่ชำระ";
+}
+async function financeRecordPayment(entryId, amount, date, method, reference='', notes='') {
+  const response=await fetch('/api/admin-dashboard?mode=finance',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-admin-key':sessionStorage.getItem('gambitAdminKey')||''},
+    body:JSON.stringify({action:'record_payment',entry_id:Number(entryId),installment_id:null,amount:Number(amount),payment_date:date,payment_method:method,reference_number:reference||null,notes:notes||null})
+  });
+  const data=await response.json();
+  if (!response.ok || !data.success) throw new Error(data.error||`HTTP ${response.status}`);
+  return data;
+}
+let financePayEntry=null;
+function openFinancePay(entry) {
+  const remaining=Math.max(0,Number(entry.total_amount)-financePaidAmount(entry.id));
+  if (remaining < 0.005) return;
+  financePayEntry=entry;
+  document.getElementById('financePayTitle').textContent=entry.entry_type==='income'?'บันทึกรับเงินจริง':'บันทึกจ่ายเงินจริง';
+  document.getElementById('financePayInfo').textContent=`รายการ #${entry.id} · ${entry.description||'-'} · คงค้าง ${financeMoney(remaining)} บาท`;
+  document.getElementById('financePayAmount').value=remaining.toFixed(2);
+  document.getElementById('financePayAmount').max=remaining.toFixed(2);
+  document.getElementById('financePayDate').value=financeLocalDate();
+  document.getElementById('financePayMethod').value='transfer';
+  document.getElementById('financePayReference').value='';
+  document.getElementById('financePayNotes').value='';
+  document.getElementById('financePayMessage').textContent='';
+  document.getElementById('financePayModal').hidden=false;
+  document.getElementById('financePayAmount').focus();
+}
+function closeFinancePay(){document.getElementById('financePayModal').hidden=true;financePayEntry=null;}
+document.getElementById('financePayCancel').addEventListener('click',closeFinancePay);
+document.getElementById('financePayForm').addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(!financePayEntry)return;
+  const entry=financePayEntry;
+  const amount=Number(document.getElementById('financePayAmount').value);
+  const remaining=Math.max(0,Number(entry.total_amount)-financePaidAmount(entry.id));
+  if(!Number.isFinite(amount)||amount<=0||amount>remaining+0.005){document.getElementById('financePayMessage').textContent='ยอดชำระต้องมากกว่า 0 และไม่เกินยอดคงค้าง';return;}
+  if(!confirm(`ยืนยัน${entry.entry_type==='income'?'รับ':'จ่าย'}เงินจริง ${financeMoney(amount)} บาท?`))return;
+  const button=document.getElementById('financePaySubmit');button.disabled=true;
+  try{
+    await financeRecordPayment(entry.id,amount,document.getElementById('financePayDate').value,document.getElementById('financePayMethod').value,document.getElementById('financePayReference').value.trim(),document.getElementById('financePayNotes').value.trim());
+    closeFinancePay();
+    await loadFinanceEntries();
+    financeUI.loadMessage.textContent=`บันทึกชำระเงินรายการ #${entry.id} สำเร็จ · กดออกเอกสารเพื่อพิมพ์`;
+  }catch(error){document.getElementById('financePayMessage').textContent='บันทึกไม่สำเร็จ: '+error.message;}
+  finally{button.disabled=false;}
+});
 function renderFinanceEntries() {
   const month = financeUI.month.value;
   const entries = financeData.entries.filter(e => String(e.entry_date || "").slice(0,7) === month)
@@ -2499,13 +2583,21 @@ function renderFinanceEntries() {
   financeUI.tbody.replaceChildren();
   if (!entries.length) {
     const row = financeUI.tbody.insertRow(); const cell = row.insertCell();
-    cell.colSpan = 7; cell.textContent = "ไม่มีรายการในเดือนนี้"; return;
+    cell.colSpan = 8; cell.textContent = "ไม่มีรายการในเดือนนี้"; return;
   }
   const categories = new Map(financeData.categories.map(c => [String(c.id),c.name]));
   for (const e of entries) {
     const row = financeUI.tbody.insertRow();
-    const cells = [e.entry_date || "-", `${e.entry_type === "income" ? "รายรับ" : "รายจ่าย"} / ${categories.get(String(e.category_id)) || "-"}`, e.description || "-", e.counterparty_name || "-", financeMoney(e.total_amount), e.status || "-"];
+    const cells = [e.entry_date || "-", `${e.entry_type === "income" ? "รายรับ" : "รายจ่าย"} / ${categories.get(String(e.category_id)) || "-"}`, e.description || "-", e.counterparty_name || "-", financeMoney(e.total_amount), financeStatus(e)];
     for (const value of cells) row.insertCell().textContent = value;
+    const payCell = row.insertCell();
+    const remainingAmount = Math.max(0, Number(e.total_amount) - financePaidAmount(e.id));
+    const payButton = document.createElement('button');
+    payButton.type = 'button'; payButton.className = 'finance-pay-button';
+    payButton.textContent = remainingAmount < 0.005 ? 'ชำระครบแล้ว' : 'บันทึกชำระ';
+    payButton.disabled = remainingAmount < 0.005;
+    payButton.addEventListener('click', () => openFinancePay(e));
+    payCell.appendChild(payButton);
     const actionCell = row.insertCell();
     const printButton = document.createElement("button");
     printButton.type = "button";
@@ -2528,7 +2620,7 @@ async function loadFinanceEntries() {
   } catch (error) {
     financeUI.loadMessage.textContent = `โหลดบัญชีไม่สำเร็จ: ${error.message}`;
     financeUI.tbody.replaceChildren();
-    const cell = financeUI.tbody.insertRow().insertCell(); cell.colSpan = 7; cell.textContent = "ไม่สามารถโหลดรายการได้";
+    const cell = financeUI.tbody.insertRow().insertCell(); cell.colSpan = 8; cell.textContent = "ไม่สามารถโหลดรายการได้";
   }
 }
 financeUI.type.addEventListener("change", renderFinanceCategories);
@@ -2544,9 +2636,7 @@ financeUI.form.addEventListener("submit", async event => {
   if (!Number.isFinite(amount) || amount <= 0 || !financeUI.category.value || !description || (dueDate && dueDate < entryDate)) {
     financeUI.message.textContent = "กรุณาตรวจสอบจำนวนเงิน หมวดหมู่ รายละเอียด และวันกำหนดชำระ"; return;
   }
-  if (selectedFinancePayment() !== "pending") {
-     financeUI.message.textContent = "การบันทึกเงินสด/เงินโอนยังต้องเชื่อม API รับชำระก่อน กรุณาเลือกยังไม่ชำระเพื่อบันทึกเฉพาะยอดตั้งรายการ"; return;
-   }
+  const paymentChoice = selectedFinancePayment();
    if (!window.confirm("ยืนยันบันทึกรายการบัญชีนี้?")) return;
   button.disabled = true; financeUI.message.textContent = "กำลังบันทึก...";
   try {
