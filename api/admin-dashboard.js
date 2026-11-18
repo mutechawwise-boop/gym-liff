@@ -96,6 +96,12 @@ if (url.searchParams.get("mode") === "finance") {
     payments: results[3]
   });
 }
+if (url.searchParams.get("mode") === "auth") {
+  return json({
+    success: true,
+    role: isOwner ? "owner" : "coach"
+  });
+}
       const today = getBangkokDateString();
 
     const [
