@@ -422,6 +422,9 @@
         font-size: 23px;
       }
     }
+  .history-action,.delete-action{border:0;border-radius:10px;padding:12px 16px;font-weight:700;cursor:pointer}
+  .history-action{background:#111;color:white}.delete-action{background:#b42318;color:white}
+  .delete-action:disabled{opacity:.5;cursor:wait}
   </style>
 </head>
 
@@ -926,35 +929,16 @@
 
     </div>
 
-<section
-  class="member-detail-belt"
-  style="margin-top:20px;"
->
+<section class="member-detail-belt" style="margin-top:20px;">
   <h3>📚 ประวัติสมาชิก</h3>
-
-  <h4>
-    💳 ประวัติแพ็กเกจ / การชำระเงิน
-  </h4>
-
-  <div id="memberPaymentHistory">
-    ยังไม่มีข้อมูล
-  </div>
-
-  <hr
-    style="
-      margin:18px 0;
-      border:0;
-      border-top:1px solid #e5e5e5;
-    "
-  >
-
-  <h4>
-    🥋 ประวัติระดับสาย / Rank Bar
-  </h4>
-
-  <div id="memberBeltHistory">
-    ยังไม่มีข้อมูล
-  </div>
+  <p style="color:#666">ดูประวัติสมัคร ต่ออายุ ชำระเงิน และการเลื่อนสายทั้งหมดในหน้าแยก</p>
+  <button type="button" id="viewMemberHistoryButton" class="history-action">ดูประวัติทั้งหมด</button>
+</section>
+<section id="ownerDeleteArea" class="member-detail-belt" style="display:none;border-color:#f1b5b5;background:#fffafa">
+  <h3 style="color:#b42318">ลบสมาชิกถาวร</h3>
+  <p style="font-size:13px;color:#666">การลบย้อนกลับไม่ได้ ระบบจะป้องกันการลบหากพบข้อมูลที่เชื่อมโยงซึ่งยังไม่ได้จัดการ</p>
+  <button type="button" id="deleteMemberButton" class="delete-action">ลบสมาชิกถาวร</button>
+  <p id="deleteMemberMessage" role="status"></p>
 </section>
     <p id="memberDetailMessage"></p>
 
