@@ -80,6 +80,59 @@ if (url.searchParams.get("mode") !== "finance") {
 }
 
 const body = await request.json();
+
+// Owner-only: record actual cash/bank movement through the database RPC.
+if (body?.action === "record_payment") {
+  const entryId = Number(body.entry_id);
+  const installmentId = body.installment_id == null || body.installment_id === ""
+    ? null : Number(body.installment_id);
+  const paymentAmount = Number(body.amount);
+  const paymentDate = body.payment_date;
+  const paymentMethod = body.payment_method;
+
+  const validDate = typeof paymentDate === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(paymentDate) &&
+    !Number.isNaN(Date.parse(`${paymentDate}T00:00:00Z`)) &&
+    new Date(`${paymentDate}T00:00:00Z`).toISOString().slice(0, 10) === paymentDate;
+
+  if (!Number.isSafeInteger(entryId) || entryId <= 0 ||
+      (installmentId !== null && (!Number.isSafeInteger(installmentId) || installmentId <= 0)) ||
+      !Number.isFinite(paymentAmount) || paymentAmount <= 0 ||
+      !Number.isSafeInteger(Math.round(paymentAmount * 100)) ||
+      Math.abs(paymentAmount * 100 - Math.round(paymentAmount * 100)) > 0.000001 ||
+      !validDate || !["cash", "transfer"].includes(paymentMethod) ||
+      (body.reference_number != null && typeof body.reference_number !== "string") ||
+      (body.notes != null && typeof body.notes !== "string") ||
+      (body.slip_path != null && typeof body.slip_path !== "string") ||
+      String(body.reference_number || "").length > 200 ||
+      String(body.notes || "").length > 2000 ||
+      String(body.slip_path || "").length > 500) {
+    return json({ success: false, error: "ข้อมูลการชำระเงินไม่ถูกต้อง" }, 400);
+  }
+
+  const paymentResponse = await supabase.request("rpc/finance_record_payment", {
+    method: "POST",
+    body: JSON.stringify({
+      p_entry_id: entryId,
+      p_installment_id: installmentId,
+      p_amount: paymentAmount,
+      p_payment_date: paymentDate,
+      p_payment_method: paymentMethod,
+      p_reference_number: body.reference_number?.trim() || null,
+      p_slip_path: body.slip_path?.trim() || null,
+      p_notes: body.notes?.trim() || null
+    })
+  });
+
+  if (!paymentResponse.ok) {
+    const details = await paymentResponse.text();
+    console.error("Finance payment RPC failed:", details);
+    return json({ success: false, error: "บันทึกชำระเงินไม่สำเร็จ กรุณาตรวจสอบยอดคงค้างและข้อมูลรายการ" }, 400);
+  }
+
+  return json({ success: true, message: "บันทึกการชำระเงินจริงสำเร็จ" });
+}
+
 const { entry_type, category_id, description, counterparty_name,
   total_amount, entry_date, due_date, notes } = body;
 
