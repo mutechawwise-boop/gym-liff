@@ -60,7 +60,42 @@ if (!isCoach && !isOwner) {
     401
   );
 }
+const url = new URL(request.url);
 
+if (url.searchParams.get("mode") === "finance") {
+  if (!isOwner) {
+    return json({ error: "Owner only" }, 403);
+  }
+
+  const tables = [
+    "finance_categories",
+    "finance_entries",
+    "finance_installments",
+    "finance_payments"
+  ];
+
+  const results = await Promise.all(
+    tables.map(async (table) => {
+      const response = await supabase.request(
+        `${table}?select=*`
+      );
+
+      if (!response.ok) {
+        throw new Error(`โหลด ${table} ไม่สำเร็จ`);
+      }
+
+      return response.json();
+    })
+  );
+
+  return json({
+    success: true,
+    categories: results[0],
+    entries: results[1],
+    installments: results[2],
+    payments: results[3]
+  });
+}
       const today = getBangkokDateString();
 
     const [
