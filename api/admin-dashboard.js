@@ -513,7 +513,7 @@ const allTransactions = [
     id: `renewal-${item.id}`,
     type: "renewal",
     memberId:
-  Number(item.member_id),
+  item.member_id == null ? null : Number(item.member_id),
     memberName:
       item.members?.display_name ||
       item.members?.nickname ||
@@ -533,7 +533,7 @@ const allTransactions = [
     id: `registration-${item.id}`,
     type: "registration",
     memberId:
-    Number(item.member_id),
+    item.member_id == null ? null : Number(item.member_id),
     memberName:
       item.nickname ||
       item.line_display_name ||
