@@ -9,10 +9,13 @@ if (!supabaseSecretKey) {
   throw new Error("SUPABASE_SECRET_KEY is missing");
 }
 
+
 const defaultHeaders = {
   apikey: supabaseSecretKey,
+  Authorization: `Bearer ${supabaseSecretKey}`,
   "Content-Type": "application/json"
 };
+
 
 export const supabase = {
   async request(path, options = {}) {
