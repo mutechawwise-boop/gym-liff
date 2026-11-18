@@ -15,10 +15,15 @@ async function handleTeacherCheckin(request, body) {
     try {
       const adminKey = request.headers.get("x-admin-key");
 
-      if (
-        !process.env.ADMIN_KEY ||
-        adminKey !== process.env.ADMIN_KEY
-      ) {
+      const isCoach =
+  Boolean(process.env.ADMIN_KEY) &&
+  adminKey === process.env.ADMIN_KEY;
+
+const isOwner =
+  Boolean(process.env.OWNER_KEY) &&
+  adminKey === process.env.OWNER_KEY;
+
+if (!isCoach && !isOwner) {
         return json(
           { error: "ไม่มีสิทธิ์เช็กชื่อแทนนักเรียน" },
           401
