@@ -120,6 +120,56 @@ function getStripeText(member) {
 }
 
 
+// Gambit belt visualization. Uses belt codes already supplied by the API.
+const BELT_VISUALS = {
+  white: ["#FFFFFF", "#FFFFFF"],
+  blue: ["#2563EB", "#2563EB"],
+  purple: ["#7E22CE", "#7E22CE"],
+  brown: ["#78350F", "#78350F"],
+  black: ["#111111", "#111111"],
+  gray_white: ["#FFFFFF", "#808080"],
+  gray: ["#808080", "#808080"],
+  gray_black: ["#808080", "#111111"],
+  yellow_white: ["#FFFFFF", "#FACC15"],
+  yellow: ["#FACC15", "#FACC15"],
+  yellow_black: ["#FACC15", "#111111"],
+  orange_white: ["#FFFFFF", "#F97316"],
+  orange: ["#F97316", "#F97316"],
+  orange_black: ["#F97316", "#111111"],
+  green_white: ["#FFFFFF", "#22C55E"],
+  green: ["#22C55E", "#22C55E"],
+  green_black: ["#22C55E", "#111111"]
+};
+
+function escapeBeltText(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[char]);
+}
+
+function beltCodeFromMember(member) {
+  const current = member?.current_belt;
+  const level = beltLevels.find((item) =>
+    Number(item.id) === Number(current?.belt_level_id)
+  );
+  return String(current?.belt_code || level?.code || "").toLowerCase();
+}
+
+function renderBeltVisual(code, stripeCount = 0, label = "") {
+  const colors = BELT_VISUALS[String(code || "").toLowerCase()];
+  if (!colors) return "";
+  const count = Math.max(0, Math.min(4, Number(stripeCount) || 0));
+  const stripes = Array.from({ length: 4 }, (_, i) =>
+    `<span style="width:3px;height:14px;background:${i < count ? "#FFFFFF" : "#555555"};display:block;border-radius:1px;"></span>`
+  ).join("");
+  const title = escapeBeltText(label || code);
+  return `<span role="img" aria-label="${title} Rank Bar ${count} ขีด" title="${title} · ${count} ขีด" style="display:inline-flex;vertical-align:middle;align-items:center;width:112px;height:23px;border:1px solid #A3A3A3;border-radius:3px;overflow:hidden;background:${colors[0]};box-sizing:border-box;flex-shrink:0;">
+    <span style="height:100%;flex:1;background:${colors[0]};"></span>
+    <span style="height:100%;flex:1;background:${colors[1]};"></span>
+    <span style="height:100%;width:33px;background:#151515;display:flex;align-items:center;justify-content:center;gap:3px;">${stripes}</span>
+  </span>`;
+}
+
 function getSessionText(member) {
   const plan =
     String(
@@ -356,7 +406,10 @@ function renderMembers() {
             </td>
 
             <td class="belt">
-              ${getBeltText(member)}
+              <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+                ${renderBeltVisual(beltCodeFromMember(member), member.current_belt?.stripe_count, getBeltText(member))}
+                <span>${escapeBeltText(getBeltText(member))}</span>
+              </div>
             </td>
 
             <td class="stripe">
@@ -768,10 +821,11 @@ function openMemberDetail(member) {
     member.current_belt;
 
 
-  detailBeltName.textContent =
-    belt?.belt_name ||
-    belt?.belt_code ||
-    "-";
+  const beltName = belt?.belt_name || belt?.belt_code || "-";
+  detailBeltName.innerHTML =
+    `<span style="display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;">` +
+    renderBeltVisual(beltCodeFromMember(member), belt?.stripe_count, beltName) +
+    `<span>${escapeBeltText(beltName)}</span></span>`;
 
 
   detailStripeCount.textContent =
@@ -1552,9 +1606,10 @@ function renderBeltHistory(memberId) {
               border-bottom:1px solid #eeeeee;
             "
           >
-            <strong>
-              ${beltName}
-            </strong>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              ${renderBeltVisual(belt.code, stripeCount, beltName)}
+              <strong>${escapeBeltText(beltName)}</strong>
+            </div>
 
             <div style="margin-top:5px; font-size:13px;">
               Rank Bar ${stripeCount} ขีด
