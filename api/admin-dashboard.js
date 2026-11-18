@@ -36,9 +36,17 @@ export default {
         }
       });
 
-    if (request.method !== "GET") {
-      return json({ error: "Method not allowed" }, 405);
-    }
+if (!["GET", "POST"].includes(request.method)) {
+  return json({ error: "Method not allowed" }, 405);
+}
+
+if (request.method === "POST") {
+  return json({
+    success: false,
+    error: "Finance POST ยังไม่เปิดใช้งาน"
+  }, 501);
+}
+
 
     try {
       const adminKey = request.headers.get("x-admin-key");
