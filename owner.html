@@ -860,12 +860,42 @@
     window.addEventListener("hashchange", showOwnerPage);
     showOwnerPage();
 
-    const savedAdminKey =
-      sessionStorage.getItem("gambitAdminKey");
+const savedAdminKey =
+  sessionStorage.getItem("gambitAdminKey");
 
-    if (!savedAdminKey) {
-      window.location.href = "admin.html";
+async function verifyOwnerAccess() {
+  if (!savedAdminKey) {
+    window.location.replace("admin.html");
+    return false;
+  }
+
+  try {
+    const response = await fetch(
+      "/api/admin-dashboard?mode=auth",
+      {
+        headers: {
+          "x-admin-key": savedAdminKey
+        },
+        cache: "no-store"
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || data.role !== "owner") {
+      throw new Error("Owner only");
     }
+
+    return true;
+  } catch {
+    sessionStorage.removeItem("gambitAdminKey");
+    sessionStorage.removeItem("gambitRole");
+    window.location.replace("admin.html");
+    return false;
+  }
+}
+
+ 
 function calculateMemberDaysRemaining(expiryDate) {
 
   if (!expiryDate) {
@@ -2248,11 +2278,29 @@ document.getElementById("ownerDateText").textContent =
           list.appendChild(notice);
         }
       }
-      loadOwnerDashboard().catch((error) => {
-  console.error(error);
-  document.getElementById("todayClassList").textContent =
-    error.message;
-}).finally(loadOwnerClassAttendance);
+    
+async function startOwnerDashboard() {
+  document.querySelector(".owner-container").style.display = "none";
+
+  const allowed = await verifyOwnerAccess();
+
+  if (!allowed) return;
+
+  document.querySelector(".owner-container").style.display = "";
+
+  try {
+    await loadOwnerDashboard();
+  } catch (error) {
+    console.error(error);
+    document.getElementById("todayClassList").textContent =
+      error.message;
+  } finally {
+    await loadOwnerClassAttendance();
+  }
+}
+
+startOwnerDashboard();
+
   </script>
 </body>
 </html>
