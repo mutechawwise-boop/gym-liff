@@ -40,12 +40,7 @@ if (!["GET", "POST"].includes(request.method)) {
   return json({ error: "Method not allowed" }, 405);
 }
 
-if (request.method === "POST") {
-  return json({
-    success: false,
-    error: "Finance POST ยังไม่เปิดใช้งาน"
-  }, 501);
-}
+
 
 
     try {
@@ -68,6 +63,21 @@ if (!isCoach && !isOwner) {
     401
   );
 }
+      
+if (request.method === "POST") {
+  if (!isOwner) {
+    return json({
+      success: false,
+      error: "Owner only"
+    }, 403);
+  }
+
+  return json({
+    success: false,
+    error: "Finance POST ยังไม่เปิดใช้งาน"
+  }, 501);
+}
+
 const url = new URL(request.url);
 
 if (url.searchParams.get("mode") === "finance") {
