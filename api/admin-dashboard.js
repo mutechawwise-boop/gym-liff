@@ -219,6 +219,65 @@ return json({ success: true, entry: rows[0] }, 201);
 
 const url = new URL(request.url);
 
+if (url.searchParams.get("mode") === "yearly-report") {
+  if (!isOwner) return json({ success: false, error: "Owner only" }, 403);
+  const year = Number(url.searchParams.get("year"));
+  if (!Number.isSafeInteger(year) || year < 2020 || year > 2100) {
+    return json({ success: false, error: "Invalid year" }, 400);
+  }
+  const start = `${year}-01-01T00:00:00+07:00`;
+  const end = `${year + 1}-01-01T00:00:00+07:00`;
+  const monthRows = Array.from({ length: 12 }, (_, index) => ({
+    month: `${year}-${String(index + 1).padStart(2, "0")}`,
+    memberIncome: 0, newMembers: 0, renewals: 0
+  }));
+  // Paginate so that a growing membership history is not silently truncated.
+  async function allRows(path) {
+    const rows = [];
+    for (let offset = 0; offset < 100000; offset += 500) {
+      const response = await supabase.request(`${path}&limit=500&offset=${offset}`);
+      if (!response.ok) {
+        console.error("Yearly report query failed:", await response.text());
+        throw new Error("โหลดข้อมูลรายงานย้อนหลังไม่สำเร็จ");
+      }
+      const batch = await response.json();
+      rows.push(...batch);
+      if (batch.length < 500) return rows;
+    }
+    throw new Error("ข้อมูลรายงานมากเกินขีดจำกัด กรุณาติดต่อผู้ดูแลระบบ");
+  }
+  const [registrations, renewals] = await Promise.all([
+    allRows(`member_registration?select=id,payment_amount,approved_at&registration_status=eq.approved&approved_at=gte.${encodeURIComponent(start)}&approved_at=lt.${encodeURIComponent(end)}&order=approved_at.asc,id.asc`),
+    allRows(`membership_transactions?select=id,amount,approved_at&transaction_type=eq.renewal&payment_status=eq.paid&approved_at=gte.${encodeURIComponent(start)}&approved_at=lt.${encodeURIComponent(end)}&order=approved_at.asc,id.asc`)
+  ]);
+  const bangkokMonth = value => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit"
+    }).formatToParts(date);
+    const partsByType = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    return `${partsByType.year}-${partsByType.month}`;
+  };
+  for (const item of registrations) {
+    const month = bangkokMonth(item.approved_at);
+    const row = monthRows.find(row => row.month === month);
+    if (!row) continue;
+    row.newMembers += 1; // Approved registrations, not a historical active-member snapshot.
+    row.memberIncome += Number(item.payment_amount || 0);
+  }
+  for (const item of renewals) {
+    const month = bangkokMonth(item.approved_at);
+    const row = monthRows.find(row => row.month === month);
+    if (!row) continue;
+    row.renewals += 1;
+    row.memberIncome += Number(item.amount || 0);
+  }
+  return json({ success: true, year, months: monthRows,
+    note: "Member income is grouped by approval date in Bangkok; November 2026 is a trial month." });
+}
+
 if (url.searchParams.get("mode") === "finance") {
   if (!isOwner) {
     return json({ error: "Owner only" }, 403);
