@@ -963,6 +963,7 @@
         <button type="button" class="report-tab" data-report-tab="export" aria-selected="false">ส่งออกรายงาน</button>
       </div>
       <div id="reportFinance" class="report-panel">
+        <div class="report-year-block"><div class="report-controls"><label>ปีรายงาน (ค.ศ.) <select id="reportYear"></select></label><span class="finance-muted">กราฟทั้งปี · พฤศจิกายน 2569 เป็นช่วงทดลอง</span></div><p id="reportYearMessage" class="finance-muted">กำลังโหลดกราฟรายปี...</p><div class="report-chart-grid"><div><h3>รายรับ–รายจ่ายเงินจริงรายเดือน</h3><div id="reportYearFinanceChart" class="report-chart"></div></div><div><h3>รายรับสมาชิกเทียบรายจ่ายทั่วไป</h3><div id="reportYearMixChart" class="report-chart"></div></div></div><p class="finance-muted">รายรับ = ค่าสมาชิกที่อนุมัติ + รายรับอื่นที่รับเงินจริง · รายจ่าย = รายจ่ายทั่วไปที่จ่ายเงินจริง · ผลต่างไม่ใช่กำไรสุทธิทางบัญชี</p></div>
         <div class="report-stats">
           <article><span>รายรับสมาชิกที่ยืนยันได้</span><strong id="reportMemberRevenue">—</strong></article>
           <article><span>รายรับอื่นที่ตั้งรายการ</span><strong id="reportOtherIncome">0.00</strong></article>
@@ -973,7 +974,7 @@
         <p id="reportFinanceNote" class="finance-muted"></p>
         <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>วันที่ตั้งรายการ</th><th>ประเภท</th><th>รายละเอียด</th><th>ยอดตั้งรายการ</th><th>ชำระสะสม</th><th>คงค้าง</th></tr></thead><tbody id="reportFinanceRows"></tbody></table></div>
       </div>
-      <div id="reportMembers" class="report-panel" hidden>
+      <div id="reportMembers" class="report-panel" hidden><div class="report-year-block"><h3>สมาชิกใหม่และการต่ออายุรายเดือน · <span id="reportMemberYearLabel"></span></h3><div id="reportYearMembersChart" class="report-chart"></div><p class="finance-muted">สมาชิกใหม่ = คำขอสมัครที่อนุมัติในเดือนนั้น · การต่ออายุ = ธุรกรรมต่ออายุที่ชำระแล้ว ไม่ใช่จำนวนสมาชิก Active ย้อนหลัง</p></div>
         <div class="report-stats"><article><span>สมาชิกทั้งหมด (ข้อมูลปัจจุบัน)</span><strong id="reportMembersTotal">—</strong></article><article><span>Active (ข้อมูลปัจจุบัน)</span><strong id="reportMembersActive">—</strong></article><article><span>หมดอายุ (ข้อมูลปัจจุบัน)</span><strong id="reportMembersExpired">—</strong></article></div>
         <p class="finance-muted">จำนวนสมาชิกเป็นสถานะปัจจุบัน ไม่ใช่ยอดย้อนหลัง ณ สิ้นเดือนที่เลือก</p>
         <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>ชื่อสมาชิก</th><th>แพ็กเกจ</th><th>วันหมดอายุ</th><th>สถานะ</th></tr></thead><tbody id="reportMemberRows"></tbody></table></div>
@@ -1000,6 +1001,10 @@
       </form>
     </div>
   </div>
+
+<style>
+.report-year-block{margin:20px 0 24px;padding:18px;border:1px solid #e3e5e9;border-radius:16px;background:#fff}.report-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.report-chart{overflow-x:auto;padding:12px 4px;min-height:220px}.report-chart svg{display:block;width:100%;min-width:520px;height:auto}.report-chart h3,.report-year-block h3{font-size:16px;margin:12px 0}.report-chart .chart-axis{fill:#667085;font:11px Arial,sans-serif}.report-chart .chart-legend{fill:#344054;font:12px Arial,sans-serif}.report-chart .chart-grid{stroke:#e5e7eb;stroke-width:1}.report-chart .chart-bar:hover{opacity:.78}.report-chart .chart-note{font:11px Arial,sans-serif;fill:#9b2226}.report-year-block select{padding:8px 12px;border:1px solid #d0d5dd;border-radius:8px;background:white}@media(max-width:900px){.report-chart-grid{grid-template-columns:1fr}}
+</style>
   <script type="module">
 
     // Local page navigation; no API or approval changes.
@@ -2644,6 +2649,7 @@ async function loadFinanceEntries() {
     financeData = {categories:Array.isArray(data.categories)?data.categories:[], entries:Array.isArray(data.entries)?data.entries:[], payments:Array.isArray(data.payments)?data.payments:[], installments:Array.isArray(data.installments)?data.installments:[]};
     renderFinanceCategories(); renderFinanceEntries(); renderOwnerReports();
     financeUI.loadMessage.textContent = `โหลดสำเร็จ · รายการทั้งหมด ${financeData.entries.length} รายการ`;
+    if (reportYearlyData) renderYearlyReport();
   } catch (error) {
     financeUI.loadMessage.textContent = `โหลดบัญชีไม่สำเร็จ: ${error.message}`;
     financeUI.tbody.replaceChildren();
@@ -2735,6 +2741,61 @@ financeUI.month.value = financeLocalDate().slice(0,7);
 document.getElementById("financeEntryDate").value = financeLocalDate();
 
 
+
+// Yearly reporting: Owner-only server aggregation for member income; general ledger payments remain from finance API.
+const reportYearSelect = document.getElementById('reportYear');
+const reportYearMessage = document.getElementById('reportYearMessage');
+const reportCurrentYear = Number(financeLocalDate().slice(0,4));
+for(let y=reportCurrentYear+1;y>=2026;y--){const o=document.createElement('option');o.value=String(y);o.textContent=String(y+543);reportYearSelect.appendChild(o);}
+reportYearSelect.value=String(reportCurrentYear);
+let reportYearlyData=null;
+const reportChartLabels=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function reportSvgBars(elementId, series, year){
+  const el=document.getElementById(elementId);el.replaceChildren();
+  if(!series?.length)return;
+  const width=760,height=310,left=62,right=16,top=43,bottom=49,plotW=width-left-right,plotH=height-top-bottom;
+  const max=Math.max(1,...series.flatMap(s=>s.values.filter(v=>v!==null)));
+  const scaleMax=max*1.12;
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox',`0 0 ${width} ${height}`);svg.setAttribute('role','img');svg.setAttribute('aria-label',`กราฟรายเดือน ปี ${year+543}`);
+  const add=(tag,attrs,text)=>{const node=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs||{}))node.setAttribute(k,String(v));if(text!==undefined)node.textContent=text;svg.appendChild(node);return node;};
+  const fmt=n=>n>=1000000?(n/1000000).toFixed(1)+'ล.' : n>=1000?(n/1000).toFixed(n%1000===0?0:1)+'k':String(Math.round(n));
+  for(let i=0;i<=4;i++){const y=top+plotH*i/4;add('line',{x1:left,y1:y,x2:width-right,y2:y,class:'chart-grid'});add('text',{x:left-8,y:y+4,'text-anchor':'end',class:'chart-axis'},fmt(scaleMax*(4-i)/4));}
+  const groupW=plotW/12,barW=Math.min(21,groupW/(series.length+1));
+  for(let m=0;m<12;m++){
+    const mid=left+groupW*(m+.5);
+    add('text',{x:mid,y:height-25,'text-anchor':'middle',class:'chart-axis'},reportChartLabels[m]);
+    const noData=series.every(s=>s.values[m]===null);
+    if(noData){add('text',{x:mid,y:top+plotH-9,'text-anchor':'middle',class:'chart-note'},'—');continue;}
+    for(let s=0;s<series.length;s++){const v=series[s].values[m];if(v===null)continue;const h=Math.max(0,v/scaleMax*plotH),x=mid+(s-(series.length-1)/2)*barW-barW*.42;const rect=add('rect',{x,y:top+plotH-h,width:barW*.84,height:h,fill:series[s].color,rx:2,class:'chart-bar'});const title=document.createElementNS('http://www.w3.org/2000/svg','title');title.textContent=`${reportChartLabels[m]} ${series[s].name}: ${reportAmount(v)}`;rect.appendChild(title);}
+    if(year===2026&&m===10)add('text',{x:mid,y:height-9,'text-anchor':'middle',class:'chart-note'},'ทดลอง');
+  }
+  let legendX=left;for(const s of series){add('rect',{x:legendX,y:12,width:12,height:12,fill:s.color,rx:2});add('text',{x:legendX+18,y:23,class:'chart-legend'},s.name);legendX+=s.name.length*9+38;}
+  el.appendChild(svg);
+}
+function renderYearlyReport(){
+  if(!reportYearlyData)return;
+  const year=Number(reportYearSelect.value),now=financeLocalDate().slice(0,7),firstLive='2026-12';
+  const months=reportYearlyData.months||[];
+  const paymentEntryMap=new Map(financeData.entries.map(e=>[String(e.id),e]));
+  const generalIncome=Array(12).fill(0),generalExpense=Array(12).fill(0);
+  for(const p of financeData.payments){const date=String(p.payment_date||'').slice(0,7);if(!date.startsWith(year+'-'))continue;const index=Number(date.slice(5,7))-1;if(index<0||index>11)continue;const e=paymentEntryMap.get(String(p.entry_id));if(e?.entry_type==='income')generalIncome[index]+=Number(p.amount||0);if(e?.entry_type==='expense')generalExpense[index]+=Number(p.amount||0);}
+  const memberIncome=months.map(m=>Number(m.memberIncome||0)),newMembers=months.map(m=>Number(m.newMembers||0)),renewals=months.map(m=>Number(m.renewals||0));
+  const display=(values)=>values.map((v,i)=>{const month=`${year}-${String(i+1).padStart(2,'0')}`;return month>now||month<firstLive?null:v;});
+  const income=memberIncome.map((v,i)=>v+generalIncome[i]);
+  reportSvgBars('reportYearFinanceChart',[{name:'รายรับจริง',values:display(income),color:'#168a62'},{name:'รายจ่ายจริง',values:display(generalExpense),color:'#e07157'}],year);
+  reportSvgBars('reportYearMixChart',[{name:'ค่าสมาชิก',values:display(memberIncome),color:'#2865b4'},{name:'รายจ่ายทั่วไป',values:display(generalExpense),color:'#e07157'}],year);
+  reportSvgBars('reportYearMembersChart',[{name:'สมาชิกใหม่ (อนุมัติ)',values:display(newMembers),color:'#2865b4'},{name:'ต่ออายุ (ชำระแล้ว)',values:display(renewals),color:'#168a62'}],year);
+  document.getElementById('reportMemberYearLabel').textContent=String(year+543);
+  const available=months.some((m,i)=>`${year}-${String(i+1).padStart(2,'0')}`>=firstLive&&`${year}-${String(i+1).padStart(2,'0')}`<=now);
+  reportYearMessage.textContent=available?'แสดงยอดตามวันที่อนุมัติค่าสมาชิกและวันที่รับ–จ่ายเงินจริง · พ.ย. 2569 เป็นเดือนทดลอง จึงไม่รวมในกราฟใช้งานจริง':'ยังไม่มีเดือนใช้งานจริงในปีที่เลือก · เริ่มแสดงตั้งแต่ธันวาคม 2569';
+}
+async function loadYearlyReport(){
+  const year=Number(reportYearSelect.value);reportYearlyData=null;reportYearMessage.textContent='กำลังโหลดรายงานรายปี...';
+  try{const response=await fetch(`/api/admin-dashboard?mode=yearly-report&year=${year}`,{headers:{'x-admin-key':savedAdminKey},cache:'no-store'});const data=await response.json();if(!response.ok||!data.success)throw new Error(data.error||'โหลดรายงานไม่สำเร็จ');if(Number(reportYearSelect.value)!==year)return;reportYearlyData=data;renderYearlyReport();}
+  catch(error){reportYearMessage.textContent=`ไม่สามารถโหลดกราฟรายปี: ${error.message}`;for(const id of ['reportYearFinanceChart','reportYearMixChart','reportYearMembersChart'])document.getElementById(id).replaceChildren();}
+}
+reportYearSelect.addEventListener('change',loadYearlyReport);
+
 // Read-only reports. Membership revenue is only complete for the current month.
 let reportOwnerSnapshot = null;
 const reportMonthInput = document.getElementById('reportMonth');
@@ -2769,7 +2830,7 @@ function renderOwnerReports(){
   for(const m of members){const expiry=String(m.membership_expiry_date||'').slice(0,10);const name=m.full_name||m.name||[m.first_name,m.last_name].filter(Boolean).join(' ')||`สมาชิก #${m.id}`;const r=mbody.insertRow();[name,m.membership_plan||m.plan_name||'-',expiry||'-',!expiry?'ไม่ระบุ':expiry>=now?'Active':'หมดอายุ'].forEach(v=>reportCell(r,v));}
 }
 reportMonthInput.addEventListener('change',renderOwnerReports);
-document.getElementById('reportRefresh').addEventListener('click',async()=>{await loadOwnerDashboard();await loadFinanceEntries();renderOwnerReports();});
+document.getElementById('reportRefresh').addEventListener('click',async()=>{await loadOwnerDashboard();await loadFinanceEntries();renderOwnerReports();await loadYearlyReport();});
 for(const tab of document.querySelectorAll('[data-report-tab]'))tab.addEventListener('click',()=>{const selected=tab.dataset.reportTab;for(const b of document.querySelectorAll('[data-report-tab]'))b.setAttribute('aria-selected',String(b===tab));for(const [key,id] of Object.entries({finance:'reportFinance',members:'reportMembers',classes:'reportClasses',export:'reportExport'}))document.getElementById(id).hidden=key!==selected;});
 function exportReportCsv(filename,rows){const quote=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const csv='\uFEFF'+rows.map(row=>row.map(quote).join(',')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 document.getElementById('reportExportFinance').addEventListener('click',()=>{const month=reportMonthInput.value;const rows=[['เลขรายการ','วันที่ตั้งรายการ','ประเภท','รายละเอียด','คู่ค้า','ยอดตั้งรายการ','ยอดชำระสะสม','คงค้าง','สถานะ']];for(const e of financeData.entries.filter(e=>String(e.entry_date||'').slice(0,7)===month)){const paid=financeData.payments.filter(p=>String(p.entry_id)===String(e.id)).reduce((s,p)=>s+Number(p.amount||0),0);rows.push([e.id,e.entry_date,e.entry_type,e.description,e.counterparty_name,Number(e.total_amount||0),paid,Math.max(0,Number(e.total_amount||0)-paid),e.status]);}exportReportCsv('gambit-finance-'+month+'.csv',rows);document.getElementById('reportExportMessage').textContent='ส่งออกบัญชีทั่วไปเรียบร้อย (เฉพาะรายการที่ตั้งในเดือนที่เลือก)';});
@@ -2793,6 +2854,7 @@ async function startOwnerDashboard() {
   } finally {
     await loadOwnerClassAttendance();
     await loadFinanceEntries();
+    await loadYearlyReport();
   }
 }
 
