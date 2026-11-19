@@ -1,3 +1,4 @@
+import { activeCoach } from "./lib/coach-auth.js";
 // Shared atomic check-in. Authentication is performed by the caller before this RPC.
 async function callAtomicCheckin(supabaseUrl, secretKey, params) {
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/gym_checkin_atomic`, {
@@ -26,9 +27,11 @@ async function handleTeacherCheckin(request, body) {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
   });
   const adminKey = request.headers.get("x-admin-key");
-  const isCoach = Boolean(process.env.ADMIN_KEY) && adminKey === process.env.ADMIN_KEY;
   const isOwner = Boolean(process.env.OWNER_KEY) && adminKey === process.env.OWNER_KEY;
-  if (!isCoach && !isOwner) return json({ error: "ไม่มีสิทธิ์เช็กชื่อแทนนักเรียน" }, 401);
+  let coach;
+  try { coach = isOwner ? null : await activeCoach(request); }
+  catch { return json({error:"ตรวจสอบสิทธิ์ Coach ไม่สำเร็จ"},500); }
+  if (!isOwner && !coach) return json({error:"ไม่มีสิทธิ์เช็กชื่อแทนนักเรียน"},401);
 
   const sessionId = Number(body.sessionId);
   const memberId = Number(body.memberId);
@@ -45,8 +48,9 @@ async function handleTeacherCheckin(request, body) {
       p_session_id: sessionId,
       p_member_id: memberId,
       p_checkin_method: "teacher",
-      // Legacy shared-key identity; replace with verified individual coach ID later.
-      p_checked_in_by: isOwner ? "owner" : "admin"
+      // Verified LINE identity is recorded for individual Coach auditability.
+      // Existing RPC parameter and check-in rules are unchanged.
+      p_checked_in_by: isOwner ? "owner" : `coach:${coach.id}`
     });
     return json({
       success: true,
@@ -57,7 +61,8 @@ async function handleTeacherCheckin(request, body) {
         session_id: sessionId,
         member_id: memberId,
         checked_in_at: result.checkedInAt,
-        checkin_method: result.checkinMethod || "teacher"
+        checkin_method: result.checkinMethod || "teacher",
+        checked_in_by: isOwner ? "owner" : `coach:${coach.id}`
       },
       checkinCount: result.checkinCount,
       remainingSessions: result.remainingSessions

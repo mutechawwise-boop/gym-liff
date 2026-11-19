@@ -1,3 +1,4 @@
+import { activeCoach } from "./lib/coach-auth.js";
 export default {
   async fetch(request) {
     const json = (data, status = 200) =>
@@ -18,13 +19,8 @@ export default {
 const adminKey =
   request.headers.get("x-admin-key");
 
-const isCoach =
-  Boolean(process.env.ADMIN_KEY) &&
-  adminKey === process.env.ADMIN_KEY;
-
-const isOwner =
-  Boolean(process.env.OWNER_KEY) &&
-  adminKey === process.env.OWNER_KEY;
+const isOwner = Boolean(process.env.OWNER_KEY) && adminKey === process.env.OWNER_KEY;
+const isCoach = !isOwner && Boolean(await activeCoach(request));
 
 if (!isCoach && !isOwner) {
   return json(
@@ -304,6 +300,18 @@ const classes = await classesResponse.json();
 
 
 
+// Resolve recorded Coach IDs server-side; the browser receives display names only.
+const coachIds = [...new Set(attendance.map(row => /^coach:(\d+)$/.exec(String(row.checked_in_by || ""))?.[1]).filter(Boolean))];
+const coachNames = {};
+if (coachIds.length) {
+  const coachResponse = await fetch(
+    `${supabaseUrl}/rest/v1/gym_coaches?id=in.(${coachIds.join(",")})&select=id,display_name`,
+    { headers }
+  );
+  if (coachResponse.ok) {
+    for (const row of await coachResponse.json()) coachNames[String(row.id)] = row.display_name;
+  }
+}
 return json({
   success: true,
   date: today,
@@ -315,6 +323,7 @@ return json({
   members,
 
   attendance,
+  coachNames,
 
   beltLevels,
 

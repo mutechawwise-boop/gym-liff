@@ -474,12 +474,23 @@
   <a href="#membershipOverview" data-owner-page="members">ภาพรวมสมาชิก</a>
   <a href="members.html">จัดการสมาชิก</a>
   <a href="#memberRegistrations" data-owner-page="registrations">คำขอสมัครสมาชิก</a>
+  <a href="#coachWorkspace" data-owner-page="coaches">🥋 จัดการ Coach</a>
   <a href="#membershipRenewals" data-owner-page="renewals">คำขอต่ออายุ</a>
   <a href="#financeOverview" data-owner-page="finance">การเงิน</a>
   <a href="#payments" data-owner-page="payments">รายการรับเงิน</a>
   <a href="#reports" data-owner-page="reports">รายงาน</a>
 </nav>
 <div class="owner-content">
+<section id="coachWorkspace" class="owner-card" style="display:none" aria-label="จัดการ Coach">
+<header style="margin-bottom:18px"><h2>🥋 จัดการ Coach</h2><p>คำขอสมัคร · สิทธิ์การใช้งาน · เวลาเข้างานและออกงาน</p></header>
+<section id="coachAccessManager" style="margin:22px auto;max-width:900px;padding:20px;border:1px solid #ddd;border-radius:14px;background:#fff">
+<h2>🥋 จัดการบัญชี Coach</h2>
+<p>Coach สมัครชื่อผู้ใช้และรหัสผ่านจากหน้า Admin — Owner อนุมัติหรือปิดสิทธิ์ได้ที่นี่</p>
+<button id="coachAccessRefresh" type="button" style="width:auto">โหลดรายชื่อ Coach</button>
+<div id="coachAccessRows" aria-live="polite"></div>
+</section>
+<section id="coachWorkOwnerReport" style="max-width:1050px;margin:20px auto;padding:20px;background:#fff;border:1px solid #ddd;border-radius:14px"><h2>⏱️ รายงาน Coach รายบุคคล / รายเดือน</h2><div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end"><label>เดือน <input id="coachReportMonth" type="month"></label><label>Coach <select id="coachReportPerson"><option value="">ทุกคน</option></select></label><button type="button" id="coachReportLoad" style="width:auto">โหลดรายงาน</button></div><div id="coachReportRows" style="margin-top:14px;overflow-x:auto"></div></section>
+</section>
 
     <section id="todayOverview" class="owner-card">
       <h2>📅 ภาพรวมวันนี้</h2>
@@ -1013,6 +1024,7 @@
       classes: ["todayClasses"],
       members: ["membershipOverview"],
       registrations: ["memberRegistrations"],
+      coaches: ["coachWorkspace"],
       renewals: ["membershipRenewals"],
       finance: ["financeOverview"],
       payments: ["payments"],
@@ -1025,6 +1037,7 @@
       const page = link?.dataset.ownerPage || "overview";
       ownerSections.forEach(section => {
         section.hidden = !ownerPages[page].includes(section.id);
+        if (section.id === "coachWorkspace") section.style.display = page === "coaches" ? "" : "none";
       });
       ownerNavLinks.forEach(item => {
         if (item.dataset.ownerPage === page) item.setAttribute("aria-current", "page");
@@ -2403,6 +2416,16 @@ document.getElementById("ownerDateText").textContent =
             .filter(s => s.session_date === today && s.status !== "cancelled")
             .sort((a,b) => String(a.start_time).localeCompare(String(b.start_time)));
           const attendance = Array.isArray(data.attendance) ? data.attendance : [];
+          const coachNames = data.coachNames || {};
+          const checkedBy = a => {
+            if(a.checkin_method === "manual") return "เพิ่มย้อนหลัง";
+            if(a.checkin_method !== "teacher") return "นักเรียนเช็กเอง";
+            const actor=String(a.checked_in_by||"");
+            if(actor === "owner") return "เช็กชื่อโดย Owner";
+            const match=/^coach:(\d+)$/.exec(actor);
+            if(match) return "เช็กชื่อโดย Coach " + (coachNames[match[1]] || "#"+match[1]);
+            return "โค้ชเช็กให้ (ไม่มีข้อมูลผู้เช็ก)";
+          };
           const members = new Map((Array.isArray(data.members) ? data.members : []).map(m => [String(m.id),m]));
           const heading = document.createElement("p");
           heading.style.color = "#666";
@@ -2432,7 +2455,7 @@ document.getElementById("ownerDateText").textContent =
                 const member = members.get(String(a.member_id));
                 const name = member?.nickname || member?.full_name || member?.display_name || `สมาชิก #${a.member_id}`;
                 const time = a.checked_in_at ? new Intl.DateTimeFormat("th-TH",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Bangkok"}).format(new Date(a.checked_in_at)) : "-";
-                const method = a.checkin_method === "teacher" ? "โค้ชเช็กให้" : a.checkin_method === "manual" ? "เพิ่มย้อนหลัง" : "เช็กผ่าน LINE";
+                const method = checkedBy(a);
                 const li = document.createElement("li");
                 li.textContent = `${name} · ${time} น. · ${method}`;
                 ul.appendChild(li);
@@ -2712,7 +2735,9 @@ function printHistoricalFinanceEntry(entry) {
   const win = window.open("", "_blank");
   if (!win) { financeUI.loadMessage.textContent = "กรุณาอนุญาต Pop-up เพื่อออกเอกสาร"; return; }
   win.document.open();
-  win.document.write(`<!doctype html><html lang="th"><head><meta charset="utf-8"><title>${escapeText(title)} #${escapeText(entry.id)}</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#111}h1{margin-bottom:4px}h2{margin-top:8px}table{width:100%;border-collapse:collapse;margin:14px 0 25px}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top}.warning{color:#a22;font-weight:bold;padding:12px;background:#fff1f1}.muted{color:#555}@media print{button{display:none}}</style></head><body><h1>GAMBIT JIUJITSU</h1><h2>${escapeText(title)}</h2><p class="muted">เลขรายการ #${escapeText(entry.id)}</p>${fullyPaid ? '<p>ชำระครบตามข้อมูลที่บันทึกในระบบ</p>' : '<p class="warning">ฉบับร่าง — ยังชำระไม่ครบหรือยังไม่บันทึกการชำระ ไม่ใช่หลักฐานการรับหรือจ่ายเงินครบจำนวน</p>'}<table>${rows.map(([label,value])=>`<tr><th>${escapeText(label)}</th><td>${escapeText(value)}</td></tr>`).join("")}</table>${paymentTable}<p class="muted">เอกสารออกจากข้อมูลรายการบัญชีที่บันทึกไว้ในระบบ</p><button onclick="window.print()">พิมพ์ / บันทึก PDF</button></body></html>`);
+  win.document.write(`<!doctype html><html lang="th"><head><meta charset="utf-8"><title>${escapeText(title)} #${escapeText(entry.id)}</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#111}h1{margin-bottom:4px}h2{margin-top:8px}table{width:100%;border-collapse:collapse;margin:14px 0 25px}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top}.warning{color:#a22;font-weight:bold;padding:12px;background:#fff1f1}.muted{color:#555}@media print{button{display:none}}</style></head><body><h1>GAMBIT JIUJITSU</h1><h2>${escapeText(title)}</h2><p class="muted">เลขรายการ #${escapeText(entry.id)}</p>${fullyPaid ? '<p>ชำระครบตามข้อมูลที่บันทึกในระบบ</p>' : '<p class="warning">ฉบับร่าง — ยังชำระไม่ครบหรือยังไม่บันทึกการชำระ ไม่ใช่หลักฐานการรับหรือจ่ายเงินครบจำนวน</p>'}<table>${rows.map(([label,value])=>`<tr><th>${escapeText(label)}</th><td>${escapeText(value)}</td></tr>`).join("")}</table>${paymentTable}<p class="muted">เอกสารออกจากข้อมูลรายการบัญชีที่บันทึกไว้ในระบบ</p><button onclick="window.print()">พิมพ์ / บันทึก PDF</button>
+
+</body></html>`);
   win.document.close(); win.focus();
 }
 
@@ -2844,6 +2869,7 @@ async function startOwnerDashboard() {
   if (!allowed) return;
 
   document.querySelector(".owner-container").style.display = "";
+  if (location.hash === "#coachWorkspace") document.getElementById("coachAccessRefresh")?.click();
 
   try {
     await loadOwnerDashboard();
@@ -2861,5 +2887,48 @@ async function startOwnerDashboard() {
 startOwnerDashboard();
 
   </script>
+
+<script>
+(function(){
+ const box=document.getElementById('coachAccessRows');
+ const btn=document.getElementById('coachAccessRefresh');
+ async function call(action,extra={}){
+  const key=sessionStorage.getItem('gambitAdminKey');
+  if(!key)throw new Error('กรุณาเข้าสู่ระบบ Owner');
+  const r=await fetch('/api/admin-dashboard?mode=coach-access',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({action,...extra})});
+  const data=await r.json();if(!r.ok||!data.success)throw new Error(data.error||'ทำรายการไม่สำเร็จ');return data;
+ }
+ async function load(){box.textContent='กำลังโหลด...';try{const data=await call('list');box.replaceChildren();if(!data.coaches.length){box.textContent='ยังไม่มีคำขอ Coach';return;}
+  for(const coach of data.coaches){const row=document.createElement('div');row.style.cssText='display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid #ddd';
+   const name=document.createElement('span');name.textContent=`${coach.display_name} · ${coach.is_active?'อนุมัติแล้ว':'รออนุมัติ / ปิดสิทธิ์'}`;
+   const toggle=document.createElement('button');toggle.type='button';toggle.style.width='auto';toggle.textContent=coach.is_active?'ปิดสิทธิ์':'อนุมัติ';
+   toggle.addEventListener('click',async()=>{if(!confirm(`ยืนยัน${coach.is_active?'ปิดสิทธิ์':'อนุมัติ'} ${coach.display_name}?`))return;toggle.disabled=true;try{await call('set_active',{id:coach.id,isActive:!coach.is_active});await load()}catch(e){alert(e.message);toggle.disabled=false}});
+   row.append(name,toggle);box.append(row);
+  }
+ }catch(e){box.textContent=e.message}}
+ btn.addEventListener('click',load);
+})();
+</script>
+<script>(function(){
+ const month=document.getElementById("coachReportMonth"),person=document.getElementById("coachReportPerson"),out=document.getElementById("coachReportRows");
+ month.value=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit"}).format(new Date()).slice(0,7);
+ const time=v=>v?new Date(v).toLocaleTimeString("th-TH",{timeZone:"Asia/Bangkok",hour:"2-digit",minute:"2-digit"}):"—";
+ const fmtDate=v=>new Date(v+"T12:00:00Z").toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"});
+ const add=(tag,txt,parent)=>{const el=document.createElement(tag);el.textContent=txt;parent.appendChild(el);return el;};
+ async function fetchReport(){out.textContent="กำลังโหลด...";try{
+ const key=sessionStorage.getItem("gambitAdminKey")||"",headers={"x-admin-key":key};
+ const a=await fetch("/api/admin-dashboard?mode=coach-access",{method:"POST",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify({action:"list"})}),c=await a.json();if(!a.ok||!c.success)throw Error(c.error||"โหลดรายชื่อ Coach ไม่สำเร็จ");
+ const old=person.value;person.replaceChildren(new Option("ทุกคน",""));for(const coach of c.coaches||[])person.add(new Option(coach.display_name,String(coach.id)));person.value=old;
+ const url="/api/admin-dashboard?mode=coach-attendance&view=monthly&month="+encodeURIComponent(month.value)+(person.value?"&coach_id="+encodeURIComponent(person.value):"");
+ const b=await fetch(url,{headers}),d=await b.json();if(!b.ok||!d.success)throw Error(d.error||"โหลดรายงานไม่สำเร็จ");
+ const names=new Map((c.coaches||[]).map(x=>[String(x.id),x.display_name])),groups=new Map();for(const r of d.records||[]){const id=String(r.coach_id);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(r)}
+ out.replaceChildren();if(!groups.size){out.textContent="ไม่มีคลาสที่เช็กอินในเดือนนี้";return}
+ for(const [id,rows] of groups){const regular=rows.filter(r=>r.kind==="regular").length,priv=rows.length-regular;
+ add("h3",(names.get(id)||"Coach #"+id)+" — รวม "+rows.length+" คลาส (ปกติ "+regular+" / Private "+priv+")",out);
+ const table=document.createElement("table");table.style.cssText="width:100%;border-collapse:collapse;margin:10px 0 25px";const head=document.createElement("tr");for(const x of ["วันที่","ประเภท","ชื่อคลาส","เวลาเริ่ม","เวลาเช็กอิน"]){const th=add("th",x,head);th.style.cssText="text-align:left;padding:8px;border-bottom:1px solid #ddd"}table.appendChild(head);
+ for(const r of rows){const tr=document.createElement("tr");for(const x of [fmtDate(r.work_date),r.kind==="private"?"Private":"ปกติ",r.class_name,String(r.scheduled_start_time||"").slice(0,5),time(r.checked_in_at)]){const td=add("td",x,tr);td.style.cssText="padding:8px;border-bottom:1px solid #eee"}table.appendChild(tr)}out.appendChild(table)}
+ }catch(e){out.textContent=e.message}}
+ document.getElementById("coachReportLoad").addEventListener("click",fetchReport);
+})();</script>
 </body>
 </html>

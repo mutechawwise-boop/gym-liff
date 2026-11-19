@@ -594,18 +594,88 @@
   .today-attendance-summary .summary-number {font-size:25px;}
   .class-attendance-count {display:inline-block;padding:7px 11px;border-radius:10px;background:#eaf7ef;color:#087b32;font-size:14px;font-weight:800;}
   @media(max-width:600px){.today-attendance-summary{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  #adminArea #coachWorkCard[hidden] {display:none !important;}
   #adminArea [data-open-class]:hover {border-color:#111 !important;box-shadow:0 4px 15px #0000000e;}
   #adminArea [data-open-class]:focus-visible {outline:3px solid #c93535;outline-offset:2px;}
-  </style>
+  
+/* Coach identity: clear, accessible header card */
+.coach-identity {
+  display: flex; align-items: center; gap: 12px;
+  width: fit-content; max-width: 100%; margin-top: 12px;
+  padding: 10px 13px; border: 1px solid rgba(255,255,255,.18);
+  border-radius: 14px; background: rgba(255,255,255,.09);
+}
+.coach-identity-avatar { display:grid; place-items:center; width:38px; height:38px;
+  border-radius: 12px; background:#fff; color:#111; font-size:20px; flex-shrink:0; }
+.coach-identity-copy { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.coach-identity-caption { color:#c9c9c9; font-size:11px; font-weight:500; letter-spacing:.01em; }
+.coach-identity-name { color:#fff; font-size:17px; line-height:1.3; font-weight:800; overflow-wrap:anywhere; }
+.coach-identity-status { display:inline-flex; align-items:center; gap:6px;
+  padding:6px 9px; border-radius:999px; background:rgba(255,255,255,.13);
+  font-size:10px; font-weight:800; letter-spacing:.08em; white-space:nowrap; }
+.coach-identity-dot { width:7px; height:7px; background:#68d391; border-radius:50%; }
+@media (max-width:600px) {
+  .coach-identity { width:100%; gap:9px; padding:9px; flex-wrap:wrap; }
+  .coach-identity-name { font-size:15px; }
+  .coach-identity-status { margin-left:auto; }
+}
+
+/* Profile and logout grouped on the right side of the header */
+.coach-header-actions { display:flex; align-items:center; justify-content:flex-end; gap:14px; flex-wrap:wrap; margin-left:auto; }
+.coach-header-actions .coach-identity { margin-top:0; width:auto; min-width:240px; padding:9px 12px; }
+.coach-header-actions .coach-identity-avatar { background:#fff; color:#111; }
+.coach-header-actions .logout-button { flex-shrink:0; }
+@media (max-width:760px) {
+  #adminArea .header { flex-wrap:wrap; gap:16px; }
+  .coach-header-actions { width:100%; margin-left:0; justify-content:space-between; }
+  .coach-header-actions .coach-identity { min-width:0; flex:1; }
+}
+
+/* Coach attendance: clean, responsive per-class check-in */
+.coach-work-card { padding:32px 34px !important; }
+.coach-work-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; }
+.coach-work-eyebrow { font-size:11px; letter-spacing:.13em; font-weight:800; color:#7b7b7b; margin-bottom:7px; }
+.coach-work-heading h2 { margin:0 0 8px; font-size:27px; line-height:1.3; }
+.coach-work-heading p { margin:0; color:#69717a; font-size:14px; line-height:1.6; }
+.coach-work-total { background:#f5f6f7; border:1px solid #eceef0; border-radius:16px; min-width:108px; padding:12px 16px; text-align:center; display:flex; flex-direction:column; gap:2px; }
+.coach-work-total strong { font-size:30px; line-height:1.1; color:#161616; }
+.coach-work-total span { font-size:12px; color:#626b74; }
+.coach-work-form { max-width:490px; margin-top:25px; }
+.coach-work-form>label:first-child { display:block; font-size:14px; font-weight:750; margin-bottom:9px; }
+.coach-work-form #coachWorkClass { display:block; width:100%; max-width:none; margin:0; border:1px solid #d8dde1; border-radius:12px; padding:13px 14px; min-height:49px; background:#fff; }
+.coach-private-option { display:flex !important; align-items:center; gap:10px; margin:17px 0 !important; font-size:14px; font-weight:650; cursor:pointer; }
+.coach-private-option input { width:18px !important; height:18px; margin:0; accent-color:#171717; }
+#coachPrivateFields { padding:15px; border:1px solid #e8eaed; border-radius:12px; margin-bottom:15px; background:#fafafa; }
+#coachPrivateFields[hidden] { display:none !important; }
+#coachPrivateFields label { display:block; font-size:13px; margin-bottom:10px; }
+#coachPrivateFields input { width:100%; margin-top:6px; }
+.coach-work-form #coachWorkIn { width:auto; border-radius:11px; padding:13px 21px; font-size:14px; font-weight:700; }
+#coachWorkMessage { min-height:0; font-size:13px; margin:12px 0 0; }
+#coachWorkMessage:empty { display:none; }
+.coach-work-history { border-top:1px solid #eceef0; margin-top:26px; padding-top:23px; }
+.coach-work-history-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
+.coach-work-history-head h3 { font-size:17px; margin:0; }
+.coach-work-count-badge { background:#eaf6ee; color:#217044; border-radius:999px; padding:6px 11px; font-size:12px; font-weight:750; white-space:nowrap; }
+.coach-work-record { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:15px 16px; border:1px solid #eceef0; border-radius:13px; margin-top:9px; background:#fff; }
+.coach-work-record-info,.coach-work-record-meta { display:flex; flex-direction:column; gap:6px; }
+.coach-work-record-info strong { font-size:15px; }
+.coach-work-kind { color:#7a828a; font-size:12px; }
+.coach-work-record-meta { align-items:flex-end; white-space:nowrap; }
+.coach-work-done { color:#187345; background:#eaf6ee; border-radius:999px; padding:4px 9px; font-size:12px; font-weight:750; }
+.coach-work-record-meta time { color:#626b74; font-size:12px; }
+.coach-work-empty { text-align:center; color:#7b838b; background:#fafafa; padding:23px; border-radius:12px; font-size:13px; }
+@media(max-width:600px) { .coach-work-card { padding:22px 17px !important; } .coach-work-heading h2 { font-size:22px; } .coach-work-total { min-width:80px; padding:9px; } .coach-work-total strong { font-size:25px; } .coach-work-record { padding:12px; } }
+</style>
 </head>
 
 <body>
   <main class="container">
     <section id="loginArea" class="card login-card">
       <h1>🔐 หน้า Admin</h1>
-      <p>กรอกรหัสสำหรับคุณครูเพื่อดูรายชื่อเข้าเรียน</p>
+      <p>Coach เข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่านส่วนตัว ส่วน Owner ใช้รหัสผ่านเดิม</p>
+      <div style="border-top:1px solid #ddd;padding-top:18px;margin-top:18px"><h2>🥋 Coach เข้าสู่ระบบ</h2><input id="coachUsername" placeholder="ชื่อผู้ใช้ Coach" autocomplete="username" style="margin-bottom:8px"><input id="coachPassword" type="password" placeholder="รหัสผ่าน Coach" autocomplete="current-password" style="margin-bottom:8px"><button id="coachLoginButton" type="button" style="margin-bottom:12px">เข้าสู่ระบบ Coach</button><details><summary style="cursor:pointer">สมัครบัญชี Coach ใหม่</summary><div style="margin-top:12px"><input id="coachRegisterName" placeholder="ชื่อ Coach" style="margin-bottom:8px"><input id="coachRegisterUsername" placeholder="ชื่อผู้ใช้ (a-z, 0-9, _)" style="margin-bottom:8px"><input id="coachRegisterPassword" type="password" placeholder="ตั้งรหัสผ่านอย่างน้อย 12 ตัวอักษร" style="margin-bottom:8px"><button id="coachRegisterButton" type="button">ส่งคำขอให้ Owner อนุมัติ</button></div></details></div>
 
-      <label for="adminKey">รหัส Admin</label>
+      <label for="adminKey">รหัส Owner</label>
       <input
         id="adminKey"
         type="password"
@@ -635,14 +705,23 @@
       <small id="dateText"></small>
     </div>
   </div>
-
-  <button
+  <div class="coach-header-actions">
+    <div id="coachSignedInAs" class="coach-identity" style="display:none" aria-label="บัญชี Coach ที่เข้าสู่ระบบ">
+        <span class="coach-identity-avatar" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M32 5v14M25 12h14" stroke="#111" stroke-width="4" stroke-linecap="round"/><path d="M23 23h18l-4 10 5 13H22l5-13-4-10Z" fill="#111"/><rect x="19" y="48" width="26" height="5" rx="2" fill="#111"/><rect x="16" y="55" width="32" height="5" rx="2" fill="#111"/></svg></span>
+        <span class="coach-identity-copy">
+          <span class="coach-identity-caption">กำลังเข้าสู่ระบบในฐานะ</span>
+          <strong class="coach-identity-name" id="coachSignedInName"></strong>
+        </span>
+        <span class="coach-identity-status"><span class="coach-identity-dot"></span>COACH</span>
+      </div>
+    <button
     id="logoutButton"
     class="logout-button"
     type="button"
   >
     ออกจากระบบ
   </button>
+  </div>
 </header>
 
 <nav class="quick-nav">
@@ -667,6 +746,11 @@
   </a>
 </nav>
 
+<section class="card coach-work-card" id="coachWorkCard">
+  <div class="coach-work-heading"><div><div class="coach-work-eyebrow">COACH ATTENDANCE</div><h2>เช็กอินการสอน</h2><p>เลือกคลาสที่สอนแล้วบันทึกเวลาเข้าได้เลย ไม่ต้องเช็กเอาต์</p></div><div class="coach-work-total"><strong id="coachWorkCount">0</strong><span>คลาสวันนี้</span></div></div>
+  <div class="coach-work-form"><label for="coachWorkClass">คลาสที่สอนวันนี้</label><select id="coachWorkClass"><option value="">กำลังโหลดตารางเรียน...</option></select><label class="coach-private-option"><input type="checkbox" id="coachPrivateToggle"><span>＋ เพิ่มคลาส Private</span></label><div id="coachPrivateFields" hidden><label>ชื่อคลาส Private <input id="coachPrivateName" maxlength="100" placeholder="เช่น Private BJJ 1:1"></label><label>เวลาเริ่มคลาส <input id="coachPrivateTime" type="time"></label></div><button type="button" id="coachWorkIn">เช็กอินคลาสที่สอน</button><p id="coachWorkMessage" role="status" aria-live="polite"></p></div>
+  <div class="coach-work-history"><div class="coach-work-history-head"><h3>รายการเช็กอินวันนี้</h3><span id="coachWorkCountBadge" class="coach-work-count-badge">0 คลาส</span></div><div id="coachWorkStatus" aria-live="polite">กำลังโหลด...</div></div>
+</section>
 <section id="dashboardSection" class="card">
     <div class="dashboard-summary">
         <article class="summary-card">
@@ -1077,6 +1161,7 @@
     </div>
   </section>
 
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script type="module">
 import { createAuth } from "./js/auth.js";
 import {
@@ -1199,7 +1284,7 @@ async function loadAdminDashboard() {
     const response = await fetch("/api/admin-dashboard", {
       method: "GET",
       headers: {
-         "x-admin-key": state.adminKey
+         "x-admin-key": state.adminKey, "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
       }
     });
 
@@ -1691,7 +1776,8 @@ function renderMonthlySchedule() {
                   "application/json",
 
                 "x-admin-key":
-                  state.adminKey
+                  state.adminKey,
+                "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
               },
 
               body: JSON.stringify({
@@ -1875,6 +1961,15 @@ function renderEmptySession() {
         const method = document.createElement("div");
         method.className = "method";
         method.textContent = getCheckinMethod(attendance.checkin_method);
+        if (attendance.checkin_method === "teacher") {
+          const who = String(attendance.checked_in_by || "");
+          if (who === "owner") method.textContent = "Owner เช็กให้";
+          else if (/^coach:\d+$/.test(who)) {
+            const coachId = who.slice(6);
+            const name = state.overview?.coachNames?.[coachId];
+            method.textContent = "Coach " + (name || "#" + coachId) + " เช็กให้";
+          }
+        }
         statusArea.appendChild(badge);
         statusArea.appendChild(method);
       } else {
@@ -2132,7 +2227,7 @@ function renderEmptySession() {
         try {
           const result = await requestJson("/api/checkin", {
             method: "POST",
-            headers: {"Content-Type":"application/json", "x-admin-key":state.adminKey},
+            headers: {"Content-Type":"application/json", "x-admin-key":state.adminKey,"x-coach-session":sessionStorage.getItem("gambitCoachSession") || ""},
             body: JSON.stringify({mode:"teacher_checkin", sessionId, memberId})
           });
           if (!Array.isArray(state.overview.attendance)) state.overview.attendance = [];
@@ -2140,7 +2235,8 @@ function renderEmptySession() {
           if (!exists) state.overview.attendance.push({
             session_id:sessionId, member_id:memberId,
             checked_in_at:result.attendance?.checked_in_at || new Date().toISOString(),
-            checkin_method:result.attendance?.checkin_method || "teacher"
+            checkin_method:result.attendance?.checkin_method || "teacher",
+            checked_in_by:result.attendance?.checked_in_by || ""
           });
           if (!result.alreadyCheckedIn && member) {
             member.checkin_count = Number(member.checkin_count || 0) + 1;
@@ -2194,11 +2290,12 @@ const data = await requestJson(
   {
     method: "GET",
     headers: {
-      "x-admin-key": state.adminKey
+      "x-admin-key": state.adminKey, "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
     }
   }
 );
         state.overview = data;
+        loadCoachWork().catch(console.error);
 
         elements.loginArea.style.display = "none";
         elements.adminArea.style.display = "block";
@@ -2418,7 +2515,8 @@ function closeEditSessionModal() {
             "application/json",
 
           "x-admin-key":
-            state.adminKey
+            state.adminKey,
+            "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
         },
 
         body: JSON.stringify({
@@ -2524,7 +2622,7 @@ function openBeltModal(member) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-admin-key": state.adminKey
+            "x-admin-key": state.adminKey, "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
           },
           body: JSON.stringify({
             memberId: state.selectedBeltMemberId,
@@ -2686,7 +2784,8 @@ async function saveEnrollmentChanges() {
             "Content-Type":
               "application/json",
             "x-admin-key":
-              state.adminKey
+              state.adminKey,
+              "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
           },
           body:
             JSON.stringify(change)
@@ -2779,7 +2878,8 @@ async function saveEnrollmentChanges() {
             "application/json",
 
           "x-admin-key":
-            state.adminKey
+            state.adminKey,
+            "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
         },
 
         body: JSON.stringify({
@@ -2857,6 +2957,33 @@ await loadOverview();
 
   loadOverview();
 }
+ async function loadCoachWork(){
+  const token=sessionStorage.getItem("gambitCoachSession"),card=document.getElementById("coachWorkCard");if(!token){card.hidden=true;return;}card.hidden=false;
+  const r=await fetch("/api/admin-dashboard?mode=coach-attendance",{headers:{"x-coach-session":token}}),d=await r.json();if(!r.ok)throw Error(d.error||"โหลดประวัติไม่สำเร็จ");
+  const status=document.getElementById("coachWorkStatus");status.replaceChildren();const records=d.records||[];
+  document.getElementById("coachWorkCount").textContent=String(records.length);
+  document.getElementById("coachWorkCountBadge").textContent=records.length+" คลาส";
+  if(!records.length){const empty=document.createElement("p");empty.className="coach-work-empty";empty.textContent="ยังไม่มีรายการเช็กอินวันนี้";status.appendChild(empty)}
+  for(const item of records){
+    const row=document.createElement("div");row.className="coach-work-record";
+    const left=document.createElement("div");left.className="coach-work-record-info";
+    const name=document.createElement("strong");name.textContent=item.class_name||"คลาส";
+    const kind=document.createElement("span");kind.className="coach-work-kind";kind.textContent=item.kind==="private"?"คลาส Private":"คลาสประจำวัน";
+    left.append(name,kind);
+    const right=document.createElement("div");right.className="coach-work-record-meta";
+    const badge=document.createElement("span");badge.className="coach-work-done";badge.textContent="✓ เช็กอินแล้ว";
+    const time=document.createElement("time");time.textContent=new Date(item.checked_in_at).toLocaleTimeString("th-TH",{timeZone:"Asia/Bangkok",hour:"2-digit",minute:"2-digit"})+" น.";
+    right.append(badge,time);row.append(left,right);status.appendChild(row);
+  }
+ }
+ async function loadCoachClasses(){const select=document.getElementById("coachWorkClass");try{const r=await fetch("/api/admin-dashboard?mode=coach-attendance&view=classes",{headers:{"x-coach-session":sessionStorage.getItem("gambitCoachSession")||""}}),d=await r.json();if(!r.ok)throw Error(d.error||"โหลดคลาสไม่สำเร็จ");select.replaceChildren(new Option("เลือกคลาสจากตารางวันนี้",""));for(const c of d.classes||[])select.add(new Option((c.classes?.name||"คลาส")+" · "+String(c.start_time||"").slice(0,5)+"–"+String(c.end_time||"").slice(0,5),String(c.id)));if(!d.classes?.length)select.options[0].text="วันนี้ไม่มีคลาสในตาราง (สามารถเพิ่ม Private ได้)";}catch(e){select.replaceChildren(new Option(e.message,""));}}
+ const privateToggle=document.getElementById("coachPrivateToggle");privateToggle.addEventListener("change",()=>{document.getElementById("coachPrivateFields").hidden=!privateToggle.checked;document.getElementById("coachWorkClass").disabled=privateToggle.checked});
+ document.getElementById("coachWorkIn").addEventListener("click",async()=>{
+  const btn=document.getElementById("coachWorkIn"),msg=document.getElementById("coachWorkMessage");btn.disabled=true;msg.textContent="กำลังบันทึก...";
+  try{const body=privateToggle.checked?{action:"checkin",kind:"private",privateName:document.getElementById("coachPrivateName").value,privateTime:document.getElementById("coachPrivateTime").value}:{action:"checkin",kind:"regular",classSessionId:Number(document.getElementById("coachWorkClass").value)};
+  const r=await fetch("/api/admin-dashboard?mode=coach-attendance",{method:"POST",headers:{"Content-Type":"application/json","x-coach-session":sessionStorage.getItem("gambitCoachSession")||""},body:JSON.stringify(body)}),d=await r.json();if(!r.ok||!d.success)throw Error(d.error||"บันทึกไม่สำเร็จ");msg.textContent="บันทึกเช็กอินคลาสสำเร็จ";await loadCoachWork();}catch(e){msg.textContent=e.message}finally{btn.disabled=false}
+ });
+ loadCoachClasses().catch(console.error);loadCoachWork().catch(e=>document.getElementById("coachWorkMessage").textContent=e.message);
 const auth = createAuth({
   elements,
   state,
@@ -2865,6 +2992,14 @@ const auth = createAuth({
   onAuthenticated: applyRole
 });
 function applyRole() {
+  const signedIn = document.getElementById("coachSignedInAs");
+  if (signedIn) {
+    const coachSession = sessionStorage.getItem("gambitCoachSession");
+    const coachName = sessionStorage.getItem("gambitCoachDisplayName");
+    signedIn.style.display = coachSession ? "flex" : "none";
+    const nameEl = document.getElementById("coachSignedInName");
+    if (nameEl) nameEl.textContent = coachSession ? (coachName || "กรุณาเข้าสู่ระบบใหม่") : "";
+  }
   document
     .querySelectorAll("[data-owner]")
     .forEach(el => {
@@ -2872,6 +3007,8 @@ function applyRole() {
     });
 }
     elements.loginButton.addEventListener("click", auth.login);
+    document.getElementById("coachLoginButton").addEventListener("click", auth.coachLogin);
+    document.getElementById("coachRegisterButton").addEventListener("click", auth.coachRegister);
 
 elements.adminKeyInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") auth.login();
@@ -2965,7 +3102,7 @@ elements.saveEditSessionButton.addEventListener(
     const response = await fetch("/api/admin-dashboard", {
       method: "GET",
       headers: {
-        "x-admin-key": state.adminKey
+        "x-admin-key": state.adminKey, "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
       }
     });
 

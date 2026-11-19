@@ -1,3 +1,4 @@
+import { activeCoach, issueCoachSession, passwordHash, newSalt } from "./lib/coach-auth.js";
 import { supabase } from "./lib/supabase.js";
 
 function getBangkokDateString() {
@@ -25,6 +26,85 @@ function calculateDaysRemaining(expiryDate, todayDate) {
   );
 }
 
+// Coach enrollment and Owner management reuse this existing serverless function.
+// These helpers never trust a LINE user ID supplied directly by the browser.
+async function coachRows(query) { const r=await supabase.request(`gym_coaches?${query}`);if(!r.ok)throw new Error("Coach lookup failed");return r.json(); }
+async function credentials(query){const r=await supabase.request(`gym_coach_credentials?${query}`);if(!r.ok)throw new Error("Coach credentials table missing; apply SQL migration");return r.json();}
+async function handleCoachAccess(request,json,isOwner){
+ let body;try{body=await request.json()}catch{return json({success:false,error:"Invalid JSON"},400)}
+ const action=body?.action;
+ if(action==="register"){
+  const name=String(body.name||"").trim(),username=String(body.username||"").trim().toLowerCase(),password=String(body.password||"");
+  if(name.length<2||name.length>100||!/^[a-z0-9_]{4,32}$/.test(username)||password.length<12||password.length>128)return json({success:false,error:"ชื่อ 2-100 ตัวอักษร ชื่อผู้ใช้ 4-32 ตัว (a-z, 0-9, _) และรหัสผ่าน 12-128 ตัว"},400);
+  const exists=await credentials(`username=eq.${encodeURIComponent(username)}&select=coach_id&limit=1`);if(exists.length)return json({success:false,error:"ชื่อผู้ใช้นี้ถูกใช้แล้ว"},409);
+  const r=await supabase.request("gym_coaches?select=id",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify({display_name:name,role:"coach",is_active:false})});if(!r.ok)return json({success:false,error:"สร้างคำขอไม่สำเร็จ"},400);
+  const [coach]=await r.json();const salt=newSalt();const hash=await passwordHash(password,salt);
+  const cr=await supabase.request("gym_coach_credentials",{method:"POST",body:JSON.stringify({coach_id:coach.id,username,password_salt:salt,password_hash:hash})});if(!cr.ok){await supabase.request(`gym_coaches?id=eq.${coach.id}`,{method:"DELETE"});return json({success:false,error:"บันทึกบัญชีไม่สำเร็จ"},500)}
+  return json({success:true,state:"pending"},201);
+ }
+ if(action==="login"){
+  const username=String(body.username||"").trim().toLowerCase(),password=String(body.password||"");if(!username||!password)return json({success:false,error:"กรุณากรอกชื่อผู้ใช้และรหัสผ่าน"},400);
+  const rows=await credentials(`username=eq.${encodeURIComponent(username)}&select=coach_id,password_salt,password_hash&limit=1`);
+  if(!rows.length)return json({success:false,error:"ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"},401);
+  const item=rows[0];const hash=await passwordHash(password,item.password_salt);if(hash.length!==item.password_hash.length||![...hash].every((c,i)=>c===item.password_hash[i]))return json({success:false,error:"ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"},401);
+  const coaches=await coachRows(`id=eq.${item.coach_id}&select=id,display_name,is_active&limit=1`);if(!coaches[0]?.is_active)return json({success:false,error:"บัญชียังไม่ได้รับอนุมัติ หรือถูกระงับสิทธิ์"},403);
+  return json({success:true,role:"coach",displayName:coaches[0].display_name,session:await issueCoachSession(coaches[0].id)});
+ }
+ if(!isOwner)return json({success:false,error:"Owner only"},403);
+ if(action==="list"){const coaches=await coachRows("select=id,display_name,role,is_active,created_at&order=created_at.desc");return json({success:true,coaches});}
+ if(action==="set_active"){const id=Number(body.id);if(!Number.isSafeInteger(id)||id<1||typeof body.isActive!=="boolean")return json({success:false,error:"Invalid input"},400);const r=await supabase.request(`gym_coaches?id=eq.${id}&select=id,is_active`,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify({is_active:body.isActive,updated_at:new Date().toISOString()})});if(!r.ok)return json({success:false,error:"Cannot update Coach"},500);const rows=await r.json();return json({success:!!rows.length,coach:rows[0]});}
+ return json({success:false,error:"Unknown action"},400);
+}
+// One attendance record per taught class. Times are generated on the server.
+async function handleCoachAttendance(request,json,isOwner,coach){
+ const url=new URL(request.url);
+ const date=getBangkokDateString();
+ const mode=url.searchParams.get("view");
+ if(request.method==="GET" && mode==="classes"){
+  if(!coach)return json({success:false,error:"Coach only"},403);
+  const r=await supabase.request(`class_sessions?select=id,start_time,end_time,session_date,classes(name)&session_date=eq.${date}&order=start_time.asc`);
+  if(!r.ok)return json({success:false,error:"โหลดตารางเรียนไม่สำเร็จ กรุณาตรวจสอบสิทธิ์และข้อมูลคลาส"},500);
+  return json({success:true,classes:await r.json()});
+ }
+ if(request.method==="GET" && mode==="monthly"){
+  if(!isOwner)return json({success:false,error:"Owner only"},403);
+  const month=url.searchParams.get("month");if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month||""))return json({success:false,error:"Invalid month"},400);
+  const [year,mm]=month.split("-").map(Number),from=month+"-01",to=new Date(Date.UTC(year,mm,1)).toISOString().slice(0,10);
+  const id=url.searchParams.get("coach_id");if(id&&!/^[1-9]\d*$/.test(id))return json({success:false,error:"Invalid coach"},400);
+  const filter=id?`coach_id=eq.${id}&`:"";
+  const r=await supabase.request(`gym_coach_class_checkins?${filter}work_date=gte.${from}&work_date=lt.${to}&select=*&order=checked_in_at.asc&limit=4000`);
+  if(!r.ok)return json({success:false,error:"โหลดรายงานคลาสไม่สำเร็จ กรุณารัน SQL migration"},500);
+  return json({success:true,records:await r.json()});
+ }
+ if(request.method==="GET"){
+  if(!coach&&!isOwner)return json({success:false,error:"ไม่มีสิทธิ์"},403);
+  const filter=isOwner?"":`coach_id=eq.${coach.id}&`;
+  const r=await supabase.request(`gym_coach_class_checkins?${filter}work_date=eq.${date}&select=*&order=checked_in_at.asc&limit=200`);
+  if(!r.ok)return json({success:false,error:"โหลดการเช็กอินไม่สำเร็จ กรุณารัน SQL migration"},500);
+  return json({success:true,records:await r.json()});
+ }
+ if(!coach)return json({success:false,error:"Coach only"},403);
+ let body;try{body=await request.json()}catch{return json({success:false,error:"Invalid JSON"},400)}
+ if(body?.action!=="checkin")return json({success:false,error:"รองรับเฉพาะการเช็กอินรายคลาส"},400);
+ const kind=body.kind==="private"?"private":"regular";
+ let name,startTime=null,sessionId=null;
+ if(kind==="regular"){
+  sessionId=Number(body.classSessionId);
+  if(!Number.isSafeInteger(sessionId)||sessionId<1)return json({success:false,error:"กรุณาเลือกคลาสประจำวัน"},400);
+  const r=await supabase.request(`class_sessions?id=eq.${sessionId}&session_date=eq.${date}&select=id,start_time,classes(name)&limit=1`);
+  if(!r.ok)return json({success:false,error:"ตรวจสอบคลาสไม่สำเร็จ"},500);
+  const rows=await r.json();if(!rows.length)return json({success:false,error:"ไม่พบคลาสนี้ในตารางวันนี้"},400);
+  name=rows[0].classes?.name||"คลาส";startTime=rows[0].start_time;
+ }else{
+  name=String(body.privateName||"").trim();startTime=String(body.privateTime||"").trim();
+  if(name.length<2||name.length>100||!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime))return json({success:false,error:"กรุณาระบุชื่อ Private 2–100 ตัวอักษร และเวลา HH:MM"},400);
+ }
+ const data={coach_id:coach.id,work_date:date,kind,class_session_id:sessionId,class_name:name,scheduled_start_time:startTime,checked_in_at:new Date().toISOString()};
+ const r=await supabase.request("gym_coach_class_checkins?select=id,checked_in_at",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify(data)});
+ if(!r.ok){const detail=await r.text();return json({success:false,error:detail.includes("23505")?"เช็กอินคลาสนี้แล้ว":"บันทึกไม่สำเร็จ กรุณาตรวจสอบ SQL migration"},detail.includes("23505")?409:500)}
+ return json({success:true,record:(await r.json())[0]});
+}
+
 export default {
   async fetch(request) {
     const json = (data, status = 200) =>
@@ -46,13 +126,18 @@ if (!["GET", "POST"].includes(request.method)) {
     try {
       const adminKey = request.headers.get("x-admin-key");
 
-const isCoach =
-  process.env.ADMIN_KEY &&
-  adminKey === process.env.ADMIN_KEY;
+const isOwner = Boolean(process.env.OWNER_KEY) && adminKey === process.env.OWNER_KEY;
+const isCoach = !isOwner && Boolean(await activeCoach(request));
 
-const isOwner =
-  process.env.OWNER_KEY &&
-  adminKey === process.env.OWNER_KEY;
+// Coach requests may be submitted without a shared password; management is Owner-only.
+      const requestUrl = new URL(request.url);
+      if (request.method === "POST" && requestUrl.searchParams.get("mode") === "coach-access") {
+        return await handleCoachAccess(request, json, isOwner);
+      }
+      if (requestUrl.searchParams.get("mode") === "coach-attendance") {
+        if (!isOwner && !isCoach) return json({success:false,error:"ไม่มีสิทธิ์"},401);
+        return await handleCoachAttendance(request,json,isOwner,isCoach ? await activeCoach(request) : null);
+      }
 
 if (!isCoach && !isOwner) {
   return json(
