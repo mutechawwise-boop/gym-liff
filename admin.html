@@ -634,6 +634,7 @@
     <div class="header-info">
       <h1>GAMBIT JIUJITSU</h1>
       <p>COACH DASHBOARD</p>
+      <small id="coachSignedInAs" style="display:none;font-weight:700;color:#fff;margin-top:5px"></small>
       <small id="dateText"></small>
     </div>
   </div>
@@ -1880,6 +1881,15 @@ function renderEmptySession() {
         const method = document.createElement("div");
         method.className = "method";
         method.textContent = getCheckinMethod(attendance.checkin_method);
+        if (attendance.checkin_method === "teacher") {
+          const who = String(attendance.checked_in_by || "");
+          if (who === "owner") method.textContent = "Owner เช็กให้";
+          else if (/^coach:\d+$/.test(who)) {
+            const coachId = who.slice(6);
+            const name = state.overview?.coachNames?.[coachId];
+            method.textContent = "Coach " + (name || "#" + coachId) + " เช็กให้";
+          }
+        }
         statusArea.appendChild(badge);
         statusArea.appendChild(method);
       } else {
@@ -2145,7 +2155,8 @@ function renderEmptySession() {
           if (!exists) state.overview.attendance.push({
             session_id:sessionId, member_id:memberId,
             checked_in_at:result.attendance?.checked_in_at || new Date().toISOString(),
-            checkin_method:result.attendance?.checkin_method || "teacher"
+            checkin_method:result.attendance?.checkin_method || "teacher",
+            checked_in_by:result.attendance?.checked_in_by || ""
           });
           if (!result.alreadyCheckedIn && member) {
             member.checkin_count = Number(member.checkin_count || 0) + 1;
@@ -2889,6 +2900,13 @@ const auth = createAuth({
   onAuthenticated: applyRole
 });
 function applyRole() {
+  const signedIn = document.getElementById("coachSignedInAs");
+  if (signedIn) {
+    const coachSession = sessionStorage.getItem("gambitCoachSession");
+    const coachName = sessionStorage.getItem("gambitCoachDisplayName");
+    signedIn.style.display = coachSession ? "block" : "none";
+    signedIn.textContent = coachSession ? "เข้าสู่ระบบโดย Coach " + (coachName || "(กรุณาเข้าสู่ระบบใหม่)") : "";
+  }
   document
     .querySelectorAll("[data-owner]")
     .forEach(el => {

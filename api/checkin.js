@@ -61,7 +61,8 @@ async function handleTeacherCheckin(request, body) {
         session_id: sessionId,
         member_id: memberId,
         checked_in_at: result.checkedInAt,
-        checkin_method: result.checkinMethod || "teacher"
+        checkin_method: result.checkinMethod || "teacher",
+        checked_in_by: isOwner ? "owner" : `coach:${coach.id}`
       },
       checkinCount: result.checkinCount,
       remainingSessions: result.remainingSessions

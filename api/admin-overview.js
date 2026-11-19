@@ -300,6 +300,18 @@ const classes = await classesResponse.json();
 
 
 
+// Resolve recorded Coach IDs server-side; the browser receives display names only.
+const coachIds = [...new Set(attendance.map(row => /^coach:(\d+)$/.exec(String(row.checked_in_by || ""))?.[1]).filter(Boolean))];
+const coachNames = {};
+if (coachIds.length) {
+  const coachResponse = await fetch(
+    `${supabaseUrl}/rest/v1/gym_coaches?id=in.(${coachIds.join(",")})&select=id,display_name`,
+    { headers }
+  );
+  if (coachResponse.ok) {
+    for (const row of await coachResponse.json()) coachNames[String(row.id)] = row.display_name;
+  }
+}
 return json({
   success: true,
   date: today,
@@ -311,6 +323,7 @@ return json({
   members,
 
   attendance,
+  coachNames,
 
   beltLevels,
 
