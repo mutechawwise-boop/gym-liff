@@ -70,39 +70,26 @@ export function createAuth({
   }
 
   async function coachLogin() {
-    elements.loginError.textContent = "";
-    const button = document.getElementById("coachLoginButton");
-    if (button) button.disabled = true;
+    const username=document.getElementById("coachUsername")?.value.trim();
+    const password=document.getElementById("coachPassword")?.value||"";
+    const button=document.getElementById("coachLoginButton");button.disabled=true;elements.loginError.textContent="";
     try {
-      if (!window.liff) throw new Error("ไม่สามารถโหลด LINE LIFF ได้");
-      await window.liff.init({liffId:"2010879060-pNUb1Njk"});
-      if (!window.liff.isLoggedIn()) { window.liff.login({redirectUri:window.location.href}); return; }
-      const idToken = window.liff.getIDToken();
-      if (!idToken) throw new Error("ไม่พบ LINE ID Token กรุณาเข้าสู่ระบบ LINE อีกครั้ง");
-      const response = await fetch("/api/admin-dashboard?mode=coach-access", {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({action:"request",idToken})
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || "ตรวจสอบ Coach ไม่สำเร็จ");
-      if (data.state !== "active") {
-        elements.loginError.textContent = "ส่งคำขอแล้ว กรุณารอ Owner อนุมัติ หรือสอบถาม Owner หากเคยได้รับสิทธิ์";
-        return;
-      }
-      sessionStorage.removeItem("gambitAdminKey");
-      sessionStorage.setItem("gambitCoachLineToken",idToken);
-      state.adminKey = "";
-      setRole(state,"coach");
-      await loadAdminDashboard();
-      await loadOverview();
-      onAuthenticated?.();
-    } catch(error) {
-      elements.loginError.textContent = error.message || "LINE Login ไม่สำเร็จ";
-    } finally { if (button) button.disabled = false; }
+      const response=await fetch("/api/admin-dashboard?mode=coach-access",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",username,password})});
+      const data=await response.json();if(!response.ok||!data.success)throw new Error(data.error||"เข้าสู่ระบบ Coach ไม่สำเร็จ");
+      sessionStorage.removeItem("gambitAdminKey");sessionStorage.setItem("gambitCoachSession",data.session);state.adminKey="";setRole(state,"coach");
+      await loadAdminDashboard();await loadOverview();onAuthenticated?.();
+    }catch(error){elements.loginError.textContent=error.message||"เข้าสู่ระบบไม่สำเร็จ";}finally{button.disabled=false;}
+  }
+  async function coachRegister(){
+    const name=document.getElementById("coachRegisterName").value.trim(),username=document.getElementById("coachRegisterUsername").value.trim(),password=document.getElementById("coachRegisterPassword").value;
+    const button=document.getElementById("coachRegisterButton");button.disabled=true;elements.loginError.textContent="";
+    try{const r=await fetch("/api/admin-dashboard?mode=coach-access",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"register",name,username,password})});const d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||"สมัครไม่สำเร็จ");elements.loginError.textContent="ส่งคำขอสำเร็จ กรุณารอ Owner อนุมัติ แล้วเข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่าน";}
+    catch(e){elements.loginError.textContent=e.message;}finally{button.disabled=false;}
   }
 
   function logout() {
     sessionStorage.removeItem("gambitAdminKey");
+    sessionStorage.removeItem("gambitCoachSession");
     sessionStorage.removeItem("gambitCoachLineToken");
     logoutRole();
 
@@ -120,7 +107,7 @@ export function createAuth({
       sessionStorage.getItem("gambitAdminKey");
 
     if (!savedAdminKey) {
-      const token = sessionStorage.getItem("gambitCoachLineToken");
+      const token = sessionStorage.getItem("gambitCoachSession");
       if (!token) return false;
       state.adminKey = "";
       setRole(state,"coach");
@@ -136,6 +123,7 @@ export function createAuth({
   return {
     login,
     coachLogin,
+    coachRegister,
     logout,
     restoreSession
   };

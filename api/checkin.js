@@ -21,32 +21,6 @@ async function callAtomicCheckin(supabaseUrl, secretKey, params) {
   return response.json();
 }
 
-// Authorize an individual Coach using a verified LINE ID Token and current DB status.
-// This is intentionally local to an existing API file: no new Vercel function.
-async function verifiedActiveCoachForCheckin(request) {
-  const token = request.headers.get("x-line-id-token");
-  if (!token) return null;
-  if (token.length > 8192 || !process.env.LINE_CHANNEL_ID) return null;
-  const verify = await fetch("https://api.line.me/oauth2/v2.1/verify", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ id_token: token, client_id: process.env.LINE_CHANNEL_ID })
-  });
-  if (!verify.ok) return null;
-  const claims = await verify.json();
-  if (!claims.sub || String(claims.aud) !== String(process.env.LINE_CHANNEL_ID)) return null;
-  const base = process.env.SUPABASE_URL;
-  const secret = process.env.SUPABASE_SECRET_KEY;
-  if (!base || !secret) throw new Error("Supabase environment is missing");
-  const response = await fetch(
-    `${base}/rest/v1/gym_coaches?line_user_id=eq.${encodeURIComponent(claims.sub)}&is_active=eq.true&select=id,line_user_id,role&limit=1`,
-    { headers: { apikey: secret, Authorization: `Bearer ${secret}` } }
-  );
-  if (!response.ok) throw new Error("Coach authorization lookup failed");
-  const rows = await response.json();
-  return rows.length === 1 ? rows[0] : null;
-}
-
 async function handleTeacherCheckin(request, body) {
   const json = (data, status = 200) => new Response(JSON.stringify(data), {
     status,
@@ -76,7 +50,7 @@ async function handleTeacherCheckin(request, body) {
       p_checkin_method: "teacher",
       // Verified LINE identity is recorded for individual Coach auditability.
       // Existing RPC parameter and check-in rules are unchanged.
-      p_checked_in_by: isOwner ? "owner" : (lineCoach ? `coach:${lineCoach.line_user_id}` : "admin")
+      p_checked_in_by: isOwner ? "owner" : `coach:${coach.id}`
     });
     return json({
       success: true,

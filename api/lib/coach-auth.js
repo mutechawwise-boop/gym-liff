@@ -1,20 +1,9 @@
-// Shared server-side Coach authorization; never trust client-supplied user IDs.
-export async function activeCoach(request) {
-  const token = request.headers.get("x-line-id-token");
-  if (!token || token.length > 8192 || !process.env.LINE_CHANNEL_ID) return null;
-  const verified = await fetch("https://api.line.me/oauth2/v2.1/verify", {
-    method: "POST", headers: {"Content-Type":"application/x-www-form-urlencoded"},
-    body: new URLSearchParams({id_token:token, client_id:process.env.LINE_CHANNEL_ID})
-  });
-  if (!verified.ok) return null;
-  const claims = await verified.json();
-  if (!claims.sub || String(claims.aud) !== String(process.env.LINE_CHANNEL_ID)) return null;
-  const url = process.env.SUPABASE_URL, secret = process.env.SUPABASE_SECRET_KEY;
-  if (!url || !secret) throw new Error("Supabase environment missing");
-  const response = await fetch(`${url}/rest/v1/gym_coaches?line_user_id=eq.${encodeURIComponent(claims.sub)}&is_active=eq.true&select=id,display_name,role&limit=1`, {
-    headers:{apikey:secret,Authorization:`Bearer ${secret}`}
-  });
-  if (!response.ok) throw new Error("Coach permission lookup failed");
-  const rows = await response.json();
-  return rows[0] || null;
-}
+// Password Coach sessions: HMAC-signed, short-lived; permission checked on every request.
+const enc = new TextEncoder();
+function b64(bytes) { return btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,""); }
+function unb64(str) { const raw=atob(str.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-str.length%4)%4));return Uint8Array.from(raw,c=>c.charCodeAt(0)); }
+async function hmac(payload) { const secret=process.env.COACH_SESSION_SECRET; if(!secret || secret.length<32) throw new Error("COACH_SESSION_SECRET missing/too short"); const key=await crypto.subtle.importKey("raw",enc.encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return b64(new Uint8Array(await crypto.subtle.sign("HMAC",key,enc.encode(payload)))); }
+export async function issueCoachSession(id) {const body=b64(enc.encode(JSON.stringify({id,exp:Date.now()+8*3600000})));return `${body}.${await hmac(body)}`;}
+export async function activeCoach(request) {const token=request.headers.get("x-coach-session")||"";const parts=token.split(".");if(parts.length!==2 || token.length>2048)return null;const expected=await hmac(parts[0]);if(expected.length!==parts[1].length)return null;let mismatch=0;for(let i=0;i<expected.length;i++)mismatch|=expected.charCodeAt(i)^parts[1].charCodeAt(i);if(mismatch)return null;let claims;try{claims=JSON.parse(new TextDecoder().decode(unb64(parts[0])));}catch{return null;}if(!Number.isSafeInteger(claims.id)||claims.id<1||!Number.isFinite(claims.exp)||claims.exp<Date.now())return null;const url=process.env.SUPABASE_URL,secret=process.env.SUPABASE_SECRET_KEY;if(!url||!secret)throw new Error("Supabase environment missing");const r=await fetch(`${url}/rest/v1/gym_coaches?id=eq.${claims.id}&is_active=eq.true&select=id,display_name,role&limit=1`,{headers:{apikey:secret,Authorization:`Bearer ${secret}`}});if(!r.ok)throw new Error("Coach permission lookup failed");const rows=await r.json();return rows[0]||null;}
+export async function passwordHash(password,salt) {const material=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:enc.encode(salt),iterations:210000,hash:"SHA-256"},material,256);return b64(new Uint8Array(bits));}
+export function newSalt(){return b64(crypto.getRandomValues(new Uint8Array(24)));}

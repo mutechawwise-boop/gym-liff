@@ -594,6 +594,7 @@
   .today-attendance-summary .summary-number {font-size:25px;}
   .class-attendance-count {display:inline-block;padding:7px 11px;border-radius:10px;background:#eaf7ef;color:#087b32;font-size:14px;font-weight:800;}
   @media(max-width:600px){.today-attendance-summary{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  #adminArea #coachWorkCard[hidden] {display:none !important;}
   #adminArea [data-open-class]:hover {border-color:#111 !important;box-shadow:0 4px 15px #0000000e;}
   #adminArea [data-open-class]:focus-visible {outline:3px solid #c93535;outline-offset:2px;}
   </style>
@@ -604,7 +605,7 @@
     <section id="loginArea" class="card login-card">
       <h1>🔐 หน้า Admin</h1>
       <p>Coach เข้าสู่ระบบด้วย LINE ส่วนตัว ส่วน Owner ใช้รหัสผ่านเดิม</p>
-      <button id="coachLoginButton" type="button" style="background:#06c755;margin-bottom:18px">เข้าสู่ระบบ Coach ด้วย LINE</button>
+      <div style="border-top:1px solid #ddd;padding-top:18px;margin-top:18px"><h2>🥋 Coach เข้าสู่ระบบ</h2><input id="coachUsername" placeholder="ชื่อผู้ใช้ Coach" autocomplete="username" style="margin-bottom:8px"><input id="coachPassword" type="password" placeholder="รหัสผ่าน Coach" autocomplete="current-password" style="margin-bottom:8px"><button id="coachLoginButton" type="button" style="margin-bottom:12px">เข้าสู่ระบบ Coach</button><details><summary style="cursor:pointer">สมัครบัญชี Coach ใหม่</summary><div style="margin-top:12px"><input id="coachRegisterName" placeholder="ชื่อ Coach" style="margin-bottom:8px"><input id="coachRegisterUsername" placeholder="ชื่อผู้ใช้ (a-z, 0-9, _)" style="margin-bottom:8px"><input id="coachRegisterPassword" type="password" placeholder="ตั้งรหัสผ่านอย่างน้อย 12 ตัวอักษร" style="margin-bottom:8px"><button id="coachRegisterButton" type="button">ส่งคำขอให้ Owner อนุมัติ</button></div></details></div>
 
       <label for="adminKey">รหัส Owner</label>
       <input
@@ -668,6 +669,7 @@
   </a>
 </nav>
 
+<section class="card" id="coachWorkCard"><h2>⏱️ บันทึกเวลาทำงาน Coach</h2><p>เช็กอิน / เช็กเอาต์ได้จากทุกที่ เวลาบันทึกตามเซิร์ฟเวอร์</p><div id="coachWorkStatus">กำลังโหลด...</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button type="button" id="coachWorkIn" style="width:auto">เช็กอินเข้างาน</button><button type="button" id="coachWorkOut" style="width:auto">เช็กเอาต์ออกงาน</button></div><p id="coachWorkMessage" role="status"></p></section>
 <section id="dashboardSection" class="card">
     <div class="dashboard-summary">
         <article class="summary-card">
@@ -1201,7 +1203,7 @@ async function loadAdminDashboard() {
     const response = await fetch("/api/admin-dashboard", {
       method: "GET",
       headers: {
-         "x-admin-key": state.adminKey, "x-line-id-token": sessionStorage.getItem("gambitCoachLineToken") || ""
+         "x-admin-key": state.adminKey, "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
       }
     });
 
@@ -1694,7 +1696,7 @@ function renderMonthlySchedule() {
 
                 "x-admin-key":
                   state.adminKey,
-                "x-line-id-token": sessionStorage.getItem("gambitCoachLineToken") || ""
+                "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
               },
 
               body: JSON.stringify({
@@ -2135,7 +2137,7 @@ function renderEmptySession() {
         try {
           const result = await requestJson("/api/checkin", {
             method: "POST",
-            headers: {"Content-Type":"application/json", "x-admin-key":state.adminKey,"x-line-id-token":sessionStorage.getItem("gambitCoachLineToken") || ""},
+            headers: {"Content-Type":"application/json", "x-admin-key":state.adminKey,"x-coach-session":sessionStorage.getItem("gambitCoachSession") || ""},
             body: JSON.stringify({mode:"teacher_checkin", sessionId, memberId})
           });
           if (!Array.isArray(state.overview.attendance)) state.overview.attendance = [];
@@ -2197,11 +2199,12 @@ const data = await requestJson(
   {
     method: "GET",
     headers: {
-      "x-admin-key": state.adminKey, "x-line-id-token": sessionStorage.getItem("gambitCoachLineToken") || ""
+      "x-admin-key": state.adminKey, "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
     }
   }
 );
         state.overview = data;
+        loadCoachWork().catch(console.error);
 
         elements.loginArea.style.display = "none";
         elements.adminArea.style.display = "block";
@@ -2422,7 +2425,7 @@ function closeEditSessionModal() {
 
           "x-admin-key":
             state.adminKey,
-            "x-line-id-token": sessionStorage.getItem("gambitCoachLineToken") || ""
+            "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
         },
 
         body: JSON.stringify({
@@ -2528,7 +2531,7 @@ function openBeltModal(member) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-admin-key": state.adminKey, "x-line-id-token": sessionStorage.getItem("gambitCoachLineToken") || ""
+            "x-admin-key": state.adminKey, "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
           },
           body: JSON.stringify({
             memberId: state.selectedBeltMemberId,
@@ -2691,7 +2694,7 @@ async function saveEnrollmentChanges() {
               "application/json",
             "x-admin-key":
               state.adminKey,
-              "x-line-id-token": sessionStorage.getItem("gambitCoachLineToken") || ""
+              "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
           },
           body:
             JSON.stringify(change)
@@ -2785,7 +2788,7 @@ async function saveEnrollmentChanges() {
 
           "x-admin-key":
             state.adminKey,
-            "x-line-id-token": sessionStorage.getItem("gambitCoachLineToken") || ""
+            "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
         },
 
         body: JSON.stringify({
@@ -2863,6 +2866,16 @@ await loadOverview();
 
   loadOverview();
 }
+ async function loadCoachWork(){
+   const token=sessionStorage.getItem("gambitCoachSession");const card=document.getElementById("coachWorkCard");if(!token){card.hidden=true;return;}card.hidden=false;
+   const date=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+   const r=await fetch(`/api/admin-dashboard?mode=coach-attendance&date=${date}`,{headers:{"x-coach-session":token}});const d=await r.json();if(!r.ok)throw new Error(d.error||"โหลดเวลาไม่สำเร็จ");
+   const shift=d.shifts?.[0];document.getElementById("coachWorkStatus").textContent=!shift?"วันนี้ยังไม่ได้เช็กอิน":`เข้างาน ${new Date(shift.checked_in_at).toLocaleTimeString("th-TH",{timeZone:"Asia/Bangkok"})}${shift.checked_out_at?` · ออกงาน ${new Date(shift.checked_out_at).toLocaleTimeString("th-TH",{timeZone:"Asia/Bangkok"})}`:" · ยังไม่เช็กเอาต์"}`;
+   document.getElementById("coachWorkIn").disabled=!!shift;document.getElementById("coachWorkOut").disabled=!shift||!!shift.checked_out_at;
+ }
+ async function recordCoachWork(action){const button=document.getElementById(action==="checkin"?"coachWorkIn":"coachWorkOut");button.disabled=true;const message=document.getElementById("coachWorkMessage");message.textContent="กำลังบันทึก...";try{const r=await fetch("/api/admin-dashboard?mode=coach-attendance",{method:"POST",headers:{"Content-Type":"application/json","x-coach-session":sessionStorage.getItem("gambitCoachSession")||""},body:JSON.stringify({action})});const d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||"บันทึกไม่สำเร็จ");message.textContent="บันทึกสำเร็จ";await loadCoachWork();}catch(e){message.textContent=e.message;button.disabled=false;}}
+ document.getElementById("coachWorkIn").addEventListener("click",()=>recordCoachWork("checkin"));
+ document.getElementById("coachWorkOut").addEventListener("click",()=>recordCoachWork("checkout"));
 const auth = createAuth({
   elements,
   state,
@@ -2879,6 +2892,7 @@ function applyRole() {
 }
     elements.loginButton.addEventListener("click", auth.login);
     document.getElementById("coachLoginButton").addEventListener("click", auth.coachLogin);
+    document.getElementById("coachRegisterButton").addEventListener("click", auth.coachRegister);
 
 elements.adminKeyInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") auth.login();
@@ -2972,7 +2986,7 @@ elements.saveEditSessionButton.addEventListener(
     const response = await fetch("/api/admin-dashboard", {
       method: "GET",
       headers: {
-        "x-admin-key": state.adminKey, "x-line-id-token": sessionStorage.getItem("gambitCoachLineToken") || ""
+        "x-admin-key": state.adminKey, "x-coach-session": sessionStorage.getItem("gambitCoachSession") || ""
       }
     });
 
