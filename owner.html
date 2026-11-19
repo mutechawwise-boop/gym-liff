@@ -474,12 +474,23 @@
   <a href="#membershipOverview" data-owner-page="members">ภาพรวมสมาชิก</a>
   <a href="members.html">จัดการสมาชิก</a>
   <a href="#memberRegistrations" data-owner-page="registrations">คำขอสมัครสมาชิก</a>
+  <a href="#coachWorkspace" data-owner-page="coaches">🥋 จัดการ Coach</a>
   <a href="#membershipRenewals" data-owner-page="renewals">คำขอต่ออายุ</a>
   <a href="#financeOverview" data-owner-page="finance">การเงิน</a>
   <a href="#payments" data-owner-page="payments">รายการรับเงิน</a>
   <a href="#reports" data-owner-page="reports">รายงาน</a>
 </nav>
 <div class="owner-content">
+<section id="coachWorkspace" class="owner-card" style="display:none" aria-label="จัดการ Coach">
+<header style="margin-bottom:18px"><h2>🥋 จัดการ Coach</h2><p>คำขอสมัคร · สิทธิ์การใช้งาน · เวลาเข้างานและออกงาน</p></header>
+<section id="coachAccessManager" style="margin:22px auto;max-width:900px;padding:20px;border:1px solid #ddd;border-radius:14px;background:#fff">
+<h2>🥋 จัดการบัญชี Coach</h2>
+<p>Coach สมัครชื่อผู้ใช้และรหัสผ่านจากหน้า Admin — Owner อนุมัติหรือปิดสิทธิ์ได้ที่นี่</p>
+<button id="coachAccessRefresh" type="button" style="width:auto">โหลดรายชื่อ Coach</button>
+<div id="coachAccessRows" aria-live="polite"></div>
+</section>
+<section id="coachWorkOwnerReport" style="max-width:900px;margin:20px auto;padding:20px;background:#fff;border:1px solid #ddd;border-radius:14px"><h2>⏱️ รายงานเวลาทำงาน Coach</h2><label>วันที่ <input id="coachReportDate" type="date"></label><button type="button" id="coachReportLoad" style="width:auto">โหลดรายงาน</button><div id="coachReportRows" style="margin-top:14px"></div></section>
+</section>
 
     <section id="todayOverview" class="owner-card">
       <h2>📅 ภาพรวมวันนี้</h2>
@@ -1013,6 +1024,7 @@
       classes: ["todayClasses"],
       members: ["membershipOverview"],
       registrations: ["memberRegistrations"],
+      coaches: ["coachWorkspace"],
       renewals: ["membershipRenewals"],
       finance: ["financeOverview"],
       payments: ["payments"],
@@ -1025,6 +1037,7 @@
       const page = link?.dataset.ownerPage || "overview";
       ownerSections.forEach(section => {
         section.hidden = !ownerPages[page].includes(section.id);
+        if (section.id === "coachWorkspace") section.style.display = page === "coaches" ? "" : "none";
       });
       ownerNavLinks.forEach(item => {
         if (item.dataset.ownerPage === page) item.setAttribute("aria-current", "page");
@@ -2846,6 +2859,7 @@ async function startOwnerDashboard() {
   if (!allowed) return;
 
   document.querySelector(".owner-container").style.display = "";
+  if (location.hash === "#coachWorkspace") document.getElementById("coachAccessRefresh")?.click();
 
   try {
     await loadOwnerDashboard();
@@ -2864,12 +2878,6 @@ startOwnerDashboard();
 
   </script>
 
-<section id="coachAccessManager" style="margin:22px auto;max-width:900px;padding:20px;border:1px solid #ddd;border-radius:14px;background:#fff">
-<h2>🥋 จัดการบัญชี Coach</h2>
-<p>Coach สมัครชื่อผู้ใช้และรหัสผ่านจากหน้า Admin — Owner อนุมัติหรือปิดสิทธิ์ได้ที่นี่</p>
-<button id="coachAccessRefresh" type="button" style="width:auto">โหลดรายชื่อ Coach</button>
-<div id="coachAccessRows" aria-live="polite"></div>
-</section>
 <script>
 (function(){
  const box=document.getElementById('coachAccessRows');
@@ -2891,7 +2899,6 @@ startOwnerDashboard();
  btn.addEventListener('click',load);
 })();
 </script>
-<section id="coachWorkOwnerReport" style="max-width:900px;margin:20px auto;padding:20px;background:#fff;border:1px solid #ddd;border-radius:14px"><h2>⏱️ รายงานเวลาทำงาน Coach</h2><label>วันที่ <input id="coachReportDate" type="date"></label><button type="button" id="coachReportLoad" style="width:auto">โหลดรายงาน</button><div id="coachReportRows" style="margin-top:14px"></div></section>
 <script>(function(){const date=document.getElementById("coachReportDate"),out=document.getElementById("coachReportRows");date.value=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());document.getElementById("coachReportLoad").addEventListener("click",async()=>{out.textContent="กำลังโหลด...";try{const key=sessionStorage.getItem("gambitAdminKey");const [a,b]=await Promise.all([fetch('/api/admin-dashboard?mode=coach-access',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({action:'list'})}),fetch('/api/admin-dashboard?mode=coach-attendance&date='+encodeURIComponent(date.value),{headers:{'x-admin-key':key}})]);const c=await a.json(),d=await b.json();if(!a.ok||!b.ok)throw Error(c.error||d.error||'โหลดไม่สำเร็จ');const shifts=new Map((d.shifts||[]).map(s=>[s.coach_id,s]));out.replaceChildren();for(const coach of c.coaches){const s=shifts.get(coach.id);const row=document.createElement('p');const time=v=>v?new Date(v).toLocaleTimeString('th-TH',{timeZone:'Asia/Bangkok'}):'—';row.textContent=coach.display_name+' · เข้างาน '+time(s?.checked_in_at)+' · ออกงาน '+time(s?.checked_out_at);out.appendChild(row)}if(!c.coaches.length)out.textContent='ยังไม่มี Coach';}catch(e){out.textContent=e.message}})})();</script>
 </body>
 </html>
