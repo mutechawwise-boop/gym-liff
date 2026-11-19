@@ -1,3 +1,4 @@
+import { activeCoach } from "./lib/coach-auth.js";
 import { supabase } from "./lib/supabase.js";
 
 function getBangkokDateString() {
@@ -25,6 +26,79 @@ function calculateDaysRemaining(expiryDate, todayDate) {
   );
 }
 
+// Coach enrollment and Owner management reuse this existing serverless function.
+// These helpers never trust a LINE user ID supplied directly by the browser.
+async function verifyCoachLineToken(idToken) {
+  if (typeof idToken !== "string" || !idToken || idToken.length > 8192) return null;
+  const channelId = process.env.LINE_CHANNEL_ID;
+  if (!channelId) throw new Error("LINE_CHANNEL_ID is not configured");
+  const response = await fetch("https://api.line.me/oauth2/v2.1/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ id_token: idToken, client_id: channelId })
+  });
+  if (!response.ok) return null;
+  const claims = await response.json();
+  if (!claims.sub || String(claims.aud) !== String(channelId)) return null;
+  return { userId: String(claims.sub), name: String(claims.name || "Coach").slice(0, 150) };
+}
+
+async function coachRows(query) {
+  const response = await supabase.request(`gym_coaches?${query}`);
+  if (!response.ok) throw new Error("Cannot read coach records");
+  return response.json();
+}
+
+async function handleCoachAccess(request, json, isOwner) {
+  let body;
+  try { body = await request.json(); }
+  catch { return json({ success: false, error: "Invalid JSON" }, 400); }
+  const action = body?.action;
+  if (action === "request" || action === "status") {
+    const identity = await verifyCoachLineToken(body?.idToken);
+    if (!identity) return json({ success: false, error: "LINE authentication failed" }, 401);
+    const rows = await coachRows(`line_user_id=eq.${encodeURIComponent(identity.userId)}&select=id,display_name,role,is_active&limit=1`);
+    if (rows.length) {
+      const coach = rows[0];
+      return json({ success: true, state: coach.is_active ? "active" : "pending_or_disabled",
+        coach: { id: coach.id, displayName: coach.display_name, role: coach.role } });
+    }
+    if (action === "status") return json({ success: true, state: "not_requested" });
+    const response = await supabase.request("gym_coaches?select=id,display_name,role,is_active", {
+      method: "POST", headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ line_user_id: identity.userId, display_name: identity.name,
+        role: "coach", is_active: false })
+    });
+    if (!response.ok) {
+      // A concurrent request may have inserted the same LINE ID first.
+      if (response.status === 409) return json({ success: true, state: "pending_or_disabled" });
+      throw new Error("Cannot create coach request");
+    }
+    const created = await response.json();
+    return json({ success: true, state: "pending", coach: {
+      id: created[0].id, displayName: created[0].display_name } }, 201);
+  }
+  if (!isOwner) return json({ success: false, error: "Owner only" }, 403);
+  if (action === "list") {
+    const coaches = await coachRows("select=id,display_name,role,is_active,created_at,updated_at&order=created_at.desc");
+    return json({ success: true, coaches });
+  }
+  if (action === "set_active") {
+    const id = Number(body?.id);
+    if (!Number.isSafeInteger(id) || id <= 0 || typeof body?.isActive !== "boolean")
+      return json({ success: false, error: "Invalid coach or status" }, 400);
+    const response = await supabase.request(`gym_coaches?id=eq.${id}&select=id,is_active`, {
+      method: "PATCH", headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ is_active: body.isActive, updated_at: new Date().toISOString() })
+    });
+    if (!response.ok) throw new Error("Cannot update coach access");
+    const rows = await response.json();
+    if (!rows.length) return json({ success: false, error: "Coach not found" }, 404);
+    return json({ success: true, coach: rows[0] });
+  }
+  return json({ success: false, error: "Unknown coach action" }, 400);
+}
+
 export default {
   async fetch(request) {
     const json = (data, status = 200) =>
@@ -46,13 +120,14 @@ if (!["GET", "POST"].includes(request.method)) {
     try {
       const adminKey = request.headers.get("x-admin-key");
 
-const isCoach =
-  process.env.ADMIN_KEY &&
-  adminKey === process.env.ADMIN_KEY;
+const isOwner = Boolean(process.env.OWNER_KEY) && adminKey === process.env.OWNER_KEY;
+const isCoach = !isOwner && Boolean(await activeCoach(request));
 
-const isOwner =
-  process.env.OWNER_KEY &&
-  adminKey === process.env.OWNER_KEY;
+// Coach requests may be submitted without a shared password; management is Owner-only.
+      const requestUrl = new URL(request.url);
+      if (request.method === "POST" && requestUrl.searchParams.get("mode") === "coach-access") {
+        return await handleCoachAccess(request, json, isOwner);
+      }
 
 if (!isCoach && !isOwner) {
   return json(

@@ -37,7 +37,7 @@ export function createAuth({
       if (
         !response.ok ||
         !data.success ||
-        !["owner", "coach"].includes(data.role)
+        data.role !== "owner"
       ) {
         throw new Error(
           data.error || "รหัสไม่ถูกต้อง"
@@ -48,14 +48,8 @@ export function createAuth({
       sessionStorage.setItem("gambitAdminKey", value);
       setRole(state, data.role);
 
-      if (data.role === "owner") {
-        window.location.href = "owner.html";
-        return;
-      }
-
-      await loadAdminDashboard();
-      await loadOverview();
-      onAuthenticated?.();
+      window.location.href = "owner.html";
+      return;
 
     } catch (error) {
       sessionStorage.removeItem("gambitAdminKey");
@@ -75,8 +69,41 @@ export function createAuth({
     }
   }
 
+  async function coachLogin() {
+    elements.loginError.textContent = "";
+    const button = document.getElementById("coachLoginButton");
+    if (button) button.disabled = true;
+    try {
+      if (!window.liff) throw new Error("ไม่สามารถโหลด LINE LIFF ได้");
+      await window.liff.init({liffId:"2010879060-PKqAwFmt"});
+      if (!window.liff.isLoggedIn()) { window.liff.login({redirectUri:window.location.href}); return; }
+      const idToken = window.liff.getIDToken();
+      if (!idToken) throw new Error("ไม่พบ LINE ID Token กรุณาเข้าสู่ระบบ LINE อีกครั้ง");
+      const response = await fetch("/api/admin-dashboard?mode=coach-access", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"request",idToken})
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "ตรวจสอบ Coach ไม่สำเร็จ");
+      if (data.state !== "active") {
+        elements.loginError.textContent = "ส่งคำขอแล้ว กรุณารอ Owner อนุมัติ หรือสอบถาม Owner หากเคยได้รับสิทธิ์";
+        return;
+      }
+      sessionStorage.removeItem("gambitAdminKey");
+      sessionStorage.setItem("gambitCoachLineToken",idToken);
+      state.adminKey = "";
+      setRole(state,"coach");
+      await loadAdminDashboard();
+      await loadOverview();
+      onAuthenticated?.();
+    } catch(error) {
+      elements.loginError.textContent = error.message || "LINE Login ไม่สำเร็จ";
+    } finally { if (button) button.disabled = false; }
+  }
+
   function logout() {
     sessionStorage.removeItem("gambitAdminKey");
+    sessionStorage.removeItem("gambitCoachLineToken");
     logoutRole();
 
     state.adminKey = "";
@@ -92,7 +119,13 @@ export function createAuth({
     const savedAdminKey =
       sessionStorage.getItem("gambitAdminKey");
 
-    if (!savedAdminKey) return false;
+    if (!savedAdminKey) {
+      const token = sessionStorage.getItem("gambitCoachLineToken");
+      if (!token) return false;
+      state.adminKey = "";
+      setRole(state,"coach");
+      return true;
+    }
 
     state.adminKey = savedAdminKey;
     restoreRole(state);
@@ -102,6 +135,7 @@ export function createAuth({
 
   return {
     login,
+    coachLogin,
     logout,
     restoreSession
   };

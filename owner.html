@@ -2712,7 +2712,35 @@ function printHistoricalFinanceEntry(entry) {
   const win = window.open("", "_blank");
   if (!win) { financeUI.loadMessage.textContent = "กรุณาอนุญาต Pop-up เพื่อออกเอกสาร"; return; }
   win.document.open();
-  win.document.write(`<!doctype html><html lang="th"><head><meta charset="utf-8"><title>${escapeText(title)} #${escapeText(entry.id)}</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#111}h1{margin-bottom:4px}h2{margin-top:8px}table{width:100%;border-collapse:collapse;margin:14px 0 25px}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top}.warning{color:#a22;font-weight:bold;padding:12px;background:#fff1f1}.muted{color:#555}@media print{button{display:none}}</style></head><body><h1>GAMBIT JIUJITSU</h1><h2>${escapeText(title)}</h2><p class="muted">เลขรายการ #${escapeText(entry.id)}</p>${fullyPaid ? '<p>ชำระครบตามข้อมูลที่บันทึกในระบบ</p>' : '<p class="warning">ฉบับร่าง — ยังชำระไม่ครบหรือยังไม่บันทึกการชำระ ไม่ใช่หลักฐานการรับหรือจ่ายเงินครบจำนวน</p>'}<table>${rows.map(([label,value])=>`<tr><th>${escapeText(label)}</th><td>${escapeText(value)}</td></tr>`).join("")}</table>${paymentTable}<p class="muted">เอกสารออกจากข้อมูลรายการบัญชีที่บันทึกไว้ในระบบ</p><button onclick="window.print()">พิมพ์ / บันทึก PDF</button></body></html>`);
+  win.document.write(`<!doctype html><html lang="th"><head><meta charset="utf-8"><title>${escapeText(title)} #${escapeText(entry.id)}</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#111}h1{margin-bottom:4px}h2{margin-top:8px}table{width:100%;border-collapse:collapse;margin:14px 0 25px}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top}.warning{color:#a22;font-weight:bold;padding:12px;background:#fff1f1}.muted{color:#555}@media print{button{display:none}}</style></head><body><h1>GAMBIT JIUJITSU</h1><h2>${escapeText(title)}</h2><p class="muted">เลขรายการ #${escapeText(entry.id)}</p>${fullyPaid ? '<p>ชำระครบตามข้อมูลที่บันทึกในระบบ</p>' : '<p class="warning">ฉบับร่าง — ยังชำระไม่ครบหรือยังไม่บันทึกการชำระ ไม่ใช่หลักฐานการรับหรือจ่ายเงินครบจำนวน</p>'}<table>${rows.map(([label,value])=>`<tr><th>${escapeText(label)}</th><td>${escapeText(value)}</td></tr>`).join("")}</table>${paymentTable}<p class="muted">เอกสารออกจากข้อมูลรายการบัญชีที่บันทึกไว้ในระบบ</p><button onclick="window.print()">พิมพ์ / บันทึก PDF</button>
+<section id="coachAccessManager" style="margin:22px auto;max-width:900px;padding:20px;border:1px solid #ddd;border-radius:14px;background:#fff">
+<h2>🥋 จัดการสิทธิ์ Coach (LINE)</h2>
+<p>Coach ส่งคำขอผ่าน LINE จากหน้า Admin — Owner อนุมัติหรือปิดสิทธิ์ได้ที่นี่</p>
+<button id="coachAccessRefresh" type="button" style="width:auto">โหลดรายชื่อ Coach</button>
+<div id="coachAccessRows" aria-live="polite"></div>
+</section>
+<script>
+(function(){
+ const box=document.getElementById('coachAccessRows');
+ const btn=document.getElementById('coachAccessRefresh');
+ async function call(action,extra={}){
+  const key=sessionStorage.getItem('gambitAdminKey');
+  if(!key)throw new Error('กรุณาเข้าสู่ระบบ Owner');
+  const r=await fetch('/api/admin-dashboard?mode=coach-access',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({action,...extra})});
+  const data=await r.json();if(!r.ok||!data.success)throw new Error(data.error||'ทำรายการไม่สำเร็จ');return data;
+ }
+ async function load(){box.textContent='กำลังโหลด...';try{const data=await call('list');box.replaceChildren();if(!data.coaches.length){box.textContent='ยังไม่มีคำขอ Coach';return;}
+  for(const coach of data.coaches){const row=document.createElement('div');row.style.cssText='display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid #ddd';
+   const name=document.createElement('span');name.textContent=`${coach.display_name} · ${coach.is_active?'อนุมัติแล้ว':'รออนุมัติ / ปิดสิทธิ์'}`;
+   const toggle=document.createElement('button');toggle.type='button';toggle.style.width='auto';toggle.textContent=coach.is_active?'ปิดสิทธิ์':'อนุมัติ';
+   toggle.addEventListener('click',async()=>{if(!confirm(`ยืนยัน${coach.is_active?'ปิดสิทธิ์':'อนุมัติ'} ${coach.display_name}?`))return;toggle.disabled=true;try{await call('set_active',{id:coach.id,isActive:!coach.is_active});await load()}catch(e){alert(e.message);toggle.disabled=false}});
+   row.append(name,toggle);box.append(row);
+  }
+ }catch(e){box.textContent=e.message}}
+ btn.addEventListener('click',load);
+})();
+</script>
+</body></html>`);
   win.document.close(); win.focus();
 }
 
@@ -2861,5 +2889,33 @@ async function startOwnerDashboard() {
 startOwnerDashboard();
 
   </script>
+
+<section id="coachAccessManager" style="margin:22px auto;max-width:900px;padding:20px;border:1px solid #ddd;border-radius:14px;background:#fff">
+<h2>🥋 จัดการสิทธิ์ Coach (LINE)</h2>
+<p>Coach ส่งคำขอผ่าน LINE จากหน้า Admin — Owner อนุมัติหรือปิดสิทธิ์ได้ที่นี่</p>
+<button id="coachAccessRefresh" type="button" style="width:auto">โหลดรายชื่อ Coach</button>
+<div id="coachAccessRows" aria-live="polite"></div>
+</section>
+<script>
+(function(){
+ const box=document.getElementById('coachAccessRows');
+ const btn=document.getElementById('coachAccessRefresh');
+ async function call(action,extra={}){
+  const key=sessionStorage.getItem('gambitAdminKey');
+  if(!key)throw new Error('กรุณาเข้าสู่ระบบ Owner');
+  const r=await fetch('/api/admin-dashboard?mode=coach-access',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({action,...extra})});
+  const data=await r.json();if(!r.ok||!data.success)throw new Error(data.error||'ทำรายการไม่สำเร็จ');return data;
+ }
+ async function load(){box.textContent='กำลังโหลด...';try{const data=await call('list');box.replaceChildren();if(!data.coaches.length){box.textContent='ยังไม่มีคำขอ Coach';return;}
+  for(const coach of data.coaches){const row=document.createElement('div');row.style.cssText='display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid #ddd';
+   const name=document.createElement('span');name.textContent=`${coach.display_name} · ${coach.is_active?'อนุมัติแล้ว':'รออนุมัติ / ปิดสิทธิ์'}`;
+   const toggle=document.createElement('button');toggle.type='button';toggle.style.width='auto';toggle.textContent=coach.is_active?'ปิดสิทธิ์':'อนุมัติ';
+   toggle.addEventListener('click',async()=>{if(!confirm(`ยืนยัน${coach.is_active?'ปิดสิทธิ์':'อนุมัติ'} ${coach.display_name}?`))return;toggle.disabled=true;try{await call('set_active',{id:coach.id,isActive:!coach.is_active});await load()}catch(e){alert(e.message);toggle.disabled=false}});
+   row.append(name,toggle);box.append(row);
+  }
+ }catch(e){box.textContent=e.message}}
+ btn.addEventListener('click',load);
+})();
+</script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+import { activeCoach } from "./lib/coach-auth.js";
 export default {
   async fetch(request) {
     const json = (data, status = 200) =>
@@ -18,13 +19,8 @@ export default {
 const adminKey =
   request.headers.get("x-admin-key");
 
-const isCoach =
-  Boolean(process.env.ADMIN_KEY) &&
-  adminKey === process.env.ADMIN_KEY;
-
-const isOwner =
-  Boolean(process.env.OWNER_KEY) &&
-  adminKey === process.env.OWNER_KEY;
+const isOwner = Boolean(process.env.OWNER_KEY) && adminKey === process.env.OWNER_KEY;
+const isCoach = !isOwner && Boolean(await activeCoach(request));
 
 if (!isCoach && !isOwner) {
   return json(

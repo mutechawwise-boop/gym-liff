@@ -1,3 +1,4 @@
+import { activeCoach } from "./lib/coach-auth.js";
 // Shared atomic check-in. Authentication is performed by the caller before this RPC.
 async function callAtomicCheckin(supabaseUrl, secretKey, params) {
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/gym_checkin_atomic`, {
@@ -20,15 +21,43 @@ async function callAtomicCheckin(supabaseUrl, secretKey, params) {
   return response.json();
 }
 
+// Authorize an individual Coach using a verified LINE ID Token and current DB status.
+// This is intentionally local to an existing API file: no new Vercel function.
+async function verifiedActiveCoachForCheckin(request) {
+  const token = request.headers.get("x-line-id-token");
+  if (!token) return null;
+  if (token.length > 8192 || !process.env.LINE_CHANNEL_ID) return null;
+  const verify = await fetch("https://api.line.me/oauth2/v2.1/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ id_token: token, client_id: process.env.LINE_CHANNEL_ID })
+  });
+  if (!verify.ok) return null;
+  const claims = await verify.json();
+  if (!claims.sub || String(claims.aud) !== String(process.env.LINE_CHANNEL_ID)) return null;
+  const base = process.env.SUPABASE_URL;
+  const secret = process.env.SUPABASE_SECRET_KEY;
+  if (!base || !secret) throw new Error("Supabase environment is missing");
+  const response = await fetch(
+    `${base}/rest/v1/gym_coaches?line_user_id=eq.${encodeURIComponent(claims.sub)}&is_active=eq.true&select=id,line_user_id,role&limit=1`,
+    { headers: { apikey: secret, Authorization: `Bearer ${secret}` } }
+  );
+  if (!response.ok) throw new Error("Coach authorization lookup failed");
+  const rows = await response.json();
+  return rows.length === 1 ? rows[0] : null;
+}
+
 async function handleTeacherCheckin(request, body) {
   const json = (data, status = 200) => new Response(JSON.stringify(data), {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
   });
   const adminKey = request.headers.get("x-admin-key");
-  const isCoach = Boolean(process.env.ADMIN_KEY) && adminKey === process.env.ADMIN_KEY;
   const isOwner = Boolean(process.env.OWNER_KEY) && adminKey === process.env.OWNER_KEY;
-  if (!isCoach && !isOwner) return json({ error: "ไม่มีสิทธิ์เช็กชื่อแทนนักเรียน" }, 401);
+  let coach;
+  try { coach = isOwner ? null : await activeCoach(request); }
+  catch { return json({error:"ตรวจสอบสิทธิ์ Coach ไม่สำเร็จ"},500); }
+  if (!isOwner && !coach) return json({error:"ไม่มีสิทธิ์เช็กชื่อแทนนักเรียน"},401);
 
   const sessionId = Number(body.sessionId);
   const memberId = Number(body.memberId);
@@ -45,8 +74,9 @@ async function handleTeacherCheckin(request, body) {
       p_session_id: sessionId,
       p_member_id: memberId,
       p_checkin_method: "teacher",
-      // Legacy shared-key identity; replace with verified individual coach ID later.
-      p_checked_in_by: isOwner ? "owner" : "admin"
+      // Verified LINE identity is recorded for individual Coach auditability.
+      // Existing RPC parameter and check-in rules are unchanged.
+      p_checked_in_by: isOwner ? "owner" : (lineCoach ? `coach:${lineCoach.line_user_id}` : "admin")
     });
     return json({
       success: true,

@@ -1,3 +1,4 @@
+import { activeCoach } from "./lib/coach-auth.js";
 import {
   pushMemberCard,
   pushLineMessage
@@ -27,9 +28,7 @@ const adminKey =
 const ownerKey =
   process.env.OWNER_KEY;
 
-const isAdmin =
-  adminKey &&
-  accessKey === adminKey;
+const isAdmin = Boolean(await activeCoach(request));
 
 const isOwner =
   ownerKey &&

@@ -456,7 +456,7 @@ const role =
   );
 
 if (
-  !adminKey ||
+  (!adminKey && !sessionStorage.getItem("gambitCoachLineToken")) ||
   !["owner", "coach"].includes(role)
 ) {
   window.location.href =
@@ -481,7 +481,7 @@ if (
         {
           headers: {
             "x-admin-key":
-              adminKey
+              adminKey, "x-line-id-token": sessionStorage.getItem("gambitCoachLineToken") || ""
           }
         }
       );
@@ -990,7 +990,7 @@ async function saveMemberEdit() {
               "application/json",
 
             "x-admin-key":
-              adminKey
+              adminKey, "x-line-id-token": sessionStorage.getItem("gambitCoachLineToken") || ""
           },
 
           body: JSON.stringify({
@@ -1391,7 +1391,7 @@ saveBeltDetailButton.addEventListener(
                 "application/json",
 
               "x-admin-key":
-                adminKey
+                adminKey, "x-line-id-token": sessionStorage.getItem("gambitCoachLineToken") || ""
             },
 
             body: JSON.stringify({
@@ -1676,7 +1676,7 @@ deleteMemberButton?.addEventListener("click", async () => {
   try {
     const response = await fetch("/api/delete-member", {
       method: "POST",
-      headers: {"Content-Type":"application/json", "x-admin-key":sessionStorage.getItem("gambitAdminKey") || ""},
+      headers: {"Content-Type":"application/json", "x-admin-key":sessionStorage.getItem("gambitAdminKey") || "", "x-line-id-token":sessionStorage.getItem("gambitCoachLineToken") || ""},
       body: JSON.stringify({memberId: selectedMemberId, confirmCode: code})
     });
     const result = await response.json();
