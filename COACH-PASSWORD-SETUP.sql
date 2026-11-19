@@ -22,3 +22,13 @@ alter table public.gym_coach_shifts enable row level security;
 revoke all on public.gym_coach_credentials from anon,authenticated;
 revoke all on public.gym_coach_shifts from anon,authenticated;
 -- Existing service_role key in API accesses these tables. No public RLS policies.
+
+-- Each Coach may teach multiple scheduled classes on the same work day.
+create table if not exists public.gym_coach_shift_classes (
+ shift_id bigint not null references public.gym_coach_shifts(id) on delete cascade,
+ class_session_id bigint not null references public.class_sessions(id),
+ created_at timestamptz not null default now(),
+ primary key (shift_id,class_session_id)
+);
+alter table public.gym_coach_shift_classes enable row level security;
+revoke all on public.gym_coach_shift_classes from anon,authenticated;

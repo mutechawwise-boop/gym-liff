@@ -489,7 +489,7 @@
 <button id="coachAccessRefresh" type="button" style="width:auto">โหลดรายชื่อ Coach</button>
 <div id="coachAccessRows" aria-live="polite"></div>
 </section>
-<section id="coachWorkOwnerReport" style="max-width:900px;margin:20px auto;padding:20px;background:#fff;border:1px solid #ddd;border-radius:14px"><h2>⏱️ รายงานเวลาทำงาน Coach</h2><label>วันที่ <input id="coachReportDate" type="date"></label><button type="button" id="coachReportLoad" style="width:auto">โหลดรายงาน</button><div id="coachReportRows" style="margin-top:14px"></div></section>
+<section id="coachWorkOwnerReport" style="max-width:1050px;margin:20px auto;padding:20px;background:#fff;border:1px solid #ddd;border-radius:14px"><h2>⏱️ รายงาน Coach รายบุคคล / รายเดือน</h2><div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end"><label>เดือน <input id="coachReportMonth" type="month"></label><label>Coach <select id="coachReportPerson"><option value="">ทุกคน</option></select></label><button type="button" id="coachReportLoad" style="width:auto">โหลดรายงาน</button></div><div id="coachReportRows" style="margin-top:14px;overflow-x:auto"></div></section>
 </section>
 
     <section id="todayOverview" class="owner-card">
@@ -2899,6 +2899,27 @@ startOwnerDashboard();
  btn.addEventListener('click',load);
 })();
 </script>
-<script>(function(){const date=document.getElementById("coachReportDate"),out=document.getElementById("coachReportRows");date.value=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());document.getElementById("coachReportLoad").addEventListener("click",async()=>{out.textContent="กำลังโหลด...";try{const key=sessionStorage.getItem("gambitAdminKey");const [a,b]=await Promise.all([fetch('/api/admin-dashboard?mode=coach-access',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({action:'list'})}),fetch('/api/admin-dashboard?mode=coach-attendance&date='+encodeURIComponent(date.value),{headers:{'x-admin-key':key}})]);const c=await a.json(),d=await b.json();if(!a.ok||!b.ok)throw Error(c.error||d.error||'โหลดไม่สำเร็จ');const shifts=new Map((d.shifts||[]).map(s=>[s.coach_id,s]));out.replaceChildren();for(const coach of c.coaches){const s=shifts.get(coach.id);const row=document.createElement('p');const time=v=>v?new Date(v).toLocaleTimeString('th-TH',{timeZone:'Asia/Bangkok'}):'—';row.textContent=coach.display_name+' · เข้างาน '+time(s?.checked_in_at)+' · ออกงาน '+time(s?.checked_out_at);out.appendChild(row)}if(!c.coaches.length)out.textContent='ยังไม่มี Coach';}catch(e){out.textContent=e.message}})})();</script>
+<script>(function(){
+ const month=document.getElementById("coachReportMonth"),person=document.getElementById("coachReportPerson"),out=document.getElementById("coachReportRows");
+ month.value=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit"}).format(new Date()).slice(0,7);
+ const time=v=>v?new Date(v).toLocaleTimeString("th-TH",{timeZone:"Asia/Bangkok",hour:"2-digit",minute:"2-digit"}):"—";
+ const fmtDate=v=>new Date(v+"T12:00:00Z").toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"});
+ const hours=s=>s.checked_out_at?Math.max(0,(new Date(s.checked_out_at)-new Date(s.checked_in_at))/3600000):0;
+ const add=(tag,txt,parent)=>{const el=document.createElement(tag);el.textContent=txt;parent.appendChild(el);return el;};
+ async function fetchReport(){out.textContent="กำลังโหลด...";try{
+ const key=sessionStorage.getItem("gambitAdminKey")||"";
+ const headers={"x-admin-key":key};const a=await fetch("/api/admin-dashboard?mode=coach-access",{method:"POST",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify({action:"list"})});const c=await a.json();if(!a.ok||!c.success)throw Error(c.error||"โหลดรายชื่อ Coach ไม่สำเร็จ");
+ const old=person.value;person.replaceChildren(new Option("ทุกคน",""));for(const coach of c.coaches||[])person.add(new Option(coach.display_name,String(coach.id)));person.value=old;
+ const url="/api/admin-dashboard?mode=coach-attendance&view=monthly&month="+encodeURIComponent(month.value)+(person.value?"&coach_id="+encodeURIComponent(person.value):"");
+ const b=await fetch(url,{headers});const d=await b.json();if(!b.ok||!d.success)throw Error(d.error||"โหลดรายงานไม่สำเร็จ");
+ const map=new Map((c.coaches||[]).map(x=>[String(x.id),x.display_name]));const byShift=new Map();for(const item of d.assignments||[]){const arr=byShift.get(String(item.shift_id))||[];arr.push(item.class_sessions);byShift.set(String(item.shift_id),arr)}
+ const groups=new Map();for(const shift of d.shifts||[]){const id=String(shift.coach_id);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(shift)}
+ out.replaceChildren();if(!groups.size){out.textContent="ไม่มีบันทึกเวลาทำงานในเดือนนี้";return}
+ for(const [id,shifts] of groups){const all=shifts.flatMap(x=>byShift.get(String(x.id))||[]);const total=shifts.reduce((n,x)=>n+hours(x),0);add("h3",(map.get(id)||"Coach #"+id)+" — "+shifts.length+" วัน · "+all.length+" คลาส · "+total.toFixed(1)+" ชั่วโมง (จากเวลาเข้า–ออก)",out);
+ const table=document.createElement("table");table.style.cssText="width:100%;border-collapse:collapse;margin:10px 0 25px";const head=document.createElement("tr");for(const x of ["วันที่","เข้างาน","ออกงาน","คลาสที่สอน"]){const th=add("th",x,head);th.style.cssText="text-align:left;padding:8px;border-bottom:1px solid #ddd"}table.appendChild(head);
+ for(const shift of shifts){const row=document.createElement("tr");const classes=byShift.get(String(shift.id))||[];for(const x of [fmtDate(shift.work_date),time(shift.checked_in_at),time(shift.checked_out_at),classes.map(c=>(c?.classes?.name||"คลาส")+" ("+String(c?.start_time||"").slice(0,5)+")").join(", ")||"—"]){const td=add("td",x,row);td.style.cssText="padding:8px;border-bottom:1px solid #eee"}table.appendChild(row)}out.appendChild(table)}
+ }catch(e){out.textContent=e.message}}
+ document.getElementById("coachReportLoad").addEventListener("click",fetchReport);
+})();</script>
 </body>
 </html>
