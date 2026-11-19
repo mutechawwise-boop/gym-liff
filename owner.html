@@ -2904,20 +2904,19 @@ startOwnerDashboard();
  month.value=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit"}).format(new Date()).slice(0,7);
  const time=v=>v?new Date(v).toLocaleTimeString("th-TH",{timeZone:"Asia/Bangkok",hour:"2-digit",minute:"2-digit"}):"—";
  const fmtDate=v=>new Date(v+"T12:00:00Z").toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"});
- const hours=s=>s.checked_out_at?Math.max(0,(new Date(s.checked_out_at)-new Date(s.checked_in_at))/3600000):0;
  const add=(tag,txt,parent)=>{const el=document.createElement(tag);el.textContent=txt;parent.appendChild(el);return el;};
  async function fetchReport(){out.textContent="กำลังโหลด...";try{
- const key=sessionStorage.getItem("gambitAdminKey")||"";
- const headers={"x-admin-key":key};const a=await fetch("/api/admin-dashboard?mode=coach-access",{method:"POST",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify({action:"list"})});const c=await a.json();if(!a.ok||!c.success)throw Error(c.error||"โหลดรายชื่อ Coach ไม่สำเร็จ");
+ const key=sessionStorage.getItem("gambitAdminKey")||"",headers={"x-admin-key":key};
+ const a=await fetch("/api/admin-dashboard?mode=coach-access",{method:"POST",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify({action:"list"})}),c=await a.json();if(!a.ok||!c.success)throw Error(c.error||"โหลดรายชื่อ Coach ไม่สำเร็จ");
  const old=person.value;person.replaceChildren(new Option("ทุกคน",""));for(const coach of c.coaches||[])person.add(new Option(coach.display_name,String(coach.id)));person.value=old;
  const url="/api/admin-dashboard?mode=coach-attendance&view=monthly&month="+encodeURIComponent(month.value)+(person.value?"&coach_id="+encodeURIComponent(person.value):"");
- const b=await fetch(url,{headers});const d=await b.json();if(!b.ok||!d.success)throw Error(d.error||"โหลดรายงานไม่สำเร็จ");
- const map=new Map((c.coaches||[]).map(x=>[String(x.id),x.display_name]));const byShift=new Map();for(const item of d.assignments||[]){const arr=byShift.get(String(item.shift_id))||[];arr.push(item.class_sessions);byShift.set(String(item.shift_id),arr)}
- const groups=new Map();for(const shift of d.shifts||[]){const id=String(shift.coach_id);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(shift)}
- out.replaceChildren();if(!groups.size){out.textContent="ไม่มีบันทึกเวลาทำงานในเดือนนี้";return}
- for(const [id,shifts] of groups){const all=shifts.flatMap(x=>byShift.get(String(x.id))||[]);const total=shifts.reduce((n,x)=>n+hours(x),0);add("h3",(map.get(id)||"Coach #"+id)+" — "+shifts.length+" วัน · "+all.length+" คลาส · "+total.toFixed(1)+" ชั่วโมง (จากเวลาเข้า–ออก)",out);
- const table=document.createElement("table");table.style.cssText="width:100%;border-collapse:collapse;margin:10px 0 25px";const head=document.createElement("tr");for(const x of ["วันที่","เข้างาน","ออกงาน","คลาสที่สอน"]){const th=add("th",x,head);th.style.cssText="text-align:left;padding:8px;border-bottom:1px solid #ddd"}table.appendChild(head);
- for(const shift of shifts){const row=document.createElement("tr");const classes=byShift.get(String(shift.id))||[];for(const x of [fmtDate(shift.work_date),time(shift.checked_in_at),time(shift.checked_out_at),classes.map(c=>(c?.classes?.name||"คลาส")+" ("+String(c?.start_time||"").slice(0,5)+")").join(", ")||"—"]){const td=add("td",x,row);td.style.cssText="padding:8px;border-bottom:1px solid #eee"}table.appendChild(row)}out.appendChild(table)}
+ const b=await fetch(url,{headers}),d=await b.json();if(!b.ok||!d.success)throw Error(d.error||"โหลดรายงานไม่สำเร็จ");
+ const names=new Map((c.coaches||[]).map(x=>[String(x.id),x.display_name])),groups=new Map();for(const r of d.records||[]){const id=String(r.coach_id);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(r)}
+ out.replaceChildren();if(!groups.size){out.textContent="ไม่มีคลาสที่เช็กอินในเดือนนี้";return}
+ for(const [id,rows] of groups){const regular=rows.filter(r=>r.kind==="regular").length,priv=rows.length-regular;
+ add("h3",(names.get(id)||"Coach #"+id)+" — รวม "+rows.length+" คลาส (ปกติ "+regular+" / Private "+priv+")",out);
+ const table=document.createElement("table");table.style.cssText="width:100%;border-collapse:collapse;margin:10px 0 25px";const head=document.createElement("tr");for(const x of ["วันที่","ประเภท","ชื่อคลาส","เวลาเริ่ม","เวลาเช็กอิน"]){const th=add("th",x,head);th.style.cssText="text-align:left;padding:8px;border-bottom:1px solid #ddd"}table.appendChild(head);
+ for(const r of rows){const tr=document.createElement("tr");for(const x of [fmtDate(r.work_date),r.kind==="private"?"Private":"ปกติ",r.class_name,String(r.scheduled_start_time||"").slice(0,5),time(r.checked_in_at)]){const td=add("td",x,tr);td.style.cssText="padding:8px;border-bottom:1px solid #eee"}table.appendChild(tr)}out.appendChild(table)}
  }catch(e){out.textContent=e.message}}
  document.getElementById("coachReportLoad").addEventListener("click",fetchReport);
 })();</script>

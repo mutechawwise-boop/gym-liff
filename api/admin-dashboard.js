@@ -55,60 +55,54 @@ async function handleCoachAccess(request,json,isOwner){
  if(action==="set_active"){const id=Number(body.id);if(!Number.isSafeInteger(id)||id<1||typeof body.isActive!=="boolean")return json({success:false,error:"Invalid input"},400);const r=await supabase.request(`gym_coaches?id=eq.${id}&select=id,is_active`,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify({is_active:body.isActive,updated_at:new Date().toISOString()})});if(!r.ok)return json({success:false,error:"Cannot update Coach"},500);const rows=await r.json();return json({success:!!rows.length,coach:rows[0]});}
  return json({success:false,error:"Unknown action"},400);
 }
+// One attendance record per taught class. Times are generated on the server.
 async function handleCoachAttendance(request,json,isOwner,coach){
  const url=new URL(request.url);
- const date=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+ const date=getBangkokDateString();
  const mode=url.searchParams.get("view");
  if(request.method==="GET" && mode==="classes"){
   if(!coach)return json({success:false,error:"Coach only"},403);
-  const r=await supabase.request(`class_sessions?select=id,start_time,end_time,session_date,classes(name)&session_date=eq.${date}&status=eq.open&order=start_time.asc`);
-  if(!r.ok)return json({success:false,error:"โหลดตารางเรียนไม่สำเร็จ"},500);
+  const r=await supabase.request(`class_sessions?select=id,start_time,end_time,session_date,classes(name)&session_date=eq.${date}&order=start_time.asc`);
+  if(!r.ok)return json({success:false,error:"โหลดตารางเรียนไม่สำเร็จ กรุณาตรวจสอบสิทธิ์และข้อมูลคลาส"},500);
   return json({success:true,classes:await r.json()});
  }
  if(request.method==="GET" && mode==="monthly"){
   if(!isOwner)return json({success:false,error:"Owner only"},403);
   const month=url.searchParams.get("month");if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month||""))return json({success:false,error:"Invalid month"},400);
-  const from=month+"-01";const [year,mm]=month.split("-").map(Number);const to=new Date(Date.UTC(year,mm,1)).toISOString().slice(0,10);
-  const coachId=url.searchParams.get("coach_id");if(coachId && !/^[1-9]\d*$/.test(coachId))return json({success:false,error:"Invalid coach"},400);
-  const filter=coachId?`coach_id=eq.${coachId}&`:"";
-  const r=await supabase.request(`gym_coach_shifts?${filter}work_date=gte.${from}&work_date=lt.${to}&select=id,coach_id,work_date,checked_in_at,checked_out_at&order=work_date.asc&limit=2000`);
-  if(!r.ok)return json({success:false,error:"โหลดวันทำงานไม่สำเร็จ"},500);
-  const shifts=await r.json();const ids=shifts.map(x=>Number(x.id));let assignments=[];
-  if(ids.length){const ar=await supabase.request(`gym_coach_shift_classes?shift_id=in.(${ids.join(",")})&select=shift_id,class_session_id,class_sessions(id,session_date,start_time,end_time,classes(name))&limit=4000`);if(!ar.ok)return json({success:false,error:"โหลดคลาสที่สอนไม่สำเร็จ"},500);assignments=await ar.json();}
-  return json({success:true,shifts,assignments});
+  const [year,mm]=month.split("-").map(Number),from=month+"-01",to=new Date(Date.UTC(year,mm,1)).toISOString().slice(0,10);
+  const id=url.searchParams.get("coach_id");if(id&&!/^[1-9]\d*$/.test(id))return json({success:false,error:"Invalid coach"},400);
+  const filter=id?`coach_id=eq.${id}&`:"";
+  const r=await supabase.request(`gym_coach_class_checkins?${filter}work_date=gte.${from}&work_date=lt.${to}&select=*&order=checked_in_at.asc&limit=4000`);
+  if(!r.ok)return json({success:false,error:"โหลดรายงานคลาสไม่สำเร็จ กรุณารัน SQL migration"},500);
+  return json({success:true,records:await r.json()});
  }
  if(request.method==="GET"){
-  const day=url.searchParams.get("date");if(day&&!/^\d{4}-\d{2}-\d{2}$/.test(day))return json({success:false,error:"Invalid date"},400);
+  if(!coach&&!isOwner)return json({success:false,error:"ไม่มีสิทธิ์"},403);
   const filter=isOwner?"":`coach_id=eq.${coach.id}&`;
-  const q=`${filter}${day?`work_date=eq.${day}&`:""}select=id,coach_id,work_date,checked_in_at,checked_out_at&order=checked_in_at.desc&limit=200`;
-  const r=await supabase.request(`gym_coach_shifts?${q}`);if(!r.ok)return json({success:false,error:"โหลดเวลาทำงานไม่สำเร็จ"},500);
-  const shifts=await r.json();let assignments=[];
-  if(shifts.length){const ids=shifts.map(x=>Number(x.id));const ar=await supabase.request(`gym_coach_shift_classes?shift_id=in.(${ids.join(",")})&select=shift_id,class_session_id,class_sessions(id,classes(name))`);if(!ar.ok)return json({success:false,error:"โหลดคลาสไม่สำเร็จ"},500);assignments=await ar.json();}
-  return json({success:true,shifts,assignments});
+  const r=await supabase.request(`gym_coach_class_checkins?${filter}work_date=eq.${date}&select=*&order=checked_in_at.asc&limit=200`);
+  if(!r.ok)return json({success:false,error:"โหลดการเช็กอินไม่สำเร็จ กรุณารัน SQL migration"},500);
+  return json({success:true,records:await r.json()});
  }
  if(!coach)return json({success:false,error:"Coach only"},403);
  let body;try{body=await request.json()}catch{return json({success:false,error:"Invalid JSON"},400)}
- if(!["checkin","checkout","add_class"].includes(body?.action))return json({success:false,error:"Invalid action"},400);
- const existing=await supabase.request(`gym_coach_shifts?coach_id=eq.${coach.id}&work_date=eq.${date}&select=id,checked_in_at,checked_out_at&limit=1`);
- if(!existing.ok)return json({success:false,error:"โหลดเวลาไม่สำเร็จ"},500);const shifts=await existing.json();const shift=shifts[0];
- if(body.action==="checkout"){
-  if(!shift||shift.checked_out_at)return json({success:false,error:"ไม่พบการเช็กอินที่ยังไม่เช็กเอาต์"},409);
-  const r=await supabase.request(`gym_coach_shifts?id=eq.${shift.id}&checked_out_at=is.null&select=id,checked_out_at`,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify({checked_out_at:new Date().toISOString()})});
-  if(!r.ok)return json({success:false,error:"เช็กเอาต์ไม่สำเร็จ"},500);return json({success:true,shift:(await r.json())[0]});
+ if(body?.action!=="checkin")return json({success:false,error:"รองรับเฉพาะการเช็กอินรายคลาส"},400);
+ const kind=body.kind==="private"?"private":"regular";
+ let name,startTime=null,sessionId=null;
+ if(kind==="regular"){
+  sessionId=Number(body.classSessionId);
+  if(!Number.isSafeInteger(sessionId)||sessionId<1)return json({success:false,error:"กรุณาเลือกคลาสประจำวัน"},400);
+  const r=await supabase.request(`class_sessions?id=eq.${sessionId}&session_date=eq.${date}&select=id,start_time,classes(name)&limit=1`);
+  if(!r.ok)return json({success:false,error:"ตรวจสอบคลาสไม่สำเร็จ"},500);
+  const rows=await r.json();if(!rows.length)return json({success:false,error:"ไม่พบคลาสนี้ในตารางวันนี้"},400);
+  name=rows[0].classes?.name||"คลาส";startTime=rows[0].start_time;
+ }else{
+  name=String(body.privateName||"").trim();startTime=String(body.privateTime||"").trim();
+  if(name.length<2||name.length>100||!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime))return json({success:false,error:"กรุณาระบุชื่อ Private 2–100 ตัวอักษร และเวลา HH:MM"},400);
  }
- const classId=Number(body.classSessionId);if(!Number.isSafeInteger(classId)||classId<1)return json({success:false,error:"กรุณาเลือกคลาสจากตารางเรียน"},400);
- const vr=await supabase.request(`class_sessions?id=eq.${classId}&session_date=eq.${date}&status=eq.open&select=id&limit=1`);
- if(!vr.ok||!(await vr.json()).length)return json({success:false,error:"คลาสไม่อยู่ในตารางเรียนวันนี้"},400);
- if(body.action==="checkin"&&shift)return json({success:false,error:"วันนี้เช็กอินแล้ว สามารถเพิ่มคลาสได้"},409);
- if(body.action==="add_class"&&(!shift||shift.checked_out_at))return json({success:false,error:"ต้องเช็กอินก่อน และยังไม่เช็กเอาต์"},409);
- let shiftId=shift?.id;
- if(body.action==="checkin"){
-  const r=await supabase.request("gym_coach_shifts?select=id",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify({coach_id:coach.id,work_date:date})});
-  if(!r.ok)return json({success:false,error:"เช็กอินไม่สำเร็จ"},409);shiftId=(await r.json())[0].id;
- }
- const ar=await supabase.request("gym_coach_shift_classes?on_conflict=shift_id,class_session_id",{method:"POST",headers:{Prefer:"resolution=ignore-duplicates,return=minimal"},body:JSON.stringify({shift_id:shiftId,class_session_id:classId})});
- if(!ar.ok)return json({success:false,error:"บันทึกคลาสไม่สำเร็จ กรุณาตรวจสอบตาราง SQL"},500);
- return json({success:true,shiftId});
+ const data={coach_id:coach.id,work_date:date,kind,class_session_id:sessionId,class_name:name,scheduled_start_time:startTime,checked_in_at:new Date().toISOString()};
+ const r=await supabase.request("gym_coach_class_checkins?select=id,checked_in_at",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify(data)});
+ if(!r.ok){const detail=await r.text();return json({success:false,error:detail.includes("23505")?"เช็กอินคลาสนี้แล้ว":"บันทึกไม่สำเร็จ กรุณาตรวจสอบ SQL migration"},detail.includes("23505")?409:500)}
+ return json({success:true,record:(await r.json())[0]});
 }
 
 export default {
