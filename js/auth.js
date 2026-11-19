@@ -75,7 +75,7 @@ export function createAuth({
     if (button) button.disabled = true;
     try {
       if (!window.liff) throw new Error("ไม่สามารถโหลด LINE LIFF ได้");
-      await window.liff.init({liffId:"2010879060-PKqAwFmt"});
+      await window.liff.init({liffId:"2010879060-pNUb1Njk"});
       if (!window.liff.isLoggedIn()) { window.liff.login({redirectUri:window.location.href}); return; }
       const idToken = window.liff.getIDToken();
       if (!idToken) throw new Error("ไม่พบ LINE ID Token กรุณาเข้าสู่ระบบ LINE อีกครั้ง");
