@@ -2416,6 +2416,16 @@ document.getElementById("ownerDateText").textContent =
             .filter(s => s.session_date === today && s.status !== "cancelled")
             .sort((a,b) => String(a.start_time).localeCompare(String(b.start_time)));
           const attendance = Array.isArray(data.attendance) ? data.attendance : [];
+          const coachNames = data.coachNames || {};
+          const checkedBy = a => {
+            if(a.checkin_method === "manual") return "เพิ่มย้อนหลัง";
+            if(a.checkin_method !== "teacher") return "นักเรียนเช็กเอง";
+            const actor=String(a.checked_in_by||"");
+            if(actor === "owner") return "เช็กชื่อโดย Owner";
+            const match=/^coach:(\d+)$/.exec(actor);
+            if(match) return "เช็กชื่อโดย Coach " + (coachNames[match[1]] || "#"+match[1]);
+            return "โค้ชเช็กให้ (ไม่มีข้อมูลผู้เช็ก)";
+          };
           const members = new Map((Array.isArray(data.members) ? data.members : []).map(m => [String(m.id),m]));
           const heading = document.createElement("p");
           heading.style.color = "#666";
@@ -2445,7 +2455,7 @@ document.getElementById("ownerDateText").textContent =
                 const member = members.get(String(a.member_id));
                 const name = member?.nickname || member?.full_name || member?.display_name || `สมาชิก #${a.member_id}`;
                 const time = a.checked_in_at ? new Intl.DateTimeFormat("th-TH",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Bangkok"}).format(new Date(a.checked_in_at)) : "-";
-                const method = a.checkin_method === "teacher" ? "โค้ชเช็กให้" : a.checkin_method === "manual" ? "เพิ่มย้อนหลัง" : "เช็กผ่าน LINE";
+                const method = checkedBy(a);
                 const li = document.createElement("li");
                 li.textContent = `${name} · ${time} น. · ${method}`;
                 ul.appendChild(li);
