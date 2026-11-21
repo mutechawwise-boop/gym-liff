@@ -69,7 +69,7 @@ async function handleCoachAttendance(request, json, isOwner, coach) {
     if (!coach && !isOwner) return json({ success: false, error: "ไม่มีสิทธิ์" }, 403);
     const r = await supabase.request("gym_branches?select=id,code,name,active&active=eq.true&order=id.asc");
     if (!r.ok) return json({ success: false, error: "โหลดสาขาไม่สำเร็จ" }, 500);
-    return json({ success: true, branches: await r.json() });
+    return json({ success: true, view: "branches", branches: await r.json() });
   }
 
   if (request.method === "GET" && view === "coaches") {
@@ -101,6 +101,10 @@ async function handleCoachAttendance(request, json, isOwner, coach) {
     if (!r.ok) return json({ success: false, error: "โหลดรายงานคลาสไม่สำเร็จ" }, 500);
     return json({ success: true, records: await r.json() });
   }
+
+  if (request.method === "GET" && view) return json({ success: false, error: "Unknown coach attendance view" }, 400);
+
+  if (request.method === "GET" && view) return json({ success: false, error: "Unknown coach attendance view" }, 400);
 
   if (request.method === "GET") {
     if (!coach && !isOwner) return json({ success: false, error: "ไม่มีสิทธิ์" }, 403);
