@@ -489,7 +489,7 @@
 <button id="coachAccessRefresh" type="button" style="width:auto">โหลดรายชื่อ Coach</button>
 <div id="coachAccessRows" aria-live="polite"></div>
 </section>
-<section id="coachWorkOwnerReport" style="max-width:1050px;margin:20px auto;padding:20px;background:#fff;border:1px solid #ddd;border-radius:14px"><h2>⏱️ รายงาน Coach รายบุคคล / รายเดือน</h2><div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end"><label>เดือน <input id="coachReportMonth" type="month"></label><label>Coach <select id="coachReportPerson"><option value="">ทุกคน</option></select></label><button type="button" id="coachReportLoad" style="width:auto">โหลดรายงาน</button></div><div id="coachReportRows" style="margin-top:14px;overflow-x:auto"></div></section>
+<section id="coachWorkOwnerReport" style="max-width:1050px;margin:20px auto;padding:20px;background:#fff;border:1px solid #ddd;border-radius:14px"><h2>⏱️ รายงาน Coach รายบุคคล / รายเดือน</h2><div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end"><label>เดือน <input id="coachReportMonth" type="month"></label><label>Coach <select id="coachReportPerson"><option value="">ทุกคน</option></select></label><button type="button" id="coachReportLoad" style="width:auto">โหลดรายงาน</button><button type="button" id="coachReportExcel" style="width:auto;background:#137c47;color:white;border:0;border-radius:8px;padding:10px 14px">⬇ Excel (.xlsx)</button><button type="button" id="coachReportPdf" style="width:auto;background:#a52a2a;color:white;border:0;border-radius:8px;padding:10px 14px">⬇ PDF</button></div><p id="coachExportStatus" role="status" style="font-size:13px;color:#555;margin:10px 0">เลือกเดือนและ Coach แล้วกดส่งออกได้ทันที · PDF ใช้เมนูบันทึกเป็น PDF ในหน้าพิมพ์</p><div id="coachReportRows" style="margin-top:14px;overflow-x:auto"></div></section>
 </section>
 
     <section id="todayOverview" class="owner-card">
@@ -2928,6 +2928,73 @@ startOwnerDashboard();
  const table=document.createElement("table");table.style.cssText="width:100%;border-collapse:collapse;margin:10px 0 25px";const head=document.createElement("tr");for(const x of ["วันที่","ประเภท","ชื่อคลาส","เวลาเริ่ม","เวลาเช็กอิน"]){const th=add("th",x,head);th.style.cssText="text-align:left;padding:8px;border-bottom:1px solid #ddd"}table.appendChild(head);
  for(const r of rows){const tr=document.createElement("tr");for(const x of [fmtDate(r.work_date),r.kind==="private"?"Private":"ปกติ",r.class_name,String(r.scheduled_start_time||"").slice(0,5),time(r.checked_in_at)]){const td=add("td",x,tr);td.style.cssText="padding:8px;border-bottom:1px solid #eee"}table.appendChild(tr)}out.appendChild(table)}
  }catch(e){out.textContent=e.message}}
+
+ // Export always re-fetches the currently selected month/coach; no stale on-screen snapshot.
+ const status=document.getElementById("coachExportStatus");
+ const excelButton=document.getElementById("coachReportExcel"),pdfButton=document.getElementById("coachReportPdf");
+ async function getExportData(){
+   const selectedMonth=month.value,selectedCoach=person.value;
+   if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(selectedMonth))throw Error("กรุณาเลือกเดือนรายงาน");
+   const key=sessionStorage.getItem("gambitAdminKey");if(!key)throw Error("กรุณาเข้าสู่ระบบ Owner");
+   const headers={"x-admin-key":key};
+   const [coachesRes,recordsRes]=await Promise.all([
+     fetch("/api/admin-dashboard?mode=coach-access",{method:"POST",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify({action:"list"}),cache:"no-store"}),
+     fetch("/api/admin-dashboard?mode=coach-attendance&view=monthly&month="+encodeURIComponent(selectedMonth)+(selectedCoach?"&coach_id="+encodeURIComponent(selectedCoach):""),{headers,cache:"no-store"})
+   ]);
+   const [coachesData,recordsData]=await Promise.all([coachesRes.json(),recordsRes.json()]);
+   if(!coachesRes.ok||!coachesData.success)throw Error(coachesData.error||"โหลดรายชื่อ Coach ไม่สำเร็จ");
+   if(!recordsRes.ok||!recordsData.success)throw Error(recordsData.error||"โหลดรายงาน Coach ไม่สำเร็จ");
+   const names=new Map((coachesData.coaches||[]).map(c=>[String(c.id),c.display_name]));
+   const records=(Array.isArray(recordsData.records)?recordsData.records:[]).filter(r=>
+     String(r.work_date||"").slice(0,7)===selectedMonth&&(!selectedCoach||String(r.coach_id)===selectedCoach)
+   ).sort((a,b)=>String(a.work_date).localeCompare(String(b.work_date))||String(a.checked_in_at||"").localeCompare(String(b.checked_in_at||"")));
+   if(!records.length)throw Error("ไม่มีรายการเช็กอินในเดือน/Coach ที่เลือก จึงไม่สร้างไฟล์เปล่า");
+   const groups=new Map();for(const r of records){const id=String(r.coach_id);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(r);}
+   const summary=[...groups].map(([id,rows])=>({id,name:names.get(id)||"Coach #"+id,total:rows.length,regular:rows.filter(r=>r.kind==="regular").length,private:rows.filter(r=>r.kind==="private").length}));
+   const filename="GAMBIT-Coach-"+selectedMonth+(selectedCoach?"-"+selectedCoach: "-ALL");
+   return {selectedMonth,selectedCoach,records,summary,names,filename};
+ }
+ function exportRows(data){return data.records.map(r=>[data.names.get(String(r.coach_id))||"Coach #"+r.coach_id,String(r.work_date||"").slice(0,10),r.kind==="private"?"Private":"ปกติ",r.class_name||"-",String(r.scheduled_start_time||"").slice(0,5)||"-",time(r.checked_in_at)]);}
+ let sheetPromise;
+ function loadSheetJS(){
+   if(window.XLSX)return Promise.resolve(window.XLSX);
+   if(!sheetPromise)sheetPromise=new Promise((resolve,reject)=>{
+     const script=document.createElement("script");script.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+     script.onload=()=>window.XLSX?resolve(window.XLSX):reject(Error("โหลดเครื่องมือ Excel ไม่สำเร็จ"));
+     script.onerror=()=>reject(Error("โหลดเครื่องมือ Excel ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต"));
+     document.head.appendChild(script);
+   }).catch(e=>{sheetPromise=null;throw e;});
+   return sheetPromise;
+ }
+ function safeSheetName(name){return String(name).replace(/[\\/?*\[\]:]/g," ").slice(0,31)||"Coach";}
+ function excelSheet(XLSX,rows,widths){const ws=XLSX.utils.aoa_to_sheet(rows);ws["!cols"]=widths.map(w=>({wch:w}));ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length-1,c:rows[0].length-1}})};return ws;}
+ excelButton.addEventListener("click",async()=>{
+   excelButton.disabled=true;status.textContent="กำลังเตรียม Excel...";
+   try{
+     const data=await getExportData(),XLSX=await loadSheetJS(),wb=XLSX.utils.book_new();
+     const summary=[["Coach","คลาสทั้งหมด","คลาสปกติ","Private","เดือน"],...data.summary.map(s=>[s.name,s.total,s.regular,s.private,data.selectedMonth])];
+     XLSX.utils.book_append_sheet(wb,excelSheet(XLSX,summary,[26,17,16,15,15]),"สรุปรายเดือน");
+     const header=["Coach","วันที่สอน","ประเภท","ชื่อคลาส","เวลาเริ่ม","เวลาเช็กอิน"];
+     XLSX.utils.book_append_sheet(wb,excelSheet(XLSX,[header,...exportRows(data)],[26,16,14,45,16,18]),"รายละเอียดคลาส");
+     XLSX.writeFile(wb,data.filename+".xlsx");status.textContent="สร้างไฟล์ Excel เรียบร้อย";
+   }catch(e){status.textContent="ส่งออก Excel ไม่สำเร็จ: "+e.message;}
+   finally{excelButton.disabled=false;}
+ });
+ function escapeExport(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+ pdfButton.addEventListener("click",async()=>{
+   // Open synchronously to avoid popup blockers after awaiting the API.
+   const win=window.open("","_blank");if(!win){status.textContent="กรุณาอนุญาต Pop-up เพื่อส่งออก PDF";return;}
+   win.document.write('<!doctype html><html lang="th"><meta charset="utf-8"><title>กำลังเตรียมรายงาน</title><body style="font-family:sans-serif;padding:25px">กำลังเตรียมรายงาน Coach...</body></html>');
+   pdfButton.disabled=true;status.textContent="กำลังเตรียม PDF...";
+   try{
+     const data=await getExportData(),details=exportRows(data);
+     const html=`<!doctype html><html lang="th"><head><meta charset="utf-8"><title>${escapeExport(data.filename)}</title><style>
+       @page{size:A4 landscape;margin:12mm}body{font-family:Arial,Tahoma,sans-serif;color:#171717;font-size:11px;margin:0}h1{font-size:22px;margin:0}h2{font-size:16px;margin:7px 0 14px}.muted{color:#666}.summary{display:flex;gap:12px;flex-wrap:wrap;margin:15px 0}.card{border:1px solid #ccc;border-radius:7px;padding:10px 14px;min-width:150px}.card strong{display:block;font-size:17px;margin-top:5px}table{width:100%;border-collapse:collapse;margin:12px 0 22px}th,td{padding:7px 8px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top}th{background:#f0f0f0}thead{display:table-header-group}tr{break-inside:avoid}.print-btn{padding:10px 15px;border:0;border-radius:7px;background:#111;color:#fff;cursor:pointer}@media print{.print-btn{display:none}}
+       </style></head><body><h1>GAMBIT JIUJITSU</h1><h2>รายงาน Coach ประจำเดือน ${escapeExport(data.selectedMonth)}</h2><p class="muted">${data.selectedCoach?"รายบุคคล":"Coach ทุกคน"} · ข้อมูลการเช็กอินจากระบบ</p><div class="summary">${data.summary.map(s=>`<div class="card">${escapeExport(s.name)}<strong>${s.total} คลาส</strong>ปกติ ${s.regular} · Private ${s.private}</div>`).join("")}</div><table><thead><tr>${["Coach","วันที่สอน","ประเภท","ชื่อคลาส","เวลาเริ่ม","เวลาเช็กอิน"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${details.map(row=>`<tr>${row.map(v=>`<td>${escapeExport(v)}</td>`).join("")}</tr>`).join("")}</tbody></table><p class="muted">จำนวนคลาสนับตามรายการเช็กอินของ Coach แต่ละคน</p><button class="print-btn" onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button></body></html>`;
+     win.document.open();win.document.write(html);win.document.close();win.focus();status.textContent="เปิดรายงานแล้ว · เลือก Print → Save as PDF เพื่อบันทึกไฟล์";
+   }catch(e){win.close();status.textContent="ส่งออก PDF ไม่สำเร็จ: "+e.message;}
+   finally{pdfButton.disabled=false;}
+ });
  document.getElementById("coachReportLoad").addEventListener("click",fetchReport);
 })();</script>
 </body>
