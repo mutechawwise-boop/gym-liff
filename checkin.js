@@ -21,6 +21,30 @@ async function callAtomicCheckin(supabaseUrl, secretKey, params) {
   return response.json();
 }
 
+// Member attendance is currently enabled only at Lak Si. Never trust a branch sent by the client.
+async function getMemberCheckinBranch(supabaseUrl, secretKey) {
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/gym_branches?code=eq.lak-si&member_checkin_enabled=eq.true&active=eq.true&select=id&limit=1`,
+    { headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}`, Accept: "application/json" } }
+  );
+  if (!response.ok) throw new Error("Cannot verify member check-in branch");
+  const branches = await response.json();
+  if (branches.length !== 1 || !Number.isSafeInteger(Number(branches[0].id))) {
+    throw new Error("Lak Si member check-in branch is unavailable");
+  }
+  return Number(branches[0].id);
+}
+
+async function isAllowedMemberSession(supabaseUrl, secretKey, sessionId) {
+  const branchId = await getMemberCheckinBranch(supabaseUrl, secretKey);
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/class_sessions?id=eq.${sessionId}&branch_id=eq.${branchId}&select=id&limit=1`,
+    { headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}`, Accept: "application/json" } }
+  );
+  if (!response.ok) throw new Error("Cannot verify session branch");
+  return (await response.json()).length === 1;
+}
+
 async function handleTeacherCheckin(request, body) {
   const json = (data, status = 200) => new Response(JSON.stringify(data), {
     status,
@@ -44,6 +68,9 @@ async function handleTeacherCheckin(request, body) {
   if (!supabaseUrl || !secretKey) return json({ error: "ตั้งค่า Supabase ไม่ครบ" }, 500);
 
   try {
+    if (!(await isAllowedMemberSession(supabaseUrl, secretKey, sessionId))) {
+      return json({ error: "คลาสนี้ยังไม่เปิดให้เช็กชื่อสมาชิก" }, 403);
+    }
     const result = await callAtomicCheckin(supabaseUrl, secretKey, {
       p_session_id: sessionId,
       p_member_id: memberId,
@@ -1104,9 +1131,11 @@ if (mode === "sessions") {
 
   // ดึงเฉพาะคลาสวันนี้
   // ที่เปิดอยู่และสมาชิกมีสิทธิ์
+   const memberBranchId = await getMemberCheckinBranch(supabaseUrl, supabaseSecretKey);
   const sessionsResponse = await fetch(
     `${supabaseUrl}/rest/v1/class_sessions` +
       `?session_date=eq.${todayThailand}` +
+      `&branch_id=eq.${memberBranchId}` +
       `&status=eq.open` +
       `&class_id=in.(${classIds.join(",")})` +
       `&select=id,class_id,session_date,start_time,end_time,classes(id,name)` +
@@ -1157,9 +1186,11 @@ if (
   );
 }
 
+const memberBranchId = await getMemberCheckinBranch(supabaseUrl, supabaseSecretKey);
 const sessionResponse = await fetch(
   `${supabaseUrl}/rest/v1/class_sessions` +
     `?id=eq.${requestedSessionId}` +
+    `&branch_id=eq.${memberBranchId}` +
     `&session_date=eq.${todayThailand}` +
     `&status=eq.open` +
     `&select=id,class_id,session_date,start_time,end_time` +
