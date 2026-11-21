@@ -2913,7 +2913,7 @@ startOwnerDashboard();
 </script>
 <script>(function(){
  const month=document.getElementById("coachReportMonth"),person=document.getElementById("coachReportPerson"),branch=document.getElementById("coachReportBranch"),out=document.getElementById("coachReportRows");
- async function loadBranches(){try{const key=sessionStorage.getItem("gambitAdminKey")||"";const r=await fetch("/api/gym-branches",{headers:{"x-admin-key":key},cache:"no-store"});const d=await r.json();if(!r.ok||!d.success||!Array.isArray(d.branches))throw Error(d.error||"API ไม่ส่งรายชื่อสาขา");const previous=branch.value;branch.replaceChildren(new Option("ทุกสาขา",""));branchNames.clear();for(const b of d.branches){branchNames.set(String(b.id),b.name);branch.add(new Option(b.name,String(b.id)));}branch.value=previous;}catch(e){document.getElementById("coachExportStatus").textContent="โหลดตัวเลือกสาขาไม่ได้: "+e.message;}}
+ async function loadBranches(){try{const key=sessionStorage.getItem("gambitAdminKey")||"";const r=await fetch("/api/admin-dashboard?mode=coach-attendance&view=branches",{headers:{"x-admin-key":key},cache:"no-store"});const d=await r.json();if(!r.ok||!d.success||!Array.isArray(d.branches))throw Error(d.error||"API ไม่ส่งรายชื่อสาขา");const previous=branch.value;branch.replaceChildren(new Option("ทุกสาขา",""));branchNames.clear();for(const b of d.branches){branchNames.set(String(b.id),b.name);branch.add(new Option(b.name,String(b.id)));}branch.value=previous;}catch(e){document.getElementById("coachExportStatus").textContent="โหลดตัวเลือกสาขาไม่ได้: "+e.message;}}
  loadBranches();
  month.value=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit"}).format(new Date()).slice(0,7);
  const branchNames=new Map();
@@ -2961,7 +2961,7 @@ startOwnerDashboard();
    const filename="GAMBIT-Coach-"+selectedMonth+(selectedCoach?"-"+selectedCoach: "-ALL")+(selectedBranch?"-branch-"+selectedBranch: "-all-branches");
    return {selectedMonth,selectedCoach,selectedBranch,branchName,records,summary,names,filename};
  }
- function exportRows(data){return data.records.map(r=>[data.names.get(String(r.coach_id))||"Coach #"+r.coach_id,branchLabel(r.branch_id),String(r.work_date||"").slice(0,10),r.kind==="private"?"Private":"ปกติ",r.class_name||"-",String(r.scheduled_start_time||"").slice(0,5)||"-",time(r.checked_in_at)]);}
+ function exportRows(data){return data.records.map(r=>[data.names.get(String(r.coach_id))||"Coach #"+r.coach_id,([...branch.options].find(o=>o.value===String(r.branch_id))?.text||String(r.branch_id||"-")),String(r.work_date||"").slice(0,10),r.kind==="private"?"Private":"ปกติ",r.class_name||"-",String(r.scheduled_start_time||"").slice(0,5)||"-",time(r.checked_in_at)]);}
  let sheetPromise;
  function loadSheetJS(){
    if(window.XLSX)return Promise.resolve(window.XLSX);
