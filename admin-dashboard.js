@@ -55,23 +55,111 @@ async function handleCoachAccess(request,json,isOwner){
  if(action==="set_active"){const id=Number(body.id);if(!Number.isSafeInteger(id)||id<1||typeof body.isActive!=="boolean")return json({success:false,error:"Invalid input"},400);const r=await supabase.request(`gym_coaches?id=eq.${id}&select=id,is_active`,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify({is_active:body.isActive,updated_at:new Date().toISOString()})});if(!r.ok)return json({success:false,error:"Cannot update Coach"},500);const rows=await r.json();return json({success:!!rows.length,coach:rows[0]});}
  return json({success:false,error:"Unknown action"},400);
 }
-async function handleCoachAttendance(request,json,isOwner,coach){
- if(request.method==="GET"){
-  const url=new URL(request.url);const day=url.searchParams.get("date");if(day&&!/^\d{4}-\d{2}-\d{2}$/.test(day))return json({success:false,error:"Invalid date"},400);
-  const filter=isOwner?"":`coach_id=eq.${coach.id}&`;
-  const q=`${filter}${day?`work_date=eq.${day}&`:""}select=id,coach_id,work_date,checked_in_at,checked_out_at&order=checked_in_at.desc&limit=200`;
-  const r=await supabase.request(`gym_coach_shifts?${q}`);if(!r.ok)throw new Error("Coach shifts table missing; apply SQL migration");return json({success:true,shifts:await r.json()});
- }
- if(!coach)return json({success:false,error:"Coach only"},403);
- const body=await request.json();if(!["checkin","checkout"].includes(body?.action))return json({success:false,error:"Invalid action"},400);
- const date=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
- const existing=await supabase.request(`gym_coach_shifts?coach_id=eq.${coach.id}&work_date=eq.${date}&select=id,checked_in_at,checked_out_at&limit=1`);if(!existing.ok)throw new Error("Coach shifts table missing");const shifts=await existing.json();const shift=shifts[0];
- if(body.action==="checkin"){
-  if(shift)return json({success:false,error:"วันนี้เช็กอินแล้ว"},409);
-  const r=await supabase.request("gym_coach_shifts?select=id,checked_in_at",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify({coach_id:coach.id,work_date:date})});if(!r.ok)return json({success:false,error:"เช็กอินไม่สำเร็จ"},409);return json({success:true,shift:(await r.json())[0]});
- }
- if(!shift||shift.checked_out_at)return json({success:false,error:"ไม่พบการเช็กอินที่ยังไม่เช็กเอาต์"},409);
- const r=await supabase.request(`gym_coach_shifts?id=eq.${shift.id}&checked_out_at=is.null&select=id,checked_out_at`,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify({checked_out_at:new Date().toISOString()})});if(!r.ok)return json({success:false,error:"เช็กเอาต์ไม่สำเร็จ"},500);return json({success:true,shift:(await r.json())[0]});
+// Coach attendance is branch-aware. The server determines the branch for regular classes.
+async function handleCoachAttendance(request, json, isOwner, coach) {
+  const url = new URL(request.url);
+  const date = getBangkokDateString();
+  const view = url.searchParams.get("view");
+  const requestedBranch = url.searchParams.get("branch_id");
+  if (requestedBranch && !/^[1-9]\d*$/.test(requestedBranch)) {
+    return json({ success: false, error: "Invalid branch" }, 400);
+  }
+
+  if (request.method === "GET" && view === "branches") {
+    if (!coach && !isOwner) return json({ success: false, error: "ไม่มีสิทธิ์" }, 403);
+    const r = await supabase.request("gym_branches?select=id,code,name,active&active=eq.true&order=id.asc");
+    if (!r.ok) return json({ success: false, error: "โหลดสาขาไม่สำเร็จ" }, 500);
+    return json({ success: true, branches: await r.json() });
+  }
+
+  if (request.method === "GET" && view === "coaches") {
+    if (!isOwner) return json({ success: false, error: "Owner only" }, 403);
+    const rows = await coachRows("select=id,display_name&order=display_name.asc");
+    return json({ success: true, coaches: rows });
+  }
+
+  if (request.method === "GET" && view === "classes") {
+    if (!coach) return json({ success: false, error: "Coach only" }, 403);
+    const branchFilter = requestedBranch ? `&branch_id=eq.${requestedBranch}` : "";
+    const r = await supabase.request(`class_sessions?select=id,branch_id,display_name,start_time,end_time,session_date,classes(name)&session_date=eq.${date}&status=eq.open${branchFilter}&order=start_time.asc`);
+    if (!r.ok) return json({ success: false, error: "โหลดตารางเรียนไม่สำเร็จ" }, 500);
+    return json({ success: true, classes: await r.json() });
+  }
+
+  if (request.method === "GET" && view === "monthly") {
+    if (!isOwner) return json({ success: false, error: "Owner only" }, 403);
+    const month = url.searchParams.get("month");
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month || "")) return json({ success: false, error: "Invalid month" }, 400);
+    const [year, mm] = month.split("-").map(Number);
+    const from = month + "-01";
+    const to = new Date(Date.UTC(year, mm, 1)).toISOString().slice(0, 10);
+    const coachId = url.searchParams.get("coach_id");
+    if (coachId && !/^[1-9]\d*$/.test(coachId)) return json({ success: false, error: "Invalid coach" }, 400);
+    const coachFilter = coachId ? `coach_id=eq.${coachId}&` : "";
+    const branchFilter = requestedBranch ? `branch_id=eq.${requestedBranch}&` : "";
+    const r = await supabase.request(`gym_coach_class_checkins?${coachFilter}${branchFilter}work_date=gte.${from}&work_date=lt.${to}&select=*&order=checked_in_at.asc&limit=4000`);
+    if (!r.ok) return json({ success: false, error: "โหลดรายงานคลาสไม่สำเร็จ" }, 500);
+    return json({ success: true, records: await r.json() });
+  }
+
+  if (request.method === "GET") {
+    if (!coach && !isOwner) return json({ success: false, error: "ไม่มีสิทธิ์" }, 403);
+    const coachFilter = isOwner ? "" : `coach_id=eq.${coach.id}&`;
+    const branchFilter = requestedBranch ? `branch_id=eq.${requestedBranch}&` : "";
+    const r = await supabase.request(`gym_coach_class_checkins?${coachFilter}${branchFilter}work_date=eq.${date}&select=*&order=checked_in_at.asc&limit=200`);
+    if (!r.ok) return json({ success: false, error: "โหลดการเช็กอินไม่สำเร็จ" }, 500);
+    return json({ success: true, records: await r.json() });
+  }
+
+  if (!coach) return json({ success: false, error: "Coach only" }, 403);
+  let body;
+  try { body = await request.json(); }
+  catch { return json({ success: false, error: "Invalid JSON" }, 400); }
+  if (body?.action !== "checkin") return json({ success: false, error: "รองรับเฉพาะการเช็กอินรายคลาส" }, 400);
+  if (body.kind !== "regular" && body.kind !== "private") return json({ success: false, error: "Invalid class kind" }, 400);
+
+  const kind = body.kind;
+  let name, startTime = null, sessionId = null, branchId = null;
+  if (kind === "regular") {
+    sessionId = Number(body.classSessionId);
+    if (!Number.isSafeInteger(sessionId) || sessionId < 1) return json({ success: false, error: "กรุณาเลือกคลาสประจำวัน" }, 400);
+    const r = await supabase.request(`class_sessions?id=eq.${sessionId}&session_date=eq.${date}&status=eq.open&select=id,branch_id,display_name,start_time,classes(name)&limit=1`);
+    if (!r.ok) return json({ success: false, error: "ตรวจสอบคลาสไม่สำเร็จ" }, 500);
+    const rows = await r.json();
+    if (!rows.length) return json({ success: false, error: "ไม่พบคลาสนี้ในตารางวันนี้" }, 400);
+    const session = rows[0];
+    branchId = Number(session.branch_id);
+    if (!Number.isSafeInteger(branchId) || branchId < 1) return json({ success: false, error: "คลาสนี้ยังไม่ได้กำหนดสาขา" }, 409);
+    if (body.branchId != null && Number(body.branchId) !== branchId) return json({ success: false, error: "สาขาที่เลือกไม่ตรงกับคลาส" }, 400);
+    name = session.display_name || session.classes?.name || "คลาส";
+    startTime = session.start_time;
+  } else {
+    name = String(body.privateName || "").trim();
+    startTime = String(body.privateTime || "").trim();
+    if (name.length < 2 || name.length > 100 || !/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)) return json({ success: false, error: "กรุณาระบุชื่อ Private 2–100 ตัวอักษร และเวลา HH:MM" }, 400);
+    // Backward compatibility: old Coach UI has no branch selector and means Lak Si.
+    if (body.branchId == null || body.branchId === "") {
+      const r = await supabase.request("gym_branches?code=eq.lak-si&active=eq.true&select=id&limit=1");
+      if (!r.ok) return json({ success: false, error: "ตรวจสอบสาขาไม่สำเร็จ" }, 500);
+      const rows = await r.json();
+      branchId = Number(rows[0]?.id);
+    } else {
+      branchId = Number(body.branchId);
+    }
+    if (!Number.isSafeInteger(branchId) || branchId < 1) return json({ success: false, error: "กรุณาเลือกสาขา" }, 400);
+  }
+
+  const branchResponse = await supabase.request(`gym_branches?id=eq.${branchId}&active=eq.true&select=id&limit=1`);
+  if (!branchResponse.ok) return json({ success: false, error: "ตรวจสอบสาขาไม่สำเร็จ" }, 500);
+  if (!(await branchResponse.json()).length) return json({ success: false, error: "สาขานี้ไม่ได้เปิดใช้งาน" }, 403);
+
+  const data = { coach_id: coach.id, branch_id: branchId, work_date: date, kind, class_session_id: sessionId, class_name: name, scheduled_start_time: startTime, checked_in_at: new Date().toISOString() };
+  const r = await supabase.request("gym_coach_class_checkins?select=id,checked_in_at,branch_id", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(data) });
+  if (!r.ok) {
+    const detail = await r.text();
+    return json({ success: false, error: detail.includes("23505") ? "เช็กอินคลาสนี้แล้ว" : "บันทึกไม่สำเร็จ กรุณาตรวจสอบ SQL migration" }, detail.includes("23505") ? 409 : 500);
+  }
+  return json({ success: true, record: (await r.json())[0] });
 }
 
 export default {
