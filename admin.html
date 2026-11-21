@@ -748,9 +748,10 @@
 
 <section class="card coach-work-card" id="coachWorkCard">
   <div class="coach-work-heading"><div><div class="coach-work-eyebrow">COACH ATTENDANCE</div><h2>เช็กอินการสอน</h2><p>เลือกคลาสที่สอนแล้วบันทึกเวลาเข้าได้เลย ไม่ต้องเช็กเอาต์</p></div><div class="coach-work-total"><strong id="coachWorkCount">0</strong><span>คลาสวันนี้</span></div></div>
-  <div class="coach-work-form"><label for="coachWorkClass">คลาสที่สอนวันนี้</label><select id="coachWorkClass"><option value="">กำลังโหลดตารางเรียน...</option></select><label class="coach-private-option"><input type="checkbox" id="coachPrivateToggle"><span>＋ เพิ่มคลาส Private</span></label><div id="coachPrivateFields" hidden><label>ชื่อคลาส Private <input id="coachPrivateName" maxlength="100" placeholder="เช่น Private BJJ 1:1"></label><label>เวลาเริ่มคลาส <input id="coachPrivateTime" type="time"></label></div><button type="button" id="coachWorkIn">เช็กอินคลาสที่สอน</button><p id="coachWorkMessage" role="status" aria-live="polite"></p></div>
+  <div class="coach-work-form"><label for="coachWorkBranch">สาขาที่สอน</label><select id="coachWorkBranch" style="display:block;width:100%;padding:13px 14px;margin:0 0 16px;border:1px solid #d8dde1;border-radius:12px;background:white"><option value="">กำลังโหลดสาขา...</option></select><label for="coachWorkClass">คลาสที่สอนวันนี้</label><select id="coachWorkClass"><option value="">กำลังโหลดตารางเรียน...</option></select><label class="coach-private-option"><input type="checkbox" id="coachPrivateToggle"><span>＋ เพิ่มคลาส Private</span></label><div id="coachPrivateFields" hidden><label>ชื่อคลาส Private <input id="coachPrivateName" maxlength="100" placeholder="เช่น Private BJJ 1:1"></label><label>เวลาเริ่มคลาส <input id="coachPrivateTime" type="time"></label></div><button type="button" id="coachWorkIn">เช็กอินคลาสที่สอน</button><p id="coachWorkMessage" role="status" aria-live="polite"></p></div>
   <div class="coach-work-history"><div class="coach-work-history-head"><h3>รายการเช็กอินวันนี้</h3><span id="coachWorkCountBadge" class="coach-work-count-badge">0 คลาส</span></div><div id="coachWorkStatus" aria-live="polite">กำลังโหลด...</div></div>
 </section>
+
 <section id="dashboardSection" class="card">
     <div class="dashboard-summary">
         <article class="summary-card">
@@ -2976,14 +2977,41 @@ await loadOverview();
     right.append(badge,time);row.append(left,right);status.appendChild(row);
   }
  }
- async function loadCoachClasses(){const select=document.getElementById("coachWorkClass");try{const r=await fetch("/api/admin-dashboard?mode=coach-attendance&view=classes",{headers:{"x-coach-session":sessionStorage.getItem("gambitCoachSession")||""}}),d=await r.json();if(!r.ok)throw Error(d.error||"โหลดคลาสไม่สำเร็จ");select.replaceChildren(new Option("เลือกคลาสจากตารางวันนี้",""));for(const c of d.classes||[])select.add(new Option((c.classes?.name||"คลาส")+" · "+String(c.start_time||"").slice(0,5)+"–"+String(c.end_time||"").slice(0,5),String(c.id)));if(!d.classes?.length)select.options[0].text="วันนี้ไม่มีคลาสในตาราง (สามารถเพิ่ม Private ได้)";}catch(e){select.replaceChildren(new Option(e.message,""));}}
+ async function loadCoachBranches(){
+  const select=document.getElementById("coachWorkBranch");
+  try{
+   const r=await fetch("/api/admin-dashboard?mode=coach-attendance&view=branches",{headers:{"x-coach-session":sessionStorage.getItem("gambitCoachSession")||""}});
+   const d=await r.json();if(!r.ok)throw Error(d.error||"โหลดสาขาไม่สำเร็จ");
+   select.replaceChildren(new Option("เลือกสาขาที่สอน",""));
+   for(const branch of d.branches||[])select.add(new Option(branch.name,String(branch.id)));
+   const priorBranch=sessionStorage.getItem("gambitCoachWorkBranch");
+   if(priorBranch&&(d.branches||[]).some(b=>String(b.id)===priorBranch))select.value=priorBranch;
+   const lakSi=(d.branches||[]).find(b=>b.code==="lak-si");
+   if(!select.value&&lakSi)select.value=String(lakSi.id);
+   else if(!select.value&&d.branches?.length===1)select.value=String(d.branches[0].id);
+   await loadCoachClasses();
+  }catch(e){select.replaceChildren(new Option(e.message,""));document.getElementById("coachWorkClass").replaceChildren(new Option("ไม่สามารถโหลดคลาสได้",""));}
+ }
+ async function loadCoachClasses(){
+  const select=document.getElementById("coachWorkClass"),branchId=document.getElementById("coachWorkBranch").value;
+  if(!branchId){select.replaceChildren(new Option("กรุณาเลือกสาขาก่อน",""));return;}
+  try{
+   const r=await fetch("/api/admin-dashboard?mode=coach-attendance&view=classes&branch_id="+encodeURIComponent(branchId),{headers:{"x-coach-session":sessionStorage.getItem("gambitCoachSession")||""}});
+   const d=await r.json();if(!r.ok)throw Error(d.error||"โหลดคลาสไม่สำเร็จ");
+   select.replaceChildren(new Option("เลือกคลาสจากตารางวันนี้",""));
+   for(const c of d.classes||[])select.add(new Option((c.display_name||c.classes?.name||"คลาส")+" · "+String(c.start_time||"").slice(0,5)+"–"+String(c.end_time||"").slice(0,5),String(c.id)));
+   if(!d.classes?.length)select.options[0].text="วันนี้ไม่มีคลาสในสาขานี้ (สามารถเพิ่ม Private ได้)";
+  }catch(e){select.replaceChildren(new Option(e.message,""));}
+ }
+ document.getElementById("coachWorkBranch").addEventListener("change",()=>{sessionStorage.setItem("gambitCoachWorkBranch",document.getElementById("coachWorkBranch").value);loadCoachClasses().catch(console.error)});
  const privateToggle=document.getElementById("coachPrivateToggle");privateToggle.addEventListener("change",()=>{document.getElementById("coachPrivateFields").hidden=!privateToggle.checked;document.getElementById("coachWorkClass").disabled=privateToggle.checked});
  document.getElementById("coachWorkIn").addEventListener("click",async()=>{
   const btn=document.getElementById("coachWorkIn"),msg=document.getElementById("coachWorkMessage");btn.disabled=true;msg.textContent="กำลังบันทึก...";
-  try{const body=privateToggle.checked?{action:"checkin",kind:"private",privateName:document.getElementById("coachPrivateName").value,privateTime:document.getElementById("coachPrivateTime").value}:{action:"checkin",kind:"regular",classSessionId:Number(document.getElementById("coachWorkClass").value)};
+  try{const branchId=Number(document.getElementById("coachWorkBranch").value);if(!branchId)throw Error("กรุณาเลือกสาขา");if(!privateToggle.checked&&!document.getElementById("coachWorkClass").value)throw Error("กรุณาเลือกคลาส");const body=privateToggle.checked?{action:"checkin",kind:"private",branchId,privateName:document.getElementById("coachPrivateName").value,privateTime:document.getElementById("coachPrivateTime").value}:{action:"checkin",kind:"regular",classSessionId:Number(document.getElementById("coachWorkClass").value),branchId};
   const r=await fetch("/api/admin-dashboard?mode=coach-attendance",{method:"POST",headers:{"Content-Type":"application/json","x-coach-session":sessionStorage.getItem("gambitCoachSession")||""},body:JSON.stringify(body)}),d=await r.json();if(!r.ok||!d.success)throw Error(d.error||"บันทึกไม่สำเร็จ");msg.textContent="บันทึกเช็กอินคลาสสำเร็จ";await loadCoachWork();}catch(e){msg.textContent=e.message}finally{btn.disabled=false}
  });
- loadCoachClasses().catch(console.error);loadCoachWork().catch(e=>document.getElementById("coachWorkMessage").textContent=e.message);
+ loadCoachBranches().catch(console.error);loadCoachWork().catch(e=>document.getElementById("coachWorkMessage").textContent=e.message);
+
 const auth = createAuth({
   elements,
   state,
