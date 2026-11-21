@@ -104,8 +104,6 @@ async function handleCoachAttendance(request, json, isOwner, coach) {
 
   if (request.method === "GET" && view) return json({ success: false, error: "Unknown coach attendance view" }, 400);
 
-  if (request.method === "GET" && view) return json({ success: false, error: "Unknown coach attendance view" }, 400);
-
   if (request.method === "GET") {
     if (!coach && !isOwner) return json({ success: false, error: "ไม่มีสิทธิ์" }, 403);
     const coachFilter = isOwner ? "" : `coach_id=eq.${coach.id}&`;
@@ -194,6 +192,13 @@ const isCoach = !isOwner && Boolean(await activeCoach(request));
       const requestUrl = new URL(request.url);
       if (request.method === "POST" && requestUrl.searchParams.get("mode") === "coach-access") {
         return await handleCoachAccess(request, json, isOwner);
+      }
+      // Explicit branch-list dispatch. Never fall through to the attendance records view.
+      if (request.method === "GET" && requestUrl.searchParams.get("mode") === "coach-attendance" && requestUrl.searchParams.get("view") === "branches") {
+        if (!isOwner && !isCoach) return json({ success: false, error: "ไม่มีสิทธิ์" }, 401);
+        const branchResult = await supabase.request("gym_branches?select=id,code,name,active&active=eq.true&order=id.asc");
+        if (!branchResult.ok) return json({ success: false, error: "โหลดรายชื่อสาขาไม่สำเร็จ" }, 502);
+        return json({ success: true, view: "branches", branches: await branchResult.json() });
       }
       if (requestUrl.searchParams.get("mode") === "coach-attendance") {
         if (!isOwner && !isCoach) return json({success:false,error:"ไม่มีสิทธิ์"},401);
