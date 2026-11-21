@@ -752,20 +752,6 @@
   <div class="coach-work-history"><div class="coach-work-history-head"><h3>รายการเช็กอินวันนี้</h3><span id="coachWorkCountBadge" class="coach-work-count-badge">0 คลาส</span></div><div id="coachWorkStatus" aria-live="polite">กำลังโหลด...</div></div>
 </section>
 
-<section class="card" id="ownerCoachReport" data-owner style="margin-top:20px">
-  <h2>รายงานการสอน Coach (Owner)</h2>
-  <p>เลือกเดือน สาขา และโค้ช เพื่อดูรายการเช็กอินการสอน</p>
-  <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end">
-    <label>เดือน <input type="month" id="ownerCoachMonth"></label>
-    <label>สาขา <select id="ownerCoachBranch"><option value="">ทุกสาขา</option></select></label>
-    <label>โค้ช <select id="ownerCoachPerson"><option value="">ทุกคน</option></select></label>
-    <button type="button" id="ownerCoachLoad">ดูรายงาน</button>
-    <button type="button" id="ownerCoachCsv" disabled>ส่งออก Excel (CSV)</button>
-    <button type="button" id="ownerCoachPrint" disabled>พิมพ์ / บันทึก PDF</button>
-  </div>
-  <p id="ownerCoachReportStatus" role="status"></p>
-  <div style="overflow:auto"><table id="ownerCoachReportTable" style="width:100%;border-collapse:collapse"><thead><tr><th>วันที่</th><th>สาขา</th><th>โค้ช</th><th>คลาส</th><th>เวลาเริ่ม</th><th>เวลาเช็กอิน</th></tr></thead><tbody></tbody></table></div>
-</section>
 <section id="dashboardSection" class="card">
     <div class="dashboard-summary">
         <article class="summary-card">
@@ -3026,74 +3012,6 @@ await loadOverview();
  });
  loadCoachBranches().catch(console.error);loadCoachWork().catch(e=>document.getElementById("coachWorkMessage").textContent=e.message);
 
-// Owner report: read-only. CSV opens in Excel; print dialog supports Save as PDF.
-let ownerCoachReportRows = [];
-let ownerCoachBranchNames = new Map(), ownerCoachNames = new Map();
-const ownerReportEl = id => document.getElementById(id);
-const ownerReportApi = async query => {
-  const response = await fetch('/api/admin-dashboard?mode=coach-attendance&' + query, {headers:{'x-admin-key':state.adminKey}});
-  const data = await response.json();
-  if (!response.ok || !data.success) throw Error(data.error || 'โหลดรายงานไม่สำเร็จ');
-  return data;
-};
-async function ownerCoachReportSetup() {
-  if (!state.adminKey) return;
-  const [branches, coaches] = await Promise.all([
-    ownerReportApi('view=branches'),
-    ownerReportApi('view=coaches')
-  ]);
-  const branch = ownerReportEl('ownerCoachBranch'), person = ownerReportEl('ownerCoachPerson');
-  branch.replaceChildren(new Option('ทุกสาขา',''));
-  person.replaceChildren(new Option('ทุกคน',''));
-  ownerCoachBranchNames = new Map((branches.branches||[]).map(x=>[String(x.id),x.name]));
-  ownerCoachNames = new Map((coaches.coaches||[]).map(x=>[String(x.id),x.display_name]));
-  for (const b of branches.branches||[]) branch.add(new Option(b.name,b.id));
-  for (const c of coaches.coaches||[]) person.add(new Option(c.display_name,c.id));
-}
-async function ownerCoachReportLoad() {
-  const status=ownerReportEl('ownerCoachReportStatus');
-  try {
-    if(!state.adminKey) throw Error('กรุณาล็อกอิน Owner ก่อน');
-    const month=ownerReportEl('ownerCoachMonth').value;
-    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw Error('กรุณาเลือกเดือน');
-    const params = new URLSearchParams({view:'monthly',month});
-    const branch=ownerReportEl('ownerCoachBranch').value, coach=ownerReportEl('ownerCoachPerson').value;
-    if(branch)params.set('branch_id',branch);
-    if(coach)params.set('coach_id',coach);
-    const result=await ownerReportApi(params.toString());
-    ownerCoachReportRows=result.records||[];
-    const tbody=ownerReportEl('ownerCoachReportTable').querySelector('tbody');
-    tbody.replaceChildren();
-    for(const record of ownerCoachReportRows){
-      const tr=document.createElement('tr');
-      const values=[record.work_date,ownerCoachBranchNames.get(String(record.branch_id))||record.branch_id||'',ownerCoachNames.get(String(record.coach_id))||record.coach_id||'',record.class_name||'',record.scheduled_start_time||'',record.checked_in_at?new Date(record.checked_in_at).toLocaleString('th-TH',{timeZone:'Asia/Bangkok'}):''];
-      for(const value of values){const td=document.createElement('td');td.textContent=String(value);td.style.padding='8px';td.style.borderBottom='1px solid #ddd';tr.append(td)}
-      tbody.append(tr);
-    }
-    status.textContent=`พบ ${ownerCoachReportRows.length} รายการ`;
-    ownerReportEl('ownerCoachCsv').disabled=false;
-    ownerReportEl('ownerCoachPrint').disabled=false;
-  } catch(e){status.textContent=e.message;ownerReportEl('ownerCoachCsv').disabled=true;ownerReportEl('ownerCoachPrint').disabled=true}
-}
-ownerReportEl('ownerCoachLoad').addEventListener('click',ownerCoachReportLoad);
-ownerReportEl('ownerCoachCsv').addEventListener('click',()=>{
-  const escapeCell = v => '"'+String(v??'').replace(/"/g,'""')+'"';
-  const header=['วันที่','สาขา','โค้ช','คลาส','เวลาเริ่ม','เวลาเช็กอิน'];
-  const rows=ownerCoachReportRows.map(r=>[r.work_date,ownerCoachBranchNames.get(String(r.branch_id))||r.branch_id,ownerCoachNames.get(String(r.coach_id))||r.coach_id,r.class_name,r.scheduled_start_time,r.checked_in_at?new Date(r.checked_in_at).toLocaleString('th-TH',{timeZone:'Asia/Bangkok'}):'']);
-  const csv='\uFEFF'+[header,...rows].map(row=>row.map(escapeCell).join(',')).join('\r\n');
-  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  const a=document.createElement('a');a.href=url;a.download='coach-attendance-'+ownerReportEl('ownerCoachMonth').value+'.csv';a.click();URL.revokeObjectURL(url);
-});
-ownerReportEl('ownerCoachPrint').addEventListener('click',()=>{
-  const table=ownerReportEl('ownerCoachReportTable').cloneNode(true);
-  const win=window.open('','_blank');if(!win){ownerReportEl('ownerCoachReportStatus').textContent='กรุณาอนุญาตป๊อปอัปเพื่อพิมพ์';return;}
-  win.document.title='รายงานการสอน Coach';
-  const h=win.document.createElement('h2');h.textContent='รายงานการสอน Coach — '+ownerReportEl('ownerCoachMonth').value;
-  const style=win.document.createElement('style');style.textContent='body{font-family:sans-serif;padding:24px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:7px;text-align:left}';
-  win.document.head.append(style);win.document.body.append(h,table);win.focus();win.print();
-});
-ownerReportEl('ownerCoachMonth').value=new Date().toISOString().slice(0,7);
-
 const auth = createAuth({
   elements,
   state,
@@ -3102,7 +3020,6 @@ const auth = createAuth({
   onAuthenticated: applyRole
 });
 function applyRole() {
-  ownerCoachReportSetup().catch(e=>{ownerReportEl('ownerCoachReportStatus').textContent=e.message});
   const signedIn = document.getElementById("coachSignedInAs");
   if (signedIn) {
     const coachSession = sessionStorage.getItem("gambitCoachSession");
