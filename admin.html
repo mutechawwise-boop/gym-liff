@@ -2980,7 +2980,7 @@ await loadOverview();
  async function loadCoachBranches(){
   const select=document.getElementById("coachWorkBranch");
   try{
-   const r=await fetch("/api/admin-dashboard?mode=coach-attendance&view=branches",{headers:{"x-coach-session":sessionStorage.getItem("gambitCoachSession")||""}});
+   const r=await fetch("/api/gym-branches",{headers:{"x-coach-session":sessionStorage.getItem("gambitCoachSession")||""}});
    const d=await r.json();if(!r.ok)throw Error(d.error||"โหลดสาขาไม่สำเร็จ");
    select.replaceChildren(new Option("เลือกสาขาที่สอน",""));
    for(const branch of d.branches||[])select.add(new Option(branch.name,String(branch.id)));
