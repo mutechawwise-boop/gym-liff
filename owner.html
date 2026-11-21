@@ -2913,9 +2913,11 @@ startOwnerDashboard();
 </script>
 <script>(function(){
  const month=document.getElementById("coachReportMonth"),person=document.getElementById("coachReportPerson"),branch=document.getElementById("coachReportBranch"),out=document.getElementById("coachReportRows");
- async function loadBranches(){try{const key=sessionStorage.getItem("gambitAdminKey")||"";const r=await fetch("/api/admin-dashboard?mode=coach-attendance&view=branches",{headers:{"x-admin-key":key},cache:"no-store"});const d=await r.json();if(!r.ok||!d.success||!Array.isArray(d.branches))throw Error(d.error||"API ไม่ส่งรายชื่อสาขา");const previous=branch.value;branch.replaceChildren(new Option("ทุกสาขา",""));for(const b of d.branches)branch.add(new Option(b.name,String(b.id)));branch.value=previous;}catch(e){document.getElementById("coachExportStatus").textContent="โหลดตัวเลือกสาขาไม่ได้: "+e.message;}}
+ async function loadBranches(){try{const key=sessionStorage.getItem("gambitAdminKey")||"";const r=await fetch("/api/gym-branches",{headers:{"x-admin-key":key},cache:"no-store"});const d=await r.json();if(!r.ok||!d.success||!Array.isArray(d.branches))throw Error(d.error||"API ไม่ส่งรายชื่อสาขา");const previous=branch.value;branch.replaceChildren(new Option("ทุกสาขา",""));branchNames.clear();for(const b of d.branches){branchNames.set(String(b.id),b.name);branch.add(new Option(b.name,String(b.id)));}branch.value=previous;}catch(e){document.getElementById("coachExportStatus").textContent="โหลดตัวเลือกสาขาไม่ได้: "+e.message;}}
  loadBranches();
  month.value=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit"}).format(new Date()).slice(0,7);
+ const branchNames=new Map();
+ const branchLabel=id=>branchNames.get(String(id))||("สาขา #"+String(id??"-"));
  const time=v=>v?new Date(v).toLocaleTimeString("th-TH",{timeZone:"Asia/Bangkok",hour:"2-digit",minute:"2-digit"}):"—";
  const fmtDate=v=>new Date(v+"T12:00:00Z").toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"});
  const add=(tag,txt,parent)=>{const el=document.createElement(tag);el.textContent=txt;parent.appendChild(el);return el;};
@@ -2929,8 +2931,8 @@ startOwnerDashboard();
  out.replaceChildren();if(!groups.size){out.textContent="ไม่มีคลาสที่เช็กอินในเดือนนี้";return}
  for(const [id,rows] of groups){const regular=rows.filter(r=>r.kind==="regular").length,priv=rows.length-regular;
  add("h3",(names.get(id)||"Coach #"+id)+" — รวม "+rows.length+" คลาส (ปกติ "+regular+" / Private "+priv+")",out);
- const table=document.createElement("table");table.style.cssText="width:100%;border-collapse:collapse;margin:10px 0 25px";const head=document.createElement("tr");for(const x of ["วันที่","ประเภท","ชื่อคลาส","เวลาเริ่ม","เวลาเช็กอิน"]){const th=add("th",x,head);th.style.cssText="text-align:left;padding:8px;border-bottom:1px solid #ddd"}table.appendChild(head);
- for(const r of rows){const tr=document.createElement("tr");for(const x of [fmtDate(r.work_date),r.kind==="private"?"Private":"ปกติ",r.class_name,String(r.scheduled_start_time||"").slice(0,5),time(r.checked_in_at)]){const td=add("td",x,tr);td.style.cssText="padding:8px;border-bottom:1px solid #eee"}table.appendChild(tr)}out.appendChild(table)}
+ const table=document.createElement("table");table.style.cssText="width:100%;border-collapse:collapse;margin:10px 0 25px";const head=document.createElement("tr");for(const x of ["วันที่","ประเภท","ชื่อคลาส","สาขา","เวลาเริ่ม","เวลาเช็กอิน"]){const th=add("th",x,head);th.style.cssText="text-align:left;padding:8px;border-bottom:1px solid #ddd"}table.appendChild(head);
+ for(const r of rows){const tr=document.createElement("tr");for(const x of [fmtDate(r.work_date),r.kind==="private"?"Private":"ปกติ",r.class_name,branchLabel(r.branch_id),String(r.scheduled_start_time||"").slice(0,5),time(r.checked_in_at)]){const td=add("td",x,tr);td.style.cssText="padding:8px;border-bottom:1px solid #eee"}table.appendChild(tr)}out.appendChild(table)}
  }catch(e){out.textContent=e.message}}
 
  // Export always re-fetches the currently selected month/coach; no stale on-screen snapshot.
@@ -2959,7 +2961,7 @@ startOwnerDashboard();
    const filename="GAMBIT-Coach-"+selectedMonth+(selectedCoach?"-"+selectedCoach: "-ALL")+(selectedBranch?"-branch-"+selectedBranch: "-all-branches");
    return {selectedMonth,selectedCoach,selectedBranch,branchName,records,summary,names,filename};
  }
- function exportRows(data){return data.records.map(r=>[data.names.get(String(r.coach_id))||"Coach #"+r.coach_id,([...branch.options].find(o=>o.value===String(r.branch_id))?.text||String(r.branch_id||"-")),String(r.work_date||"").slice(0,10),r.kind==="private"?"Private":"ปกติ",r.class_name||"-",String(r.scheduled_start_time||"").slice(0,5)||"-",time(r.checked_in_at)]);}
+ function exportRows(data){return data.records.map(r=>[data.names.get(String(r.coach_id))||"Coach #"+r.coach_id,branchLabel(r.branch_id),String(r.work_date||"").slice(0,10),r.kind==="private"?"Private":"ปกติ",r.class_name||"-",String(r.scheduled_start_time||"").slice(0,5)||"-",time(r.checked_in_at)]);}
  let sheetPromise;
  function loadSheetJS(){
    if(window.XLSX)return Promise.resolve(window.XLSX);
