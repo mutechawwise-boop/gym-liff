@@ -86,6 +86,51 @@ async function handleCoachAttendance(request, json, isOwner, coach) {
     return json({ success: true, classes: await r.json() });
   }
 
+  if (request.method === "GET" && view === "history") {
+    if (!coach) {
+      return json({
+        success: false,
+        error: "Coach only"
+      }, 403);
+    }
+
+    const month = url.searchParams.get("month");
+
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month || "")) {
+      return json({
+        success: false,
+        error: "Invalid month"
+      }, 400);
+    }
+
+    const [year, mm] = month.split("-").map(Number);
+    const from = month + "-01";
+    const to = new Date(Date.UTC(year, mm, 1))
+      .toISOString().slice(0, 10);
+
+    const coachFilter = `coach_id=eq.${coach.id}&`;
+    const branchFilter = requestedBranch
+      ? `branch_id=eq.${requestedBranch}&`
+      : "";
+
+    const r = await supabase.request(
+      `gym_coach_class_checkins?${coachFilter}${branchFilter}work_date=gte.${from}&work_date=lt.${to}&select=*&order=checked_in_at.desc&limit=4000`
+    );
+
+    if (!r.ok) {
+      return json({
+        success: false,
+        error: "โหลดประวัติการสอนไม่สำเร็จ"
+      }, 500);
+    }
+
+    return json({
+      success: true,
+      records: await r.json()
+    });
+  }
+
+
   if (request.method === "GET" && view === "monthly") {
     if (!isOwner) return json({ success: false, error: "Owner only" }, 403);
     const month = url.searchParams.get("month");
