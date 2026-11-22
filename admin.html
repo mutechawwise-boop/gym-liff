@@ -828,8 +828,8 @@
 
   <button type="button"
     id="coachMissingCheckinBtn"
-    disabled
-    title="รอเปิดใช้งานระบบส่งคำขอ"
+   onclick="openCoachMissingRequest()"
+title="แจ้งลืมเช็กอินย้อนหลัง"
     style="background:#171717;color:#fff;border:0;border-radius:10px;padding:12px 16px;font-size:14px;font-weight:600;">
     + แจ้งลืมเช็กอิน
   </button>
@@ -3093,8 +3093,424 @@ if (historyBranch) {
    await loadCoachClasses();
   }catch(e){select.replaceChildren(new Option(e.message,""));document.getElementById("coachWorkClass").replaceChildren(new Option("ไม่สามารถโหลดคลาสได้",""));}
  }
+async function submitCoachAttendanceRequest(payload) {
+  const session = sessionStorage.getItem("gambitCoachSession");
 
-let coachHistoryRequestId = 0;
+  if (!session) {
+    throw new Error("กรุณาเข้าสู่ระบบใหม่");
+  }
+
+  const response = await fetch(
+    "/api/admin-dashboard?mode=coach-attendance&view=request",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-coach-session": session
+      },
+      body: JSON.stringify(payload),
+      cache: "no-store"
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.error || "ส่งคำขอไม่สำเร็จ");
+  }
+
+  return result;
+}
+function openCoachEditRequest(item) {
+  if (document.getElementById("coachEditDialog")) return;
+
+  const dialog = document.createElement("dialog");
+  dialog.id = "coachEditDialog";
+
+  dialog.style.cssText = `
+    width:calc(100% - 32px);
+    max-width:460px;
+    max-height:90vh;
+    overflow:auto;
+    box-sizing:border-box;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:20px;
+    color:#171717;
+    background:#ffffff;
+  `;
+
+  dialog.innerHTML = `
+    <h3 style="margin:0 0 16px;">
+      ขอแก้ไขรายการสอน
+    </h3>
+
+    <form id="coachEditForm"
+      style="display:grid;gap:12px;">
+
+      <label>
+        วันที่สอน
+        <input type="date" name="work_date" required>
+      </label>
+
+      <label>
+        ชื่อคลาส
+        <input type="text" name="class_name"
+          maxlength="100" required>
+      </label>
+
+      <label>
+        เวลาเริ่มสอน
+        <input type="time"
+          name="scheduled_start_time" required>
+      </label>
+
+      <label>
+        เวลาเช็กอินที่ขอแก้ไข
+        <input type="time" name="checkin_time" required>
+      </label>
+
+      <label>
+        เหตุผลที่ขอแก้ไข
+        <textarea name="reason" rows="3"
+          maxlength="1000" required
+          placeholder="ระบุเหตุผล..."></textarea>
+      </label>
+
+      <div style="font-size:12px;color:#64748b;">
+        ข้อมูลจะยังไม่เปลี่ยนแปลง
+        จนกว่า Owner จะอนุมัติ
+      </div>
+
+      <div id="coachEditMessage"
+        style="font-size:13px;"></div>
+
+      <div style="display:grid;
+        grid-template-columns:1fr 2fr;gap:8px;">
+
+        <button type="button" id="coachEditCancel">
+          ยกเลิก
+        </button>
+
+        <button type="submit" id="coachEditSubmit"
+          style="background:#171717;color:#fff;">
+          ส่งคำขอ
+        </button>
+
+      </div>
+    </form>
+  `;
+
+  document.body.appendChild(dialog);
+
+  const form = dialog.querySelector("form");
+  const msg = dialog.querySelector("#coachEditMessage");
+  const submitBtn = dialog.querySelector("#coachEditSubmit");
+  const cancelBtn = dialog.querySelector("#coachEditCancel");
+
+  form.elements.work_date.value = item.work_date || "";
+  form.elements.class_name.value = item.class_name || "";
+
+  form.elements.scheduled_start_time.value =
+    String(item.scheduled_start_time || "").slice(0, 5);
+
+  if (item.checked_in_at) {
+    const checkedIn = new Date(item.checked_in_at);
+
+    if (!Number.isNaN(checkedIn.getTime())) {
+      form.elements.checkin_time.value =
+        new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Asia/Bangkok",
+          hour: "2-digit",
+          minute: "2-digit",
+          hourCycle: "h23"
+        }).format(checkedIn);
+    }
+  }
+
+  dialog.querySelectorAll("input, textarea").forEach(el => {
+    el.style.cssText = `
+      display:block;
+      width:100%;
+      box-sizing:border-box;
+      padding:10px;
+      margin-top:6px;
+      border:1px solid #d1d5db;
+      border-radius:8px;
+      background:#fff;
+      color:#171717;
+      font-size:16px;
+    `;
+  });
+
+  cancelBtn.onclick = () => dialog.close();
+
+  dialog.addEventListener("close", () => {
+    dialog.remove();
+  });
+
+  dialog.addEventListener("cancel", event => {
+    if (submitBtn.disabled) event.preventDefault();
+  });
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const reason = form.elements.reason.value.trim();
+
+    if (!reason) {
+      msg.textContent = "กรุณาระบุเหตุผล";
+      return;
+    }
+
+    submitBtn.disabled = true;
+    cancelBtn.disabled = true;
+    submitBtn.textContent = "กำลังส่ง...";
+    msg.textContent = "";
+
+    try {
+      await submitCoachAttendanceRequest({
+        request_type: "edit",
+        checkin_id: Number(item.id),
+        reason: reason,
+        requested_data: {
+          work_date: form.elements.work_date.value,
+          class_name: form.elements.class_name.value.trim(),
+          scheduled_start_time:
+            form.elements.scheduled_start_time.value,
+          checkin_time: form.elements.checkin_time.value
+        }
+      });
+
+      dialog.close();
+
+      alert("ส่งคำขอสำเร็จ รอ Owner ตรวจสอบ");
+
+    } catch (error) {
+      msg.style.color = "#b91c1c";
+      msg.textContent = error.message;
+    } finally {
+      submitBtn.disabled = false;
+      cancelBtn.disabled = false;
+      submitBtn.textContent = "ส่งคำขอ";
+    }
+  });
+
+  dialog.showModal();
+}
+  async function openCoachMissingRequest() {
+  const session = sessionStorage.getItem("gambitCoachSession");
+
+  if (!session) {
+    alert("กรุณาเข้าสู่ระบบใหม่");
+    return;
+  }
+
+  if (document.getElementById("coachMissingDialog")) return;
+
+  const dialog = document.createElement("dialog");
+  dialog.id = "coachMissingDialog";
+
+  dialog.style.cssText = `
+    width:calc(100% - 32px);
+    max-width:440px;
+    max-height:90vh;
+    overflow:auto;
+    border:0;
+    border-radius:16px;
+    padding:24px;
+    box-sizing:border-box;
+  `;
+
+  dialog.innerHTML = `
+    <h3 style="margin:0 0 8px;">
+      แจ้งลืมเช็กอิน
+    </h3>
+
+    <p style="font-size:13px;color:#64748b;">
+      ส่งคำขอให้ Owner ตรวจสอบรายการสอนย้อนหลัง
+    </p>
+
+    <form id="coachMissingForm"
+      style="display:grid;gap:12px;">
+
+      <label>สาขา</label>
+      <select name="branch_id" required>
+        <option value="">เลือกสาขา</option>
+      </select>
+
+      <label>วันที่สอน</label>
+      <input type="date" name="work_date" required>
+
+      <label>ประเภทคลาส</label>
+      <select name="kind" required>
+        <option value="regular">คลาสปกติ</option>
+        <option value="private">Private</option>
+      </select>
+
+      <label>ชื่อคลาส</label>
+      <input type="text" name="class_name"
+        maxlength="100" required>
+
+      <label>เวลาเริ่มสอน</label>
+      <input type="time"
+        name="scheduled_start_time" required>
+
+      <label>เหตุผลที่ลืมเช็กอิน</label>
+      <textarea name="reason" rows="3"
+        maxlength="1000" required></textarea>
+
+      <div id="coachMissingMessage"
+        style="font-size:13px;color:#b91c1c;">
+      </div>
+
+      <button type="submit"
+        style="background:#171717;color:white;
+        border:0;border-radius:8px;padding:12px;">
+        ส่งคำขอ
+      </button>
+
+      <button type="button" id="coachMissingCancel"
+        style="background:#f3f4f6;border:0;
+        border-radius:8px;padding:12px;">
+        ยกเลิก
+      </button>
+
+    </form>
+  `;
+
+  document.body.appendChild(dialog);
+
+  const form = dialog.querySelector("form");
+  const msg = dialog.querySelector("#coachMissingMessage");
+  const submitBtn = form.querySelector("[type=submit]");
+  const cancelBtn = dialog.querySelector("#coachMissingCancel");
+  const branchSelect = form.elements.namedItem("branch_id");
+
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date());
+
+  form.elements.namedItem("work_date").max = today;
+  form.elements.namedItem("work_date").value = today;
+
+  dialog.addEventListener("close", () => {
+    dialog.remove();
+  });
+
+  cancelBtn.onclick = () => dialog.close();
+
+  dialog.addEventListener("cancel", (event) => {
+    if (cancelBtn.disabled) event.preventDefault();
+  });
+
+  submitBtn.disabled = true;
+
+  dialog.showModal();
+
+  try {
+    const response = await fetch(
+      "/api/admin-dashboard?mode=coach-attendance&view=branches",
+      {
+        headers: {
+          "x-coach-session": session
+        },
+        cache: "no-store"
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error("โหลดสาขาไม่สำเร็จ");
+    }
+
+    for (const branch of result.branches || []) {
+      const option = document.createElement("option");
+      option.value = branch.id;
+      option.textContent = branch.name;
+      branchSelect.appendChild(option);
+    }
+
+    if (branchSelect.options.length <= 1) {
+      throw new Error("ไม่พบสาขาที่เปิดใช้งาน");
+    }
+
+    submitBtn.disabled = false;
+
+  } catch (error) {
+    msg.textContent = error.message;
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const values = new FormData(form);
+
+    const payload = {
+      request_type: "missing",
+      branch_id: Number(values.get("branch_id")),
+      reason: String(values.get("reason")).trim(),
+      requested_data: {
+        work_date: values.get("work_date"),
+        kind: values.get("kind"),
+        class_name: String(values.get("class_name")).trim(),
+        scheduled_start_time: values.get("scheduled_start_time")
+      }
+    };
+
+    if (!payload.reason || !payload.requested_data.class_name) {
+      msg.textContent = "กรุณากรอกชื่อคลาสและเหตุผล";
+      return;
+    }
+
+    if (session !== sessionStorage.getItem("gambitCoachSession")) {
+      msg.textContent = "กรุณาเข้าสู่ระบบใหม่";
+      return;
+    }
+
+    submitBtn.disabled = true;
+    cancelBtn.disabled = true;
+    submitBtn.textContent = "กำลังส่งคำขอ...";
+    msg.textContent = "";
+
+    try {
+      const response = await fetch(
+        "/api/admin-dashboard?mode=coach-attendance&view=request",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-coach-session": session
+          },
+          body: JSON.stringify(payload),
+          cache: "no-store"
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "ส่งคำขอไม่สำเร็จ");
+      }
+
+      dialog.close();
+
+      alert("ส่งคำขอสำเร็จ รอ Owner ตรวจสอบ");
+
+    } catch (error) {
+      msg.textContent = error.message;
+    } finally {
+      submitBtn.disabled = false;
+      cancelBtn.disabled = false;
+      submitBtn.textContent = "ส่งคำขอ";
+    }
+  });
+}
+  let coachHistoryRequestId = 0;
 
 async function loadCoachHistory() {
   const month = document.getElementById("coachHistoryMonth");
@@ -3265,8 +3681,12 @@ const editBtn = document.createElement("button");
 editBtn.type = "button";
 editBtn.textContent = "ขอแก้ไข";
 editBtn.dataset.checkinId = String(item.id);
-editBtn.disabled = true;
-editBtn.title = "รอเปิดใช้งานระบบส่งคำขอ";
+editBtn.disabled = false;
+editBtn.title = "ส่งคำขอแก้ไขรายการสอน";
+
+editBtn.addEventListener("click", () => {
+  openCoachEditRequest(item);
+});
 editBtn.style.cssText = `
   grid-column:2;
   grid-row:2 / 4;
