@@ -3010,7 +3010,7 @@ await loadOverview();
   try{const branchId=Number(document.getElementById("coachWorkBranch").value);if(!branchId)throw Error("กรุณาเลือกสาขา");if(!privateToggle.checked&&!document.getElementById("coachWorkClass").value)throw Error("กรุณาเลือกคลาส");const body=privateToggle.checked?{action:"checkin",kind:"private",branchId,privateName:document.getElementById("coachPrivateName").value,privateTime:document.getElementById("coachPrivateTime").value}:{action:"checkin",kind:"regular",classSessionId:Number(document.getElementById("coachWorkClass").value),branchId};
   const r=await fetch("/api/admin-dashboard?mode=coach-attendance",{method:"POST",headers:{"Content-Type":"application/json","x-coach-session":sessionStorage.getItem("gambitCoachSession")||""},body:JSON.stringify(body)}),d=await r.json();if(!r.ok||!d.success)throw Error(d.error||"บันทึกไม่สำเร็จ");msg.textContent="บันทึกเช็กอินคลาสสำเร็จ";await loadCoachWork();}catch(e){msg.textContent=e.message}finally{btn.disabled=false}
  });
- loadCoachBranches().catch(console.error);loadCoachWork().catch(e=>document.getElementById("coachWorkMessage").textContent=e.message);
+
 
 const auth = createAuth({
   elements,
@@ -3020,6 +3020,11 @@ const auth = createAuth({
   onAuthenticated: applyRole
 });
 function applyRole() {
+    if (sessionStorage.getItem("gambitCoachSession")) {
+    document.getElementById("coachWorkMessage").textContent = "";
+    loadCoachBranches().catch(console.error);
+    loadCoachWork().catch(console.error);
+  }
   const signedIn = document.getElementById("coachSignedInAs");
   if (signedIn) {
     const coachSession = sessionStorage.getItem("gambitCoachSession");
