@@ -828,7 +828,6 @@
 
   <button type="button"
     id="coachMissingCheckinBtn"
-   onclick="openCoachMissingRequest()"
 title="แจ้งลืมเช็กอินย้อนหลัง"
     style="background:#171717;color:#fff;border:0;border-radius:10px;padding:12px 16px;font-size:14px;font-weight:600;">
     + แจ้งลืมเช็กอิน
@@ -3509,6 +3508,11 @@ function openCoachEditRequest(item) {
       submitBtn.textContent = "ส่งคำขอ";
     }
   });
+}
+  const coachMissingBtn = document.getElementById("coachMissingCheckinBtn");
+
+if (coachMissingBtn) {
+  coachMissingBtn.addEventListener("click", openCoachMissingRequest);
 }
   let coachHistoryRequestId = 0;
 
