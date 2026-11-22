@@ -19,6 +19,7 @@ export function createAuth({
     elements.loginButton.disabled = true;
     elements.loginButton.textContent = "กำลังตรวจสอบ...";
     elements.loginError.textContent = "";
+    window.gambitLoginIntro?.start();
 
     try {
       const response = await fetch(
@@ -48,10 +49,12 @@ export function createAuth({
       sessionStorage.setItem("gambitAdminKey", value);
       setRole(state, data.role);
 
+      await window.gambitLoginIntro?.finish();
       window.location.href = "owner.html";
       return;
 
     } catch (error) {
+      window.gambitLoginIntro?.stop();
       sessionStorage.removeItem("gambitAdminKey");
       logoutRole();
 
@@ -72,13 +75,13 @@ export function createAuth({
   async function coachLogin() {
     const username=document.getElementById("coachUsername")?.value.trim();
     const password=document.getElementById("coachPassword")?.value||"";
-    const button=document.getElementById("coachLoginButton");button.disabled=true;elements.loginError.textContent="";
+    const button=document.getElementById("coachLoginButton");button.disabled=true;elements.loginError.textContent="";window.gambitLoginIntro?.start();
     try {
       const response=await fetch("/api/admin-dashboard?mode=coach-access",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",username,password})});
       const data=await response.json();if(!response.ok||!data.success)throw new Error(data.error||"เข้าสู่ระบบ Coach ไม่สำเร็จ");
       sessionStorage.removeItem("gambitAdminKey");sessionStorage.setItem("gambitCoachSession",data.session);state.adminKey="";setRole(state,"coach");
-      await loadAdminDashboard();await loadOverview();onAuthenticated?.();
-    }catch(error){elements.loginError.textContent=error.message||"เข้าสู่ระบบไม่สำเร็จ";}finally{button.disabled=false;}
+      await loadAdminDashboard();await loadOverview();onAuthenticated?.();await window.gambitLoginIntro?.finish();
+    }catch(error){window.gambitLoginIntro?.stop();elements.loginError.textContent=error.message||"เข้าสู่ระบบไม่สำเร็จ";}finally{button.disabled=false;}
   }
   async function coachRegister(){
     const name=document.getElementById("coachRegisterName").value.trim(),username=document.getElementById("coachRegisterUsername").value.trim(),password=document.getElementById("coachRegisterPassword").value;
