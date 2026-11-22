@@ -3149,9 +3149,10 @@ function openCoachEditRequest(item) {
   `;
 
   dialog.innerHTML = `
-    <h3 style="margin:0 0 16px;">
-      ขอแก้ไขรายการสอน
-    </h3>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;">
+      <h3 style="margin:0;">ขอแก้ไขรายการสอน</h3>
+      <button type="button" id="coachEditClose" aria-label="ปิดหน้าต่าง" style="background:#f1f5f9;color:#171717;border:0;border-radius:8px;font-size:24px;cursor:pointer;padding:3px 12px;">×</button>
+    </div>
 
     <form id="coachEditForm"
       style="display:grid;gap:12px;">
@@ -3215,6 +3216,8 @@ function openCoachEditRequest(item) {
   const msg = dialog.querySelector("#coachEditMessage");
   const submitBtn = dialog.querySelector("#coachEditSubmit");
   const cancelBtn = dialog.querySelector("#coachEditCancel");
+  const closeBtn = dialog.querySelector("#coachEditClose");
+  closeBtn.addEventListener("click", () => { if (!submitBtn.disabled) dialog.close(); });
 
   form.elements.work_date.value = item.work_date || "";
   form.elements.class_name.value = item.class_name || "";
@@ -3293,6 +3296,7 @@ function openCoachEditRequest(item) {
       dialog.close();
 
       alert("ส่งคำขอสำเร็จ รอ Owner ตรวจสอบ");
+      await loadCoachHistory();
 
     } catch (error) {
       msg.style.color = "#b91c1c";
@@ -3680,6 +3684,7 @@ session_id: values.get("schedule_type") === "scheduled"
       dialog.close();
 
       alert("ส่งคำขอสำเร็จ รอ Owner ตรวจสอบ");
+      await loadCoachHistory();
 
     } catch (error) {
       msg.textContent = error.message;
@@ -3752,6 +3757,29 @@ async function loadCoachHistory() {
 
     const records = d.records || [];
 
+    // Fetch the Coach's own requests and display their review status in history.
+    const requestParams = new URLSearchParams({
+      mode: "coach-attendance", view: "requests"
+    });
+    if (branch.value) requestParams.set("branch_id", branch.value);
+    const requestResponse = await fetch("/api/admin-dashboard?" + requestParams, {
+      headers: { "x-coach-session": session }, cache: "no-store"
+    });
+    const requestData = await requestResponse.json();
+    if (!requestResponse.ok || !requestData.success) {
+      throw Error(requestData.error || "โหลดสถานะคำขอไม่สำเร็จ");
+    }
+    if (requestId !== coachHistoryRequestId ||
+        session !== sessionStorage.getItem("gambitCoachSession")) return;
+    const requests = (requestData.requests || []).filter(req => {
+      const date = req.requested_data?.work_date || req.original_data?.work_date || "";
+      return date.slice(0, 7) === month.value;
+    });
+    const statusText = { pending: "รออนุมัติ", approved: "อนุมัติแล้ว", rejected: "ไม่อนุมัติ" };
+    const statusColor = { pending: "#92400e", approved: "#166534", rejected: "#991b1b" };
+    const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, ch =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
+
     document.getElementById("coachHistoryTotal").textContent =
       records.length;
 
@@ -3763,8 +3791,8 @@ async function loadCoachHistory() {
 
     message.textContent = "";
 
-    if (!records.length) {
-      list.textContent = "ไม่มีประวัติการสอนในเดือนนี้";
+    if (!records.length && !requests.length) {
+      list.textContent = "ไม่มีประวัติการสอนหรือคำขอในเดือนนี้";
       return;
     }
 
@@ -3889,9 +3917,49 @@ editBtn.style.cssText = `
   white-space:nowrap;
 `;
 
+const itemRequests = requests.filter(req => Number(req.checkin_id) === Number(item.id));
+if (itemRequests.length) {
+  const badges = document.createElement("div");
+  badges.style.cssText = "grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;";
+  for (const req of itemRequests) {
+    const badge = document.createElement("span");
+    badge.style.cssText = `font-size:12px;padding:4px 8px;border-radius:7px;background:#f1f5f9;color:${statusColor[req.status] || "#475569"};`;
+    badge.textContent = "คำขอแก้ไข #" + req.id + " · " + (statusText[req.status] || req.status);
+    if (req.status === "rejected" && req.owner_note) badge.title = "เหตุผล: " + req.owner_note;
+    badges.appendChild(badge);
+  }
+  row.appendChild(badges);
+  if (itemRequests.some(req => req.status === "pending")) {
+    editBtn.disabled = true;
+    editBtn.textContent = "รออนุมัติ";
+  }
+}
 row.append(name, detail, type, time, editBtn);
 list.appendChild(row);
 
+    }
+    // Missing check-in requests have no check-in record until Owner approves.
+    for (const req of requests.filter(req => req.request_type === "missing")) {
+      const data = req.requested_data || {};
+      const row = document.createElement("div");
+      row.style.cssText = "padding:12px;margin:6px 0;border:1px solid #e2e5e9;border-radius:10px;background:#fffbeb;";
+      const heading = document.createElement("strong");
+      heading.textContent = (data.class_name || "คลาสที่แจ้งเพิ่ม") + " · แจ้งลืมเช็กอิน";
+      const detail = document.createElement("div");
+      detail.style.cssText = "font-size:12px;color:#475569;margin-top:4px;";
+      const branchName = Array.from(branch.options).find(o => o.value === String(req.branch_id))?.text || "สาขา " + req.branch_id;
+      detail.textContent = (data.work_date || "-") + " · " + branchName + " · เริ่ม " + String(data.scheduled_start_time || "-").slice(0,5) + " น.";
+      const status = document.createElement("div");
+      status.style.cssText = `font-size:12px;margin-top:6px;font-weight:700;color:${statusColor[req.status] || "#475569"};`;
+      status.textContent = "คำขอ #" + req.id + " · " + (statusText[req.status] || req.status);
+      row.append(heading, detail, status);
+      if (req.owner_note) {
+        const note = document.createElement("div");
+        note.style.cssText = "font-size:12px;margin-top:4px;";
+        note.textContent = "หมายเหตุ Owner: " + req.owner_note;
+        row.appendChild(note);
+      }
+      list.appendChild(row);
     }
   } catch (e) {
     if (requestId === coachHistoryRequestId &&
