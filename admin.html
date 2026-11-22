@@ -750,6 +750,45 @@
   <div class="coach-work-heading"><div><div class="coach-work-eyebrow">COACH ATTENDANCE</div><h2>เช็กอินการสอน</h2><p>เลือกคลาสที่สอนแล้วบันทึกเวลาเข้าได้เลย ไม่ต้องเช็กเอาต์</p></div><div class="coach-work-total"><strong id="coachWorkCount">0</strong><span>คลาสวันนี้</span></div></div>
   <div class="coach-work-form"><label for="coachWorkBranch">สาขาที่สอน</label><select id="coachWorkBranch" style="display:block;width:100%;padding:13px 14px;margin:0 0 16px;border:1px solid #d8dde1;border-radius:12px;background:white"><option value="">กำลังโหลดสาขา...</option></select><label for="coachWorkClass">คลาสที่สอนวันนี้</label><select id="coachWorkClass"><option value="">กำลังโหลดตารางเรียน...</option></select><label class="coach-private-option"><input type="checkbox" id="coachPrivateToggle"><span>＋ เพิ่มคลาส Private</span></label><div id="coachPrivateFields" hidden><label>ชื่อคลาส Private <input id="coachPrivateName" maxlength="100" placeholder="เช่น Private BJJ 1:1"></label><label>เวลาเริ่มคลาส <input id="coachPrivateTime" type="time"></label></div><button type="button" id="coachWorkIn">เช็กอินคลาสที่สอน</button><p id="coachWorkMessage" role="status" aria-live="polite"></p></div>
   <div class="coach-work-history"><div class="coach-work-history-head"><h3>รายการเช็กอินวันนี้</h3><span id="coachWorkCountBadge" class="coach-work-count-badge">0 คลาส</span></div><div id="coachWorkStatus" aria-live="polite">กำลังโหลด...</div></div>
+
+<div class="coach-work-history" id="coachHistorySection">
+  <div class="coach-work-history-head">
+    <h3>ประวัติการสอนย้อนหลัง</h3>
+  </div>
+
+  <div class="coach-work-form">
+    <label for="coachHistoryMonth">เลือกเดือน</label>
+    <input type="month" id="coachHistoryMonth"
+      style="width:100%;padding:12px;margin-bottom:16px;">
+
+    <label for="coachHistoryBranch">เลือกสาขา</label>
+    <select id="coachHistoryBranch"
+      style="width:100%;padding:12px;margin-bottom:16px;">
+      <option value="">ทุกสาขา</option>
+    </select>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0;text-align:center;">
+    <div style="background:#f5f5f5;padding:12px;border-radius:12px;">
+      <small>คลาสทั้งหมด</small>
+      <h2 id="coachHistoryTotal">0</h2>
+    </div>
+    <div style="background:#f5f5f5;padding:12px;border-radius:12px;">
+      <small>คลาสปกติ</small>
+      <h2 id="coachHistoryRegular">0</h2>
+    </div>
+    <div style="background:#f5f5f5;padding:12px;border-radius:12px;">
+      <small>Private</small>
+      <h2 id="coachHistoryPrivate">0</h2>
+    </div>
+  </div>
+
+  <div id="coachHistoryMessage"></div>
+  <div id="coachHistoryList">
+    กรุณาเลือกเดือน
+  </div>
+</div>
+
 </section>
 
 <section id="dashboardSection" class="card">
@@ -2984,6 +3023,15 @@ await loadOverview();
    const d=await r.json();if(!r.ok)throw Error(d.error||"โหลดสาขาไม่สำเร็จ");
    select.replaceChildren(new Option("เลือกสาขาที่สอน",""));
    for(const branch of d.branches||[])select.add(new Option(branch.name,String(branch.id)));
+    
+const historyBranch = document.getElementById("coachHistoryBranch");
+if (historyBranch) {
+  historyBranch.replaceChildren(new Option("ทุกสาขา", ""));
+  for (const branch of d.branches || []) {
+    historyBranch.add(new Option(branch.name, String(branch.id)));
+  }
+}
+
    const priorBranch=sessionStorage.getItem("gambitCoachWorkBranch");
    if(priorBranch&&(d.branches||[]).some(b=>String(b.id)===priorBranch))select.value=priorBranch;
    const lakSi=(d.branches||[]).find(b=>b.code==="lak-si");
@@ -2992,7 +3040,141 @@ await loadOverview();
    await loadCoachClasses();
   }catch(e){select.replaceChildren(new Option(e.message,""));document.getElementById("coachWorkClass").replaceChildren(new Option("ไม่สามารถโหลดคลาสได้",""));}
  }
- async function loadCoachClasses(){
+
+let coachHistoryRequestId = 0;
+
+async function loadCoachHistory() {
+  const month = document.getElementById("coachHistoryMonth");
+  const branch = document.getElementById("coachHistoryBranch");
+  const list = document.getElementById("coachHistoryList");
+  const message = document.getElementById("coachHistoryMessage");
+  const session = sessionStorage.getItem("gambitCoachSession");
+
+  if (!month || !branch || !list || !message || !session) return;
+
+  if (!month.value) {
+    month.value = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Bangkok",
+      year: "numeric",
+      month: "2-digit"
+    }).format(new Date());
+  }
+
+  const requestId = ++coachHistoryRequestId;
+
+  message.textContent = "กำลังโหลดประวัติการสอน...";
+  list.replaceChildren();
+
+  document.getElementById("coachHistoryTotal").textContent = "-";
+  document.getElementById("coachHistoryRegular").textContent = "-";
+  document.getElementById("coachHistoryPrivate").textContent = "-";
+
+  try {
+    const params = new URLSearchParams({
+      mode: "coach-attendance",
+      view: "history",
+      month: month.value
+    });
+
+    if (branch.value) {
+      params.set("branch_id", branch.value);
+    }
+
+    const r = await fetch("/api/admin-dashboard?" + params, {
+      headers: {
+        "x-coach-session": session
+      },
+      cache: "no-store"
+    });
+
+    const d = await r.json();
+
+    if (requestId !== coachHistoryRequestId ||
+        session !== sessionStorage.getItem("gambitCoachSession")) return;
+
+    if (!r.ok || !d.success) {
+      throw Error(d.error || "โหลดประวัติไม่สำเร็จ");
+    }
+
+    const records = d.records || [];
+
+    document.getElementById("coachHistoryTotal").textContent =
+      records.length;
+
+    document.getElementById("coachHistoryRegular").textContent =
+      records.filter(item => item.kind === "regular").length;
+
+    document.getElementById("coachHistoryPrivate").textContent =
+      records.filter(item => item.kind === "private").length;
+
+    message.textContent = "";
+
+    if (!records.length) {
+      list.textContent = "ไม่มีประวัติการสอนในเดือนนี้";
+      return;
+    }
+
+    for (const item of records) {
+      const row = document.createElement("div");
+      row.className = "coach-work-record";
+      row.style.padding = "14px 0";
+      row.style.borderBottom = "1px solid #e5e7eb";
+
+      const branchName = Array.from(branch.options)
+        .find(o => o.value === String(item.branch_id))?.text
+        || "สาขา " + item.branch_id;
+
+      const date = new Date(item.work_date + "T00:00:00+07:00")
+        .toLocaleDateString("th-TH", {
+          timeZone: "Asia/Bangkok",
+          day: "numeric",
+          month: "short",
+          year: "numeric"
+        });
+
+      const checkin = item.checked_in_at
+        ? new Date(item.checked_in_at).toLocaleTimeString("th-TH", {
+            timeZone: "Asia/Bangkok",
+            hour: "2-digit",
+            minute: "2-digit"
+          })
+        : "-";
+
+      const name = document.createElement("strong");
+      name.textContent = item.class_name || "-";
+
+      const detail = document.createElement("div");
+      detail.textContent = date + " · " + branchName;
+
+      const type = document.createElement("div");
+      type.textContent = item.kind === "private"
+        ? "Private Class"
+        : "คลาสปกติ";
+
+      const time = document.createElement("div");
+      time.textContent =
+        "เวลาเริ่มสอน " +
+        (item.scheduled_start_time || "-").slice(0, 5) +
+        " | เช็กอิน " + checkin + " น.";
+
+      row.append(name, detail, type, time);
+      list.appendChild(row);
+    }
+  } catch (e) {
+    if (requestId === coachHistoryRequestId &&
+        session === sessionStorage.getItem("gambitCoachSession")) {
+      message.textContent = e.message;
+    }
+  }
+}
+
+document.getElementById("coachHistoryMonth")
+  .addEventListener("change", loadCoachHistory);
+
+document.getElementById("coachHistoryBranch")
+  .addEventListener("change", loadCoachHistory);
+
+  async function loadCoachClasses(){
   const select=document.getElementById("coachWorkClass"),branchId=document.getElementById("coachWorkBranch").value;
   if(!branchId){select.replaceChildren(new Option("กรุณาเลือกสาขาก่อน",""));return;}
   try{
@@ -3022,7 +3204,9 @@ const auth = createAuth({
 function applyRole() {
     if (sessionStorage.getItem("gambitCoachSession")) {
     document.getElementById("coachWorkMessage").textContent = "";
-    loadCoachBranches().catch(console.error);
+  loadCoachBranches()
+  .then(() => loadCoachHistory())
+  .catch(console.error);
     loadCoachWork().catch(console.error);
   }
   const signedIn = document.getElementById("coachSignedInAs");
