@@ -64,7 +64,178 @@ async function handleCoachAttendance(request, json, isOwner, coach) {
   if (requestedBranch && !/^[1-9]\d*$/.test(requestedBranch)) {
     return json({ success: false, error: "Invalid branch" }, 400);
   }
+if (request.method === "GET" && view === "requests") {
+  if (!coach && !isOwner) {
+    return json({
+      success: false,
+      error: "ไม่มีสิทธิ์เข้าถึง"
+    }, 403);
+  }
 
+  let query =
+    "gym_coach_attendance_requests?select=*&order=created_at.desc";
+
+  if (!isOwner) {
+    query += "&coach_id=eq." + encodeURIComponent(coach.id);
+  }
+
+  if (requestedBranch) {
+    query += "&branch_id=eq." + encodeURIComponent(requestedBranch);
+  }
+
+  const r = await supabase.request(query);
+
+  if (!r.ok) {
+    return json({
+      success: false,
+      error: "โหลดรายการคำขอไม่สำเร็จ"
+    }, 500);
+  }
+
+  return json({
+    success: true,
+    requests: await r.json()
+  });
+}
+  if (request.method === "POST" && view === "request") {
+  if (!coach || isOwner) {
+    return json({
+      success: false,
+      error: "เฉพาะโค้ชเท่านั้น"
+    }, 403);
+  }
+
+  const body = await request.json();
+  const requestType = body.request_type;
+  const reason = String(body.reason || "").trim();
+  const requestedData = body.requested_data;
+
+  if (!["edit", "missing"].includes(requestType)) {
+    return json({
+      success: false,
+      error: "ประเภทคำขอไม่ถูกต้อง"
+    }, 400);
+  }
+
+  if (!reason || reason.length > 1000) {
+    return json({
+      success: false,
+      error: "กรุณาระบุเหตุผลไม่เกิน 1000 ตัวอักษร"
+    }, 400);
+  }
+
+  if (!requestedData ||
+      typeof requestedData !== "object" ||
+      Array.isArray(requestedData)) {
+    return json({
+      success: false,
+      error: "กรุณาระบุข้อมูลที่ต้องการแก้ไข"
+    }, 400);
+  }
+
+  let checkinId = null;
+  let originalData = null;
+  let branchId = null;
+
+  if (requestType === "edit") {
+    checkinId = Number(body.checkin_id);
+
+    if (!Number.isSafeInteger(checkinId) ||
+        checkinId < 1) {
+      return json({
+        success: false,
+        error: "รายการเช็กอินไม่ถูกต้อง"
+      }, 400);
+    }
+
+    const originalResponse = await supabase.request(
+      `gym_coach_class_checkins?id=eq.${checkinId}&coach_id=eq.${coach.id}&select=*&limit=1`
+    );
+
+    if (!originalResponse.ok) {
+      return json({
+        success: false,
+        error: "ตรวจสอบข้อมูลเดิมไม่สำเร็จ"
+      }, 500);
+    }
+
+    const rows = await originalResponse.json();
+
+    if (!rows.length) {
+      return json({
+        success: false,
+        error: "ไม่พบรายการเช็กอินของคุณ"
+      }, 404);
+    }
+
+    originalData = rows[0];
+    branchId = originalData.branch_id;
+
+  } else {
+    branchId = Number(body.branch_id);
+
+    if (!Number.isSafeInteger(branchId) ||
+        branchId < 1) {
+      return json({
+        success: false,
+        error: "กรุณาเลือกสาขา"
+      }, 400);
+    }
+
+    const branchResponse = await supabase.request(
+      `gym_branches?id=eq.${branchId}&active=eq.true&select=id&limit=1`
+    );
+
+    if (!branchResponse.ok) {
+      return json({
+        success: false,
+        error: "ตรวจสอบสาขาไม่สำเร็จ"
+      }, 500);
+    }
+
+    if (!(await branchResponse.json()).length) {
+      return json({
+        success: false,
+        error: "ไม่พบสาขาที่เปิดใช้งาน"
+      }, 400);
+    }
+  }
+
+  const data = {
+    coach_id: coach.id,
+    checkin_id: checkinId,
+    branch_id: branchId,
+    request_type: requestType,
+    original_data: originalData,
+    requested_data: requestedData,
+    reason: reason,
+    status: "pending"
+  };
+
+  const result = await supabase.request(
+    "gym_coach_attendance_requests?select=id,status",
+    {
+      method: "POST",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(data)
+    }
+  );
+
+  if (!result.ok) {
+    return json({
+      success: false,
+      error: "ส่งคำขอไม่สำเร็จ"
+    }, 500);
+  }
+
+  return json({
+    success: true,
+    message: "ส่งคำขอสำเร็จ รอ Owner ตรวจสอบ",
+    record: (await result.json())[0]
+  });
+}
   if (request.method === "GET" && view === "branches") {
     if (!coach && !isOwner) return json({ success: false, error: "ไม่มีสิทธิ์" }, 403);
     const r = await supabase.request("gym_branches?select=id,code,name,active&active=eq.true&order=id.asc");
