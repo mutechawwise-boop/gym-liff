@@ -756,32 +756,85 @@
     <h3>ประวัติการสอนย้อนหลัง</h3>
   </div>
 
-  <div class="coach-work-form">
-    <label for="coachHistoryMonth">เลือกเดือน</label>
-    <input type="month" id="coachHistoryMonth"
-      style="width:100%;padding:12px;margin-bottom:16px;">
+ 
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:16px;margin:20px 0;">
 
-    <label for="coachHistoryBranch">เลือกสาขา</label>
+  <div style="min-width:0;">
+    <label for="coachHistoryMonth"
+      style="display:block;font-weight:600;margin-bottom:8px;">
+      เลือกเดือน
+    </label>
+    <input type="month" id="coachHistoryMonth"
+      style="width:100%;height:48px;padding:12px;box-sizing:border-box;border:1px solid #d1d5db;border-radius:10px;background:#fff;color:#171717;font-size:15px;">
+  </div>
+
+  <div style="min-width:0;">
+    <label for="coachHistoryBranch"
+      style="display:block;font-weight:600;margin-bottom:8px;">
+      เลือกสาขา
+    </label>
     <select id="coachHistoryBranch"
-      style="width:100%;padding:12px;margin-bottom:16px;">
+      style="width:100%;height:48px;padding:12px;box-sizing:border-box;border:1px solid #d1d5db;border-radius:10px;background:#fff;color:#171717;font-size:15px;">
       <option value="">ทุกสาขา</option>
     </select>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0;text-align:center;">
-    <div style="background:#f5f5f5;padding:12px;border-radius:12px;">
-      <small>คลาสทั้งหมด</small>
-      <h2 id="coachHistoryTotal">0</h2>
+</div>
+
+
+ 
+<div style="margin:24px 0 12px;font-size:12px;font-weight:700;color:#64748b;letter-spacing:1px;">
+  MONTHLY SUMMARY
+</div>
+
+<div style="font-size:18px;font-weight:700;margin-bottom:12px;">
+  สรุปการสอนประจำเดือน
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:24px;">
+
+  <div style="background:#171717;color:#fff;padding:16px 10px;border-radius:14px;text-align:center;">
+    <div style="font-size:13px;color:#d1d5db;">
+      คลาสทั้งหมด
     </div>
-    <div style="background:#f5f5f5;padding:12px;border-radius:12px;">
-      <small>คลาสปกติ</small>
-      <h2 id="coachHistoryRegular">0</h2>
-    </div>
-    <div style="background:#f5f5f5;padding:12px;border-radius:12px;">
-      <small>Private</small>
-      <h2 id="coachHistoryPrivate">0</h2>
-    </div>
+    <h2 id="coachHistoryTotal" style="font-size:32px;font-weight:800;margin:12px 0 4px;color:#fff;">0</h2>
+    <div style="font-size:12px;color:#d1d5db;">คลาส</div>
   </div>
+
+  <div style="background:#f5f5f5;color:#171717;border:1px solid #e5e7eb;padding:16px 10px;border-radius:14px;text-align:center;">
+    <div style="font-size:13px;color:#64748b;">
+      คลาสปกติ
+    </div>
+    <h2 id="coachHistoryRegular" style="font-size:32px;font-weight:800;margin:12px 0 4px;color:#171717;">0</h2>
+    <div style="font-size:12px;color:#64748b;">คลาส</div>
+  </div>
+
+  <div style="background:#f5f5f5;color:#171717;border:1px solid #e5e7eb;padding:16px 10px;border-radius:14px;text-align:center;">
+    <div style="font-size:13px;color:#64748b;">
+      Private
+    </div>
+    <h2 id="coachHistoryPrivate" style="font-size:32px;font-weight:800;margin:12px 0 4px;color:#171717;">0</h2>
+    <div style="font-size:12px;color:#64748b;">คลาส</div>
+  </div>
+
+</div>
+
+
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:24px 0 16px;padding-top:20px;border-top:1px solid #e5e7eb;">
+
+  <h3 style="margin:0;font-size:18px;font-weight:700;">
+    รายการสอนย้อนหลัง
+  </h3>
+
+  <button type="button"
+    id="coachMissingCheckinBtn"
+    disabled
+    title="รอเปิดใช้งานระบบส่งคำขอ"
+    style="background:#171717;color:#fff;border:0;border-radius:10px;padding:12px 16px;font-size:14px;font-weight:600;">
+    + แจ้งลืมเช็กอิน
+  </button>
+
+</div>
 
   <div id="coachHistoryMessage"></div>
   <div id="coachHistoryList">
@@ -3157,8 +3210,61 @@ async function loadCoachHistory() {
         (item.scheduled_start_time || "-").slice(0, 5) +
         " | เช็กอิน " + checkin + " น.";
 
-      row.append(name, detail, type, time);
-      list.appendChild(row);
+      
+row.className = "coach-history-item";
+row.style.cssText = `
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:16px;
+  margin-bottom:12px;
+  border:1px solid #e2e5e9;
+  border-radius:14px;
+  background:#ffffff;
+  color:#171717;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);
+`;
+
+name.style.cssText = "font-size:17px;font-weight:700;";
+
+detail.style.cssText = "font-size:13px;color:#64748b;";
+
+type.style.cssText = `
+  font-size:12px;
+  background:#e8f5ec;
+  color:#166534;
+  padding:5px 10px;
+  border-radius:20px;
+  align-self:flex-start;
+`;
+
+time.style.cssText = `
+  font-size:14px;
+  line-height:1.8;
+  padding-top:10px;
+  border-top:1px solid #e5e7eb;
+`;
+
+const editBtn = document.createElement("button");
+editBtn.type = "button";
+editBtn.textContent = "ขอแก้ไข";
+editBtn.dataset.checkinId = String(item.id);
+editBtn.disabled = true;
+editBtn.title = "รอเปิดใช้งานระบบส่งคำขอ";
+editBtn.style.cssText = `
+  align-self:flex-end;
+  background:#ffffff;
+  color:#171717;
+  border:1px solid #d1d5db;
+  padding:9px 16px;
+  border-radius:8px;
+  font-size:13px;
+  font-weight:600;
+`;
+
+row.append(name, detail, type, time, editBtn);
+list.appendChild(row);
+
     }
   } catch (e) {
     if (requestId === coachHistoryRequestId &&
