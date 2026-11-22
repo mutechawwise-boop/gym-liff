@@ -3347,13 +3347,27 @@ function openCoachEditRequest(item) {
         <option value="private">Private</option>
       </select>
 
-      <label>ชื่อคลาส</label>
-      <input type="text" name="class_name"
-        maxlength="100" required>
+<label>รูปแบบคลาส</label>
+<select name="schedule_type" id="coachMissingScheduleType" required>
+  <option value="scheduled">คลาสตามตารางสอน</option>
+  <option value="special">คลาสพิเศษนอกตาราง</option>
+</select>
 
+<div id="coachMissingScheduledFields">
+  <label>เลือกคลาสจากตารางสอน</label>
+  <select id="coachMissingClassSelect">
+    <option value="">กรุณาเลือกสาขาและวันที่ก่อน</option>
+  </select>
+</div>
+
+      <label>ชื่อคลาส</label>
+      <input type="text" id="coachMissingClassName"
+       name="class_name" maxlength="100" required>
       <label>เวลาเริ่มสอน</label>
-      <input type="time"
-        name="scheduled_start_time" required>
+     
+<input type="time" id="coachMissingStartTime"
+       name="scheduled_start_time" required>
+
 
       <label>เหตุผลที่ลืมเช็กอิน</label>
       <textarea name="reason" rows="3"
@@ -3384,7 +3398,140 @@ function openCoachEditRequest(item) {
   const msg = dialog.querySelector("#coachMissingMessage");
   const submitBtn = form.querySelector("[type=submit]");
   const cancelBtn = dialog.querySelector("#coachMissingCancel");
+    if (cancelBtn) {
+  cancelBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    dialog.close();
+  });
+}
   const branchSelect = form.elements.namedItem("branch_id");
+
+const scheduleTypeSelect = dialog.querySelector(
+  "#coachMissingScheduleType"
+);
+const scheduledFields = dialog.querySelector(
+  "#coachMissingScheduledFields"
+);
+const classSelect = dialog.querySelector(
+  "#coachMissingClassSelect"
+);
+const classNameInput = dialog.querySelector(
+  "#coachMissingClassName"
+);
+const startTimeInput = dialog.querySelector(
+  "#coachMissingStartTime"
+);
+
+function updateMissingScheduleType() {
+  const isSpecial = scheduleTypeSelect.value === "special";
+
+  scheduledFields.hidden = isSpecial;
+  classSelect.disabled = isSpecial;
+  classSelect.required = !isSpecial;
+
+  classNameInput.readOnly = !isSpecial;
+  startTimeInput.readOnly = !isSpecial;
+
+  if (isSpecial) {
+    classNameInput.value = "";
+    startTimeInput.value = "";
+  } else {
+    classNameInput.value = "";
+    startTimeInput.value = "";
+  }
+}
+
+scheduleTypeSelect.addEventListener(
+  "change",
+  updateMissingScheduleType
+);
+updateMissingScheduleType();
+
+const workDateInput = form.elements.namedItem("work_date");
+
+async function loadCoachMissingClasses() {
+  classSelect.innerHTML =
+    '<option value="">กำลังโหลดคลาส...</option>';
+
+  classNameInput.value = "";
+  startTimeInput.value = "";
+
+  const branchId = branchSelect.value;
+  const date = workDateInput.value;
+
+  if (scheduleTypeSelect.value === "special") return;
+
+  if (!branchId || !date) {
+    classSelect.innerHTML =
+      '<option value="">กรุณาเลือกสาขาและวันที่ก่อน</option>';
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams({
+      mode: "coach-attendance",
+      view: "classes",
+      branch_id: branchId,
+      date: date
+    });
+
+    const response = await fetch(
+      `/api/admin-dashboard?${params}`,
+      {
+        headers: { "x-coach-session": session },
+        cache: "no-store"
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error("โหลดตารางสอนไม่สำเร็จ");
+    }
+
+    classSelect.innerHTML =
+      '<option value="">เลือกคลาส</option>';
+
+    for (const item of result.classes || []) {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent =
+        `${item.display_name || item.classes?.name || "คลาส"} (${String(item.start_time || "").slice(0, 5)})`;
+      option.dataset.name =
+        item.display_name || item.classes?.name || "";
+      option.dataset.time =
+        String(item.start_time || "").slice(0, 5);
+      classSelect.appendChild(option);
+    }
+
+    if (classSelect.options.length === 1) {
+      classSelect.innerHTML =
+        '<option value="">ไม่พบคลาสในตารางของวันนี้</option>';
+    }
+  } catch (error) {
+    classSelect.innerHTML =
+      '<option value="">โหลดคลาสไม่สำเร็จ</option>';
+  }
+}
+
+classSelect.addEventListener("change", () => {
+  const option = classSelect.selectedOptions[0];
+  classNameInput.value = option?.dataset.name || "";
+  startTimeInput.value = option?.dataset.time || "";
+});
+
+branchSelect.addEventListener(
+  "change",
+  loadCoachMissingClasses
+);
+workDateInput.addEventListener(
+  "change",
+  loadCoachMissingClasses
+);
+scheduleTypeSelect.addEventListener(
+  "change",
+  loadCoachMissingClasses
+);
 
   const today = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Bangkok",
@@ -3400,7 +3547,7 @@ function openCoachEditRequest(item) {
     dialog.remove();
   });
 
-  cancelBtn.onclick = () => dialog.close();
+
 
   dialog.addEventListener("cancel", (event) => {
     if (cancelBtn.disabled) event.preventDefault();
@@ -3437,7 +3584,7 @@ function openCoachEditRequest(item) {
     if (branchSelect.options.length <= 1) {
       throw new Error("ไม่พบสาขาที่เปิดใช้งาน");
     }
-
+await loadCoachMissingClasses();
     submitBtn.disabled = false;
 
   } catch (error) {
@@ -3449,6 +3596,14 @@ function openCoachEditRequest(item) {
 
     const values = new FormData(form);
 
+if (
+  scheduleTypeSelect.value === "scheduled" &&
+  !classSelect.value
+) {
+  msg.textContent = "กรุณาเลือกคลาสจากตารางสอน";
+  return;
+}
+
     const payload = {
       request_type: "missing",
       branch_id: Number(values.get("branch_id")),
@@ -3456,6 +3611,12 @@ function openCoachEditRequest(item) {
       requested_data: {
         work_date: values.get("work_date"),
         kind: values.get("kind"),
+        
+schedule_type: values.get("schedule_type"),
+session_id: values.get("schedule_type") === "scheduled"
+  ? Number(classSelect.value)
+  : null,
+
         class_name: String(values.get("class_name")).trim(),
         scheduled_start_time: values.get("scheduled_start_time")
       }
