@@ -489,6 +489,17 @@
 <button id="coachAccessRefresh" type="button" style="width:auto">โหลดรายชื่อ Coach</button>
 <div id="coachAccessRows" aria-live="polite"></div>
 </section>
+<section id="coachAttendanceReview" style="max-width:1050px;margin:20px auto;padding:20px;background:#fff;border:1px solid #ddd;border-radius:14px">
+<h2>📋 คำขอแก้ไข / แจ้งลืมเช็กอินของ Coach</h2>
+<p style="color:#555">ตรวจสอบคำขอและอนุมัติหรือปฏิเสธ โดยรายการที่อนุมัติจะอัปเดตประวัติการสอน</p>
+<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end">
+<label>สถานะ <select id="coachRequestStatus"><option value="pending">รออนุมัติ</option><option value="all">ทั้งหมด</option><option value="approved">อนุมัติแล้ว</option><option value="rejected">ไม่อนุมัติ</option></select></label>
+<label>สาขา <select id="coachRequestBranch"><option value="">ทุกสาขา</option></select></label>
+<button id="coachRequestRefresh" type="button" style="width:auto">โหลดคำขอ</button>
+</div>
+<p id="coachRequestFeedback" role="status" aria-live="polite" style="margin:12px 0;color:#555"></p>
+<div id="coachRequestRows" style="overflow-x:auto"></div>
+</section>
 <section id="coachWorkOwnerReport" style="max-width:1050px;margin:20px auto;padding:20px;background:#fff;border:1px solid #ddd;border-radius:14px"><h2>⏱️ รายงาน Coach รายบุคคล / รายเดือน</h2><div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end"><label>เดือน <input id="coachReportMonth" type="month"></label><label>สาขา <select id="coachReportBranch"><option value="">ทุกสาขา</option></select></label><label>Coach <select id="coachReportPerson"><option value="">ทุกคน</option></select></label><button type="button" id="coachReportLoad" style="width:auto">โหลดรายงาน</button><button type="button" id="coachReportExcel" style="width:auto;background:#137c47;color:white;border:0;border-radius:8px;padding:10px 14px">⬇ Excel (.xlsx)</button><button type="button" id="coachReportPdf" style="width:auto;background:#a52a2a;color:white;border:0;border-radius:8px;padding:10px 14px">⬇ PDF</button></div><p id="coachExportStatus" role="status" style="font-size:13px;color:#555;margin:10px 0">เลือกเดือนและ Coach แล้วกดส่งออกได้ทันที · PDF ใช้เมนูบันทึกเป็น PDF ในหน้าพิมพ์</p><div id="coachReportRows" style="margin-top:14px;overflow-x:auto"></div></section>
 </section>
 
@@ -3005,5 +3016,125 @@ startOwnerDashboard();
  document.getElementById("coachReportLoad").addEventListener("click",fetchReport);
  branch.addEventListener("change",()=>{out.textContent="เปลี่ยนสาขาแล้ว กดโหลดรายงานเพื่อดูข้อมูล";});
 })();</script>
+<script>
+(function () {
+  const rowsBox = document.getElementById('coachRequestRows');
+  const feedback = document.getElementById('coachRequestFeedback');
+  const statusSelect = document.getElementById('coachRequestStatus');
+  const branchSelect = document.getElementById('coachRequestBranch');
+  const refresh = document.getElementById('coachRequestRefresh');
+  if (!rowsBox || !feedback || !refresh) return;
+  let coachNames = new Map();
+  let branchNames = new Map();
+  let busy = false;
+  function headers() {
+    const key = sessionStorage.getItem('gambitAdminKey');
+    if (!key) throw new Error('กรุณาเข้าสู่ระบบ Owner');
+    return {'x-admin-key': key};
+  }
+  async function api(path, options = {}) {
+    const response = await fetch('/api/admin-dashboard?mode=' + path, {
+      ...options, headers: {...headers(), ...(options.headers || {})}, cache: 'no-store'
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || 'ทำรายการไม่สำเร็จ');
+    return data;
+  }
+  const text = (tag, value) => {
+    const el = document.createElement(tag);
+    el.textContent = value == null ? '-' : String(value);
+    return el;
+  };
+  function formatDateTime(value) {
+    if (!value) return '-';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value) :
+      new Intl.DateTimeFormat('th-TH', {timeZone:'Asia/Bangkok', dateStyle:'short', timeStyle:'short'}).format(date);
+  }
+  async function setupFilters() {
+    try {
+      const [coachData, branchData] = await Promise.all([
+        api('coach-access', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'list'})}),
+        api('coach-attendance&view=branches')
+      ]);
+      coachNames = new Map((coachData.coaches || []).map(c => [String(c.id), c.display_name]));
+      branchNames = new Map((branchData.branches || []).map(b => [String(b.id), b.name]));
+      branchSelect.replaceChildren(new Option('ทุกสาขา', ''));
+      for (const branch of branchData.branches || []) branchSelect.add(new Option(branch.name, String(branch.id)));
+    } catch (error) { feedback.textContent = 'โหลดตัวเลือกไม่สำเร็จ: ' + error.message; }
+  }
+  async function review(item, decision) {
+    if (busy) return;
+    const label = decision === 'approved' ? 'อนุมัติ' : 'ไม่อนุมัติ';
+    const ownerNote = prompt('หมายเหตุ Owner สำหรับการ' + label + ' (เว้นว่างได้)', '');
+    if (ownerNote === null) return;
+    if (!confirm('ยืนยัน' + label + 'คำขอ #' + item.id + ' ของ ' + (coachNames.get(String(item.coach_id)) || 'Coach #' + item.coach_id) + '?')) return;
+    busy = true;
+    refresh.disabled = true;
+    feedback.textContent = 'กำลังบันทึกผลการตรวจสอบ...';
+    try {
+      await api('coach-attendance&view=review', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({request_id:item.id,decision,owner_note:ownerNote})
+      });
+      await load();
+      feedback.textContent = 'บันทึกผลการ' + label + 'เรียบร้อย';
+    } catch (error) { feedback.textContent = 'ไม่สำเร็จ: ' + error.message; }
+    finally { busy = false; refresh.disabled = false; }
+  }
+  async function load() {
+    if (busy && refresh.disabled === false) return;
+    rowsBox.replaceChildren();
+    feedback.textContent = 'กำลังโหลดคำขอ...';
+    try {
+      const suffix = branchSelect.value ? '&branch_id=' + encodeURIComponent(branchSelect.value) : '';
+      const data = await api('coach-attendance&view=requests' + suffix);
+      const filtered = (data.requests || []).filter(r => statusSelect.value === 'all' || r.status === statusSelect.value);
+      feedback.textContent = 'พบ ' + filtered.length + ' รายการ';
+      if (!filtered.length) { rowsBox.textContent = 'ไม่มีคำขอตามเงื่อนไข'; return; }
+      for (const item of filtered) {
+        const detail = item.requested_data || {};
+        const original = item.original_data || {};
+        const card = document.createElement('article');
+        card.style.cssText = 'border:1px solid #e2e2e2;border-radius:10px;padding:14px;margin:10px 0;background:#fafafa';
+        const statusLabel = {pending:'รออนุมัติ',approved:'อนุมัติแล้ว',rejected:'ไม่อนุมัติ'}[item.status] || item.status;
+        card.append(text('strong', '#' + item.id + ' · ' + (coachNames.get(String(item.coach_id)) || 'Coach #' + item.coach_id) + ' · ' + statusLabel));
+        const details = [
+          'ประเภท: ' + (item.request_type === 'missing' ? 'แจ้งลืมเช็กอิน' : 'ขอแก้ไขเช็กอิน'),
+          'สาขา: ' + (branchNames.get(String(item.branch_id)) || 'สาขา #' + item.branch_id),
+          'วันที่สอน: ' + (detail.work_date || original.work_date || '-'),
+          'คลาส: ' + (detail.class_name || original.class_name || '-'),
+          'เวลาเริ่มคลาส: ' + (detail.scheduled_start_time || original.scheduled_start_time || '-'),
+          'เวลาเช็กอินที่ขอแก้: ' + (detail.checkin_time || '-'),
+          'เวลาเช็กอินเดิม: ' + formatDateTime(original.checked_in_at),
+          'เหตุผล Coach: ' + (item.reason || '-'),
+          'ส่งคำขอ: ' + formatDateTime(item.created_at)
+        ];
+        for (const line of details) { const div = text('div', line); div.style.marginTop = '5px'; card.append(div); }
+        if (item.status !== 'pending') {
+          const note = text('div', 'หมายเหตุ Owner: ' + (item.owner_note || '-') + ' · ตรวจสอบ: ' + formatDateTime(item.reviewed_at));
+          note.style.marginTop = '8px'; card.append(note);
+        } else {
+          const actions = document.createElement('div');
+          actions.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:12px';
+          for (const [decision, label, color] of [['approved','อนุมัติ','#137c47'],['rejected','ไม่อนุมัติ','#b42318']]) {
+            const button = text('button', label);
+            button.type = 'button'; button.style.cssText = 'width:auto;background:' + color + ';color:white;border:0;border-radius:8px;padding:10px 16px';
+            button.addEventListener('click', () => review(item, decision));
+            actions.append(button);
+          }
+          card.append(actions);
+        }
+        rowsBox.append(card);
+      }
+    } catch (error) { feedback.textContent = 'โหลดคำขอไม่สำเร็จ: ' + error.message; }
+  }
+  refresh.addEventListener('click', load);
+  statusSelect.addEventListener('change', load);
+  branchSelect.addEventListener('change', load);
+  setupFilters().then(load);
+  document.querySelector('[data-owner-page="coaches"]')?.addEventListener('click', load);
+})();
+</script>
 </body>
 </html>
