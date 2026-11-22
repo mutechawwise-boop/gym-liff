@@ -201,6 +201,55 @@ if (request.method === "GET" && view === "requests") {
     }
   }
 
+if (requestType === "missing") {
+  const scheduleType = requestedData?.schedule_type;
+
+  if (!["scheduled", "special"].includes(scheduleType)) {
+    return json({
+      success: false,
+      error: "กรุณาเลือกรูปแบบคลาส"
+    }, 400);
+  }
+
+  if (scheduleType === "scheduled") {
+    const sessionId = Number(requestedData.session_id);
+
+    if (!Number.isSafeInteger(sessionId) || sessionId < 1) {
+      return json({
+        success: false,
+        error: "กรุณาเลือกคลาสจากตารางสอน"
+      }, 400);
+    }
+
+    const sessionResponse = await supabase.request(
+      `class_sessions?id=eq.${sessionId}&branch_id=eq.${branchId}&session_date=eq.${encodeURIComponent(requestedData.work_date)}&select=id,display_name,start_time&limit=1`
+    );
+
+    if (!sessionResponse.ok) {
+      return json({
+        success: false,
+        error: "ตรวจสอบตารางสอนไม่สำเร็จ"
+      }, 500);
+    }
+
+    const sessions = await sessionResponse.json();
+
+    if (!sessions.length) {
+      return json({
+        success: false,
+        error: "คลาสไม่ตรงกับสาขาหรือวันที่เลือก"
+      }, 400);
+    }
+    
+const matchedSession = sessions[0];
+
+requestedData.class_name = matchedSession.display_name;
+requestedData.scheduled_start_time =
+  String(matchedSession.start_time || "").slice(0, 5);
+
+  }
+}
+
   const data = {
     coach_id: coach.id,
     checkin_id: checkinId,
