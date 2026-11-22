@@ -3331,9 +3331,11 @@ function openCoachEditRequest(item) {
   `;
 
   dialog.innerHTML = `
-    <h3 style="margin:0 0 8px;">
-      แจ้งลืมเช็กอิน
-    </h3>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <h3 style="margin:0 0 8px;">แจ้งลืมเช็กอิน</h3>
+      <button type="button" id="coachMissingClose" aria-label="ปิดหน้าต่าง"
+        style="font-size:24px;background:transparent;border:0;cursor:pointer;padding:4px 10px;">×</button>
+    </div>
 
     <p style="font-size:13px;color:#64748b;">
       ส่งคำขอให้ Owner ตรวจสอบรายการสอนย้อนหลัง
@@ -3407,6 +3409,10 @@ function openCoachEditRequest(item) {
   const msg = dialog.querySelector("#coachMissingMessage");
   const submitBtn = form.querySelector("[type=submit]");
   const cancelBtn = dialog.querySelector("#coachMissingCancel");
+  const closeBtn = dialog.querySelector("#coachMissingClose");
+  closeBtn.addEventListener("click", () => {
+    if (!cancelBtn.disabled) dialog.close();
+  });
     if (cancelBtn) {
   cancelBtn.addEventListener("click", (event) => {
     event.preventDefault();
@@ -3458,7 +3464,9 @@ updateMissingScheduleType();
 
 const workDateInput = form.elements.namedItem("work_date");
 
+let missingClassesLoadId = 0;
 async function loadCoachMissingClasses() {
+  const loadId = ++missingClassesLoadId;
   classSelect.innerHTML =
     '<option value="">กำลังโหลดคลาส...</option>';
 
@@ -3493,9 +3501,10 @@ async function loadCoachMissingClasses() {
     );
 
     const result = await response.json();
+    if (loadId !== missingClassesLoadId) return;
 
     if (!response.ok || !result.success) {
-      throw new Error("โหลดตารางสอนไม่สำเร็จ");
+      throw new Error(result.error || "โหลดตารางสอนไม่สำเร็จ");
     }
 
     classSelect.innerHTML =
@@ -3515,11 +3524,13 @@ async function loadCoachMissingClasses() {
 
     if (classSelect.options.length === 1) {
       classSelect.innerHTML =
-        '<option value="">ไม่พบคลาสในตารางของวันนี้</option>';
+        '<option value="">ไม่พบคลาสในตารางของวันที่เลือก</option>';
     }
   } catch (error) {
+    if (loadId !== missingClassesLoadId) return;
     classSelect.innerHTML =
       '<option value="">โหลดคลาสไม่สำเร็จ</option>';
+    msg.textContent = error.message;
   }
 }
 
