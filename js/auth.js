@@ -79,7 +79,7 @@ export function createAuth({
     try {
       const response=await fetch("/api/admin-dashboard?mode=coach-access",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",username,password})});
       const data=await response.json();if(!response.ok||!data.success)throw new Error(data.error||"เข้าสู่ระบบ Coach ไม่สำเร็จ");
-      sessionStorage.removeItem("gambitAdminKey");sessionStorage.setItem("gambitCoachSession",data.session);state.adminKey="";setRole(state,"coach");
+      sessionStorage.removeItem("gambitAdminKey");sessionStorage.setItem("gambitCoachSession",data.session);sessionStorage.setItem("gambitCoachDisplayName",String(data.displayName||username));state.adminKey="";setRole(state,"coach");
       await loadAdminDashboard();await loadOverview();onAuthenticated?.();await window.gambitLoginIntro?.finish();
     }catch(error){window.gambitLoginIntro?.stop();elements.loginError.textContent=error.message||"เข้าสู่ระบบไม่สำเร็จ";}finally{button.disabled=false;}
   }
@@ -101,6 +101,7 @@ export function createAuth({
   function logout() {
     sessionStorage.removeItem("gambitAdminKey");
     sessionStorage.removeItem("gambitCoachSession");
+    sessionStorage.removeItem("gambitCoachDisplayName");
     sessionStorage.removeItem("gambitCoachLineToken");
     logoutRole();
 
