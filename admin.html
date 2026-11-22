@@ -746,6 +746,14 @@
   </a>
 </nav>
 
+<section class="card" id="ownerCoachReviewCard" hidden style="margin-bottom:18px;">
+  <h2>คำขอแก้ไขเวลาเช็กอิน Coach</h2>
+  <p style="color:#64748b;font-size:13px">Owner ตรวจสอบคำขอทั้งสองสาขา ก่อนอนุมัติหรือปฏิเสธ</p>
+  <button type="button" id="ownerCoachReviewRefresh" style="width:auto;margin:10px 0">โหลดคำขอล่าสุด</button>
+  <p id="ownerCoachReviewMessage" role="status" aria-live="polite"></p>
+  <div id="ownerCoachReviewList"></div>
+</section>
+
 <section class="card coach-work-card" id="coachWorkCard">
   <div class="coach-work-heading"><div><div class="coach-work-eyebrow">COACH ATTENDANCE</div><h2>เช็กอินการสอน</h2><p>เลือกคลาสที่สอนแล้วบันทึกเวลาเข้าได้เลย ไม่ต้องเช็กเอาต์</p></div><div class="coach-work-total"><strong id="coachWorkCount">0</strong><span>คลาสวันนี้</span></div></div>
   <div class="coach-work-form"><label for="coachWorkBranch">สาขาที่สอน</label><select id="coachWorkBranch" style="display:block;width:100%;padding:13px 14px;margin:0 0 16px;border:1px solid #d8dde1;border-radius:12px;background:white"><option value="">กำลังโหลดสาขา...</option></select><label for="coachWorkClass">คลาสที่สอนวันนี้</label><select id="coachWorkClass"><option value="">กำลังโหลดตารางเรียน...</option></select><label class="coach-private-option"><input type="checkbox" id="coachPrivateToggle"><span>＋ เพิ่มคลาส Private</span></label><div id="coachPrivateFields" hidden><label>ชื่อคลาส Private <input id="coachPrivateName" maxlength="100" placeholder="เช่น Private BJJ 1:1"></label><label>เวลาเริ่มคลาส <input id="coachPrivateTime" type="time"></label></div><button type="button" id="coachWorkIn">เช็กอินคลาสที่สอน</button><p id="coachWorkMessage" role="status" aria-live="polite"></p></div>
@@ -2388,6 +2396,7 @@ const data = await requestJson(
 );
         state.overview = data;
         loadCoachWork().catch(console.error);
+        loadOwnerCoachReview().catch(console.error);
 
         elements.loginArea.style.display = "none";
         elements.adminArea.style.display = "block";
@@ -3914,7 +3923,95 @@ const auth = createAuth({
   loadOverview,
   onAuthenticated: applyRole
 });
+// Owner-only coach attendance review (never shown to Coach accounts).
+async function loadOwnerCoachReview() {
+  const card = document.getElementById("ownerCoachReviewCard");
+  if (!card) return;
+  const isOwnerSession = Boolean(state.adminKey) && !sessionStorage.getItem("gambitCoachSession");
+  card.hidden = !isOwnerSession;
+  if (!isOwnerSession) return;
+  const list = document.getElementById("ownerCoachReviewList");
+  const message = document.getElementById("ownerCoachReviewMessage");
+  message.textContent = "กำลังโหลดคำขอ...";
+  list.replaceChildren();
+  try {
+    const [response, coachesResponse, branchesResponse] = await Promise.all([
+      fetch("/api/admin-dashboard?mode=coach-attendance&view=requests", {
+        headers: { "x-admin-key": state.adminKey }, cache: "no-store"
+      }),
+      fetch("/api/admin-dashboard?mode=coach-attendance&view=coaches", {
+        headers: { "x-admin-key": state.adminKey }, cache: "no-store"
+      }),
+      fetch("/api/admin-dashboard?mode=coach-attendance&view=branches", {
+        headers: { "x-admin-key": state.adminKey }, cache: "no-store"
+      })
+    ]);
+    const data = await response.json();
+    if (!response.ok || !data.success) throw Error(data.error || "โหลดคำขอไม่สำเร็จ");
+    const coachData = coachesResponse.ok ? await coachesResponse.json() : {};
+    const branchData = branchesResponse.ok ? await branchesResponse.json() : {};
+    const coaches = new Map((coachData.coaches || []).map(c => [Number(c.id), c.display_name]));
+    const branches = new Map((branchData.branches || []).map(b => [Number(b.id), b.name]));
+    const requests = (data.requests || []).filter(r => r.status === "pending");
+    message.textContent = requests.length ? `รอตรวจสอบ ${requests.length} รายการ` : "ไม่มีคำขอที่รอตรวจสอบ";
+    for (const item of requests) {
+      const d = item.requested_data || {};
+      const row = document.createElement("div");
+      row.style.cssText = "border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:10px 0;background:#fff";
+      const title = document.createElement("strong");
+      title.textContent = `${coaches.get(Number(item.coach_id)) || `Coach #${item.coach_id}`} · ${branches.get(Number(item.branch_id)) || `สาขา #${item.branch_id}`}`;
+      const detail = document.createElement("p");
+      detail.style.cssText = "font-size:13px;line-height:1.8;white-space:pre-line;margin:8px 0";
+      detail.textContent = [
+        item.request_type === "missing" ? "แจ้งลืมเช็กอิน" : "ขอแก้ไขเช็กอิน",
+        `วันที่: ${d.work_date || "-"} | คลาส: ${d.class_name || "-"}`,
+        `เวลาเริ่มคลาส: ${d.scheduled_start_time || "-"}${item.request_type === "edit" ? ` | เวลาเช็กอินที่ขอแก้: ${d.checkin_time || "-"}` : ""}`,
+        `เหตุผล: ${item.reason || "-"}`
+      ].join("\n");
+      const note = document.createElement("textarea");
+      note.placeholder = "หมายเหตุ Owner (ไม่บังคับ)";
+      note.maxLength = 2000;
+      note.rows = 2;
+      note.style.cssText = "width:100%;box-sizing:border-box;margin:6px 0;padding:9px;border:1px solid #ddd;border-radius:8px";
+      const actions = document.createElement("div");
+      actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap";
+      const approve = document.createElement("button");
+      approve.type = "button"; approve.textContent = "อนุมัติ";
+      approve.style.cssText = "width:auto;background:#166534;color:white";
+      const reject = document.createElement("button");
+      reject.type = "button"; reject.textContent = "ปฏิเสธ";
+      reject.style.cssText = "width:auto;background:#991b1b;color:white";
+      async function review(decision) {
+        const label = decision === "approved" ? "อนุมัติ" : "ปฏิเสธ";
+        if (!window.confirm(`${label}คำขอ #${item.id} ใช่หรือไม่?`)) return;
+        approve.disabled = true; reject.disabled = true;
+        message.textContent = `กำลัง${label}...`;
+        try {
+          const response = await fetch("/api/admin-dashboard?mode=coach-attendance&view=review", {
+            method: "POST", cache: "no-store",
+            headers: { "Content-Type": "application/json", "x-admin-key": state.adminKey },
+            body: JSON.stringify({ request_id: item.id, decision, owner_note: note.value.trim() })
+          });
+          const result = await response.json();
+          if (!response.ok || !result.success) throw Error(result.error || "บันทึกไม่สำเร็จ");
+          await loadOwnerCoachReview();
+        } catch (error) {
+          message.textContent = error.message;
+          approve.disabled = false; reject.disabled = false;
+        }
+      }
+      approve.addEventListener("click", () => review("approved"));
+      reject.addEventListener("click", () => review("rejected"));
+      actions.append(approve, reject);
+      row.append(title, detail, note, actions);
+      list.append(row);
+    }
+  } catch (error) { message.textContent = error.message; }
+}
+document.getElementById("ownerCoachReviewRefresh").addEventListener("click", loadOwnerCoachReview);
+
 function applyRole() {
+  loadOwnerCoachReview().catch(console.error);
     if (sessionStorage.getItem("gambitCoachSession")) {
     document.getElementById("coachWorkMessage").textContent = "";
   loadCoachBranches()
